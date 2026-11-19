@@ -49,6 +49,8 @@ ignore = ["N818"]
 "tests/**" = ["S101"]
 # Reviewed: dynamic SQL parts are constants, ints or filter_sql() output; values are bound ($n).
 "packages/python/vlade_rag/knowledge/postgres/*" = ["S608"]
+# Typer declares options as argument defaults.
+"packages/python/vlade_rag/cli/*" = ["B008"]
 
 # ---------------------------------------------------------------- mypy
 [tool.mypy]
@@ -66,7 +68,7 @@ module = "vlade_rag.core.*"
 strict = true
 
 [[tool.mypy.overrides]]
-module = ["vlade_rag_core", "asyncpg", "asyncpg.*", "pgvector", "pgvector.*"]
+module = ["vlade_rag_core", "asyncpg", "pgvector.*", "docling.*", "yaml"]
 ignore_missing_imports = true
 
 # ---------------------------------------------------------------- pytest
