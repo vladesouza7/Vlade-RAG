@@ -86,7 +86,10 @@ def api_serve(
     except ImportError as exc:
         typer.echo('The API needs the "api" extra: pip install "vlade-rag[api]"', err=True)
         raise typer.Exit(1) from exc
+    from vlade_rag.observability.logging import configure_logging
+
     settings = get_settings()
+    configure_logging(settings.log_level, json_output=settings.environment != "dev")
     uvicorn.run(
         "vlade_rag.api.app:create_app",
         factory=True,
@@ -102,6 +105,10 @@ def worker(
 ) -> None:
     """Run the ingestion worker."""
     from vlade_rag.ingestion.worker import Worker
+    from vlade_rag.observability.logging import configure_logging
+
+    settings = get_settings()
+    configure_logging(settings.log_level, json_output=settings.environment != "dev")
 
     async def go(rt: Any) -> None:
         w = Worker(rt)

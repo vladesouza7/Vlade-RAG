@@ -9,7 +9,7 @@ from typer.testing import CliRunner
 
 from vlade_rag import __version__
 from vlade_rag.cli import main
-from vlade_rag.cli.main import app
+from vlade_rag.cli.app import app
 from vlade_rag.native import backend
 
 runner = CliRunner()
@@ -43,7 +43,7 @@ def test_main_without_cli_extra(monkeypatch: pytest.MonkeyPatch) -> None:
     real_import = builtins.__import__
 
     def fake_import(name: str, *args: Any, **kwargs: Any) -> Any:
-        if name == "vlade_rag.cli.main":
+        if name == "vlade_rag.cli.app":
             raise ImportError("No module named 'typer'")
         return real_import(name, *args, **kwargs)
 

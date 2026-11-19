@@ -4,8 +4,10 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import time
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager, suppress
+from typing import Any
 
 from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
@@ -34,9 +36,13 @@ def create_app(settings: Settings | None = None, runtime: Runtime | None = None)
     """Build the API. Without ``runtime``, the lifespan builds one from ``settings``."""
     settings = settings or get_settings()
 
+    from vlade_rag.observability.opentelemetry import setup_telemetry
+
+    tracer = setup_telemetry(settings)
+
     @asynccontextmanager
     async def lifespan(app: FastAPI) -> AsyncIterator[None]:
-        rt = runtime or await build_runtime(settings)
+        rt = runtime or await build_runtime(settings, tracer=tracer)
         app.state.runtime = rt
         worker_task: asyncio.Task[None] | None = None
         if settings.api.embedded_worker:
@@ -81,6 +87,37 @@ def create_app(settings: Settings | None = None, runtime: Runtime | None = None)
         logger.exception("Unhandled error", exc_info=exc)
         return _problem(500, "InternalError", "Unexpected error.", "internal", True)
 
+    @app.middleware("http")
+    async def telemetry(request: Request, call_next: Any) -> Any:
+        if request.url.path.startswith("/health"):
+            return await call_next(request)
+        route = request.url.path
+        started = time.perf_counter()
+        with tracer.span(
+            f"{request.method} {route}",
+            {"http.request.method": request.method, "url.path": route},
+        ) as span:
+            response = await call_next(request)
+            span.set_attribute("http.response.status_code", response.status_code)
+        _record_duration(request.method, response.status_code, time.perf_counter() - started)
+        return response
+
     app.include_router(health.router)
     app.include_router(v1.router)
     return app
+
+
+def _record_duration(method: str, status: int, seconds: float) -> None:
+    try:
+        from opentelemetry import metrics
+    except ImportError:
+        return
+    global _DURATION
+    if _DURATION is None:
+        _DURATION = metrics.get_meter("vlade_rag").create_histogram(
+            "vlade_request_duration_seconds", unit="s", description="HTTP request duration"
+        )
+    _DURATION.record(seconds, {"interface": "api", "method": method, "status": status})
+
+
+_DURATION: Any = None
