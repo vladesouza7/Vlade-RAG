@@ -16,7 +16,7 @@
 
 | Fase | Nome | Versão | Situação |
 |---|---|---|---|
-| 0 | Fundação | `0.0.x` | Em andamento. Documentos fundadores criados em 2026-11-19 |
+| 0 | Fundação | `0.0.x` | Em andamento. Tarefas 0.1 a 0.10 concluídas em 2026-11-19. Falta a primeira execução da CI no GitHub |
 | 1 | Núcleo mínimo | `0.1.0` | Não iniciada |
 | 2 | Interfaces e armazenamento | `0.2.0` | Não iniciada |
 | 3 | Qualidade | `0.3.0` | Não iniciada |
@@ -43,14 +43,14 @@ F0 Fundação
 |---|---|---|
 | 0.1 | Documentos fundadores: `PROJECT_SPEC.md`, `ARCHITECTURE.md`, `MCP_SPEC.md`, `ROADMAP.md` | Concluída |
 | 0.2 | ADRs 0001 a 0015 | Concluída |
-| 0.3 | Arquivos open source: `README.md`, `CONTRIBUTING.md`, `CODE_OF_CONDUCT.md`, `SECURITY.md`, `CHANGELOG.md`, templates de issue e de pull request | ADR-0001 |
-| 0.4 | Workspace `uv` com `packages/python` e workspace Cargo com `packages/rust/vlade_rag_core` | ADR-0003 |
-| 0.5 | Esqueleto dos módulos da seção 3 do `ARCHITECTURE.md`, com `__init__.py` e testes vazios | ARCHITECTURE §3 |
-| 0.6 | CI no GitHub Actions: `ruff`, `mypy --strict` no `core`, `pytest`, `cargo clippy`, `cargo fmt --check`, build das duas distribuições | RNF-05, RNF-10 |
-| 0.7 | Verificação de licenças na CI (`pip-licenses` e `cargo-deny`) | ADR-0001 |
-| 0.8 | Linter da skill `asd-ste100-pt-br` na CI para `docs/` e `skills/` | CLAUDE.md |
-| 0.9 | `docker-compose.yml` com o perfil `dev`: `api`, `postgres`, `valkey` | ARCHITECTURE §17 |
-| 0.10 | Endpoint `/health/live` | ARCHITECTURE §14.1 |
+| 0.3 | Arquivos open source: `README.md`, `CONTRIBUTING.md`, `CODE_OF_CONDUCT.md`, `SECURITY.md`, `CHANGELOG.md`, templates de issue e de pull request | ADR-0001 · Concluída |
+| 0.4 | Workspace `uv` com `packages/python` e workspace Cargo com `packages/rust/vlade_rag_core` | ADR-0003 · Concluída |
+| 0.5 | Esqueleto dos módulos da seção 3 do `ARCHITECTURE.md`, com `__init__.py` e testes vazios | ARCHITECTURE §3 · Concluída |
+| 0.6 | CI no GitHub Actions: `ruff`, `mypy --strict` no `core`, `pytest`, `cargo clippy`, `cargo fmt --check`, build das duas distribuições | RNF-05, RNF-10 · Concluída |
+| 0.7 | Verificação de licenças na CI (`pip-licenses` e `cargo-deny`) | ADR-0001 · Concluída |
+| 0.8 | Linter da skill `asd-ste100-pt-br` na CI para `docs/` e `skills/` | CLAUDE.md · Concluída |
+| 0.9 | `docker-compose.yml` com o perfil `dev`: `api`, `postgres`, `valkey` | ARCHITECTURE §17 · Concluída |
+| 0.10 | Endpoint `/health/live` | ARCHITECTURE §14.1 · Concluída |
 
 **Critérios de aceite:**
 

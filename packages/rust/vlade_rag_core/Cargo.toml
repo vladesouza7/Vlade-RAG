@@ -1,0 +1,22 @@
+[package]
+name = "vlade_rag_core"
+version = "0.0.1"
+description = "Native engine for Vlade-RAG"
+readme = "README.md"
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[lib]
+name = "vlade_rag_core"
+crate-type = ["cdylib", "rlib"]
+
+[features]
+# `python` builds the PyO3 bindings. Pure-Rust logic stays testable with
+# `cargo test --no-default-features`, without a Python interpreter.
+default = ["python"]
+python = ["dep:pyo3"]
+
+[dependencies]
+pyo3 = { version = "0.30.1", features = ["abi3-py312"], optional = true }

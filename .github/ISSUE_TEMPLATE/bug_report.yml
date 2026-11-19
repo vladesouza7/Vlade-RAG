@@ -1,0 +1,51 @@
+name: Relatar um erro
+description: Informe um comportamento errado do Vlade-RAG.
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Não use este formulário para vulnerabilidades. Siga o SECURITY.md.
+  - type: textarea
+    id: what
+    attributes:
+      label: O que aconteceu
+      description: Descreva o comportamento errado.
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: O que você esperava
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Passos para reproduzir
+      description: Liste os comandos, a configuração e os dados de entrada. Remova segredos.
+      placeholder: |
+        1. ...
+        2. ...
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Versão ou commit
+      placeholder: "vlade-rag version"
+    validations:
+      required: true
+  - type: dropdown
+    id: interface
+    attributes:
+      label: Interface
+      options: [Biblioteca Python, API REST, MCP, CLI, Worker, Kestra, Outra]
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs
+      description: Cole os logs relevantes. Remova segredos e dados pessoais.
+      render: text

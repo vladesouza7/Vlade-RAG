@@ -1,0 +1,62 @@
+# Vlade-RAG services. Profiles: dev, staging, prod (docs/ARCHITECTURE.md section 17).
+# Run from the repository root: docker compose --profile dev up
+# Memory limits keep the dev profile under 3 GB (RNF-11).
+
+services:
+  api:
+    profiles: [dev, staging, prod]
+    build:
+      context: ../..
+      dockerfile: deploy/docker/Dockerfile
+    image: vlade-rag:dev
+    environment:
+      VLADE_ENVIRONMENT: ${VLADE_ENVIRONMENT:-dev}
+      VLADE_LOG_LEVEL: ${VLADE_LOG_LEVEL:-INFO}
+    ports:
+      - "127.0.0.1:${VLADE_API_HOST_PORT:-8000}:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      valkey:
+        condition: service_healthy
+    mem_limit: 512m
+    restart: unless-stopped
+
+  postgres:
+    profiles: [dev, staging, prod]
+    build:
+      context: ../postgres
+    image: vlade-postgres:17
+    environment:
+      POSTGRES_DB: vlade
+      POSTGRES_USER: vlade_owner
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Defina POSTGRES_PASSWORD no arquivo .env}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    ports:
+      - "127.0.0.1:${POSTGRES_HOST_PORT:-5432}:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U vlade_owner -d vlade"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    mem_limit: 1g
+    restart: unless-stopped
+
+  valkey:
+    profiles: [dev, staging, prod]
+    image: valkey/valkey:9.2-alpine
+    command: ["valkey-server", "--save", "", "--appendonly", "no",
+              "--maxmemory", "256mb", "--maxmemory-policy", "allkeys-lru"]
+    ports:
+      - "127.0.0.1:${VALKEY_HOST_PORT:-6379}:6379"
+    healthcheck:
+      test: ["CMD", "valkey-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    mem_limit: 320m
+    restart: unless-stopped
+
+volumes:
+  pgdata:

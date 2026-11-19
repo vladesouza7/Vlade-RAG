@@ -55,12 +55,13 @@ Extras de `vlade-rag`:
 | `s3` | cliente S3 assíncrono |
 | `cache` | cliente Redis, compatível com Valkey |
 | `api` | FastAPI, Uvicorn |
+| `cli` | Typer |
 | `mcp` | SDK oficial `mcp` |
 | `langgraph` | LangGraph |
 | `eval` | RAGAS |
 | `langfuse` | SDK Langfuse |
 | `otel` | SDK OpenTelemetry e exportadores OTLP |
-| `server` | `api`, `mcp`, `postgres`, `s3`, `cache`, `otel`, `parsers`, `native` |
+| `server` | `api`, `cli`, `mcp`, `postgres`, `s3`, `cache`, `otel`, `parsers`, `native` |
 | `all` | Todos os extras de licença permissiva |
 
 A instalação sem extras traz só o domínio, os ports, os casos de uso, a configuração e os adapters em memória. Os adapters em memória servem para testes e protótipos.

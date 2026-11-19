@@ -1,0 +1,55 @@
+[build-system]
+requires = ["hatchling>=1.33.0"]
+build-backend = "hatchling.build"
+
+[project]
+name = "vlade-rag"
+version = "0.0.1"
+description = "Modular, extensible Retrieval-Augmented Generation (RAG) framework."
+readme = "README.md"
+requires-python = ">=3.12"
+license = "MIT"
+license-files = ["LICENSE"]
+authors = [{ name = "Vlade-RAG contributors" }]
+keywords = ["rag", "retrieval-augmented-generation", "llm", "mcp", "pgvector"]
+classifiers = [
+    "Development Status :: 2 - Pre-Alpha",
+    "Intended Audience :: Developers",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+    "Typing :: Typed",
+]
+# Core install: domain, ports, use cases, configuration. Permissive licenses only (ADR-0001).
+dependencies = [
+    "pydantic>=2.14.4",
+    "pydantic-settings>=2.16.3",
+]
+
+# Extras are added phase by phase. Full target list: docs/ARCHITECTURE.md section 2.
+[project.optional-dependencies]
+native = ["vlade-rag-core==0.0.1"]
+api = [
+    "fastapi>=0.165.0",
+    "uvicorn>=0.54.0",
+]
+cli = ["typer>=0.29.2"]
+server = ["vlade-rag[native,api,cli]"]
+
+[project.scripts]
+vlade-rag = "vlade_rag.cli:main"
+
+[project.urls]
+Homepage = "https://github.com/vladesouza7/Vlade-RAG"
+Repository = "https://github.com/vladesouza7/Vlade-RAG"
+Issues = "https://github.com/vladesouza7/Vlade-RAG/issues"
+
+[tool.uv.sources]
+vlade-rag-core = { workspace = true }
+
+[tool.hatch.build.targets.wheel]
+packages = ["vlade_rag"]
+
+[tool.hatch.build.targets.sdist]
+include = ["vlade_rag", "README.md", "LICENSE"]

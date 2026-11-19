@@ -1,0 +1,87 @@
+# Vlade-RAG uv workspace root (virtual: this file does not define a package).
+# Distributions live in packages/. See docs/adr/0003-divisao-rust-python.md.
+
+[tool.uv.workspace]
+members = ["packages/python", "packages/rust/vlade_rag_core"]
+
+[tool.uv]
+package = false
+
+[dependency-groups]
+dev = [
+    "httpx2>=2.16.2",
+    "mypy>=2.4.1",
+    "pytest>=9.2.0",
+    "pytest-cov>=7.1.0",
+    "ruff>=0.17.6",
+]
+
+# ---------------------------------------------------------------- ruff
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+src = ["packages/python", "tests"]
+extend-exclude = [".claude", "docs/referencia"]
+
+[tool.ruff.format]
+# Code blocks in Markdown documents are illustrative; format Python files only.
+exclude = ["*.md"]
+
+[tool.ruff.lint]
+select = [
+    "E", "W",   # pycodestyle
+    "F",        # pyflakes
+    "I",        # isort
+    "B",        # bugbear
+    "UP",       # pyupgrade
+    "N",        # pep8-naming
+    "S",        # bandit
+    "ASYNC",    # async pitfalls
+    "SIM",      # simplify
+    "RUF",      # ruff-specific
+]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**" = ["S101"]
+
+# ---------------------------------------------------------------- mypy
+[tool.mypy]
+python_version = "3.12"
+mypy_path = "packages/python"
+packages = ["vlade_rag"]
+warn_unused_configs = true
+warn_unused_ignores = true
+warn_redundant_casts = true
+disallow_untyped_defs = true
+no_implicit_optional = true
+
+[[tool.mypy.overrides]]
+module = "vlade_rag.core.*"
+strict = true
+
+[[tool.mypy.overrides]]
+module = ["vlade_rag_core"]
+ignore_missing_imports = true
+
+# ---------------------------------------------------------------- pytest
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = ["-ra", "--strict-markers"]
+markers = [
+    "llm: calls a real LLM provider; not run in default CI",
+    "integration: needs external services (PostgreSQL, Valkey)",
+]
+
+# ---------------------------------------------------------------- coverage
+[tool.coverage.run]
+source = ["vlade_rag"]
+branch = true
+
+[tool.coverage.report]
+show_missing = true
+skip_empty = true
+exclude_also = [
+    "if TYPE_CHECKING:",
+    "raise NotImplementedError",
+    "\\.\\.\\.",
+]
