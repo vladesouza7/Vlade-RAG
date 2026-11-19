@@ -1,0 +1,171 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  python:
+    name: Python ${{ matrix.python }} (native=${{ matrix.native }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python: ["3.12", "3.13"]
+        native: [false, true]
+    services:
+      postgres:
+        image: pgvector/pgvector:0.8.7-pg17-trixie
+        env:
+          POSTGRES_USER: vlade_owner
+          POSTGRES_PASSWORD: ci-only-password
+          POSTGRES_DB: postgres
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U vlade_owner" --health-interval 5s
+          --health-timeout 3s --health-retries 20
+    env:
+      VLADE_TEST_DATABASE_URL: postgresql://vlade_owner:ci-only-password@localhost:5432/postgres
+    steps:
+      - uses: actions/checkout@v7
+      - uses: dtolnay/rust-toolchain@stable
+        if: matrix.native
+      - uses: astral-sh/setup-uv@v10.3.3
+        with:
+          python-version: ${{ matrix.python }}
+          enable-cache: true
+      - name: Install
+        run: >
+          uv sync --locked --package vlade-rag
+          --extra api --extra cli --extra postgres --extra ollama --extra openai --extra otel
+          ${{ matrix.native && '--extra native' || '' }}
+      - name: Install dev tools
+        # Recent uv versions do not install the root dev group with --package.
+        run: uv sync --locked --inexact --only-group dev
+      - name: Check native backend
+        run: |
+          backend=$(uv run --no-sync python -c "from vlade_rag.native import backend; print(backend())")
+          echo "backend=$backend"
+          test "$backend" = "${{ matrix.native && 'rust' || 'python' }}"
+      - name: Ruff
+        run: |
+          uv run --no-sync ruff check .
+          uv run --no-sync ruff format --check .
+      - name: Mypy
+        run: uv run --no-sync mypy
+      - name: Pytest
+        run: uv run --no-sync pytest --cov --cov-report=term --cov-fail-under=85
+
+  rust:
+    name: Rust
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy, rustfmt
+      - run: cargo fmt --all --check
+      - run: cargo clippy --locked --workspace --all-targets -- -D warnings
+      - run: cargo test --locked --workspace --no-default-features
+
+  licenses:
+    name: Licenses (ADR-0001)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@v10.3.3
+        with:
+          python-version: "3.12"
+      - name: Python runtime dependencies
+        run: |
+          uv venv /tmp/lic
+          # The docling extra pulls PyTorch and NVIDIA CUDA libraries (proprietary). ADR-0001
+          # item 4 keeps non-permissive dependencies in optional extras, so it is not checked here.
+          uv export --frozen --no-dev --package vlade-rag --extra server --extra api --extra cli --extra postgres --extra ollama --extra openai --extra otel --no-emit-workspace -o /tmp/req.txt
+          uv pip install --python /tmp/lic/bin/python -r /tmp/req.txt
+          uvx pip-licenses==5.5.5 --python /tmp/lic/bin/python --from=mixed --format=json > /tmp/licenses.json
+          python3 scripts/check_licenses.py /tmp/licenses.json
+      - name: Rust dependencies
+        uses: EmbarkStudios/cargo-deny-action@v2
+        with:
+          command: check licenses bans sources
+      - name: Rust advisories (non-blocking)
+        uses: EmbarkStudios/cargo-deny-action@v2
+        continue-on-error: true
+        with:
+          command: check advisories
+
+  docs:
+    name: Docs (ASD-STE100 pt-BR)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+      - name: Linter self-test
+        run: python3 .claude/skills/asd-ste100-pt-br/scripts/ste-lint-ptbr.py --selftest
+      - name: Lint documentation
+        run: |
+          shopt -s nullglob
+          python3 .claude/skills/asd-ste100-pt-br/scripts/ste-lint-ptbr.py \
+            --disable rotacao-de-sinonimos \
+            VLADE-RAG.md CLAUDE.md README.md CONTRIBUTING.md CODE_OF_CONDUCT.md \
+            SECURITY.md CHANGELOG.md docs/*.md docs/adr/*.md \
+            packages/python/README.md packages/rust/*/README.md \
+            evals/datasets/README.md evals/datasets/*/README.md skills/*/SKILL.md
+
+  build:
+    name: Build distributions
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@v10.3.3
+      - name: vlade-rag (sdist and wheel)
+        run: uv build --package vlade-rag --out-dir dist
+      - name: vlade-rag-core (manylinux wheel)
+        uses: PyO3/maturin-action@v1
+        with:
+          command: build
+          args: --release --out dist -m packages/rust/vlade_rag_core/Cargo.toml
+          manylinux: auto
+      - uses: actions/upload-artifact@v7
+        with:
+          name: dist
+          path: dist/
+
+  compose:
+    name: Docker Compose (dev profile)
+    runs-on: ubuntu-latest
+    env:
+      POSTGRES_PASSWORD: ci-only-password
+      VLADE_APP_DB_PASSWORD: ci-only-app-password
+      VLADE_API_KEY_PEPPER: ci-only-pepper
+    steps:
+      - uses: actions/checkout@v7
+      - name: Validate
+        run: docker compose --profile dev config --quiet
+      - name: Start
+        run: docker compose --profile dev up --detach --build --wait --wait-timeout 300
+      - name: Smoke test
+        run: |
+          curl --fail --silent http://127.0.0.1:8000/health/live | tee /tmp/live.json
+          grep -q '"native_backend":"rust"' /tmp/live.json
+          curl --fail --silent http://127.0.0.1:8000/health/ready
+      - name: Logs on failure
+        if: failure()
+        run: docker compose --profile dev logs
+      - name: Stop
+        if: always()
+        run: docker compose --profile dev down --volumes

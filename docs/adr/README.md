@@ -7,7 +7,7 @@ Cada arquivo registra uma decisão. Um ADR aceito não muda. Para mudar uma deci
 | [0001](0001-licenca-mit.md) | Licença MIT e política de licenças das dependências | Aceito | D7 |
 | [0002](0002-arquitetura-ports-adapters.md) | Clean Architecture com ports e adapters | Aceito | — |
 | [0003](0003-divisao-rust-python.md) | Divisão entre Rust e Python e distribuição dos pacotes | Aceito | — |
-| [0004](0004-postgresql-pgvector.md) | PostgreSQL com pgvector como armazenamento padrão | Aceito | — |
+| [0004](0004-postgresql-pgvector.md) | PostgreSQL com pgvector como armazenamento padrão | Aceito. Item 4 substituído pelo ADR-0016 | — |
 | [0005](0005-busca-lexica.md) | Busca léxica: `tsvector` padrão, `pg_search` opcional | Aceito | D1 |
 | [0006](0006-armazenamento-de-objetos.md) | Armazenamento de objetos pela API S3 | Aceito | D2 |
 | [0007](0007-cache-valkey.md) | Valkey como cache padrão | Aceito | D3 |
@@ -19,6 +19,7 @@ Cada arquivo registra uma decisão. Um ADR aceito não muda. Para mudar uma deci
 | [0013](0013-mcp-qualquer-cliente.md) | MCP como interface de primeira classe para qualquer cliente | Aceito | D8 |
 | [0014](0014-sem-human-in-the-loop-v1.md) | Sem human-in-the-loop na versão 1 | Aceito | D9 |
 | [0015](0015-observabilidade.md) | Observabilidade com OpenTelemetry, Langfuse e LGTM | Aceito | — |
+| [0016](0016-asyncpg-e-migracoes-sql.md) | asyncpg e migrações em SQL (substitui o item 4 do ADR-0004) | Aceito | — |
 
 ## Modelo
 

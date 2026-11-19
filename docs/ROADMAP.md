@@ -16,8 +16,8 @@
 
 | Fase | Nome | Versão | Situação |
 |---|---|---|---|
-| 0 | Fundação | `0.0.x` | Em andamento. Documentos fundadores criados em 2026-11-19 |
-| 1 | Núcleo mínimo | `0.1.0` | Não iniciada |
+| 0 | Fundação | `0.0.x` | Tarefas 0.1 a 0.10 concluídas em 2026-11-19. Falta a primeira execução da CI no GitHub |
+| 1 | Núcleo mínimo | `0.1.0` | Em andamento. Tarefas 1.1 a 1.21 implementadas em 2026-11-19. Falta rodar o teste de aceite com um provedor remoto e a revisão humana do relatório |
 | 2 | Interfaces e armazenamento | `0.2.0` | Não iniciada |
 | 3 | Qualidade | `0.3.0` | Não iniciada |
 | 4 | Operação | `0.4.0` | Não iniciada |
@@ -43,14 +43,14 @@ F0 Fundação
 |---|---|---|
 | 0.1 | Documentos fundadores: `PROJECT_SPEC.md`, `ARCHITECTURE.md`, `MCP_SPEC.md`, `ROADMAP.md` | Concluída |
 | 0.2 | ADRs 0001 a 0015 | Concluída |
-| 0.3 | Arquivos open source: `README.md`, `CONTRIBUTING.md`, `CODE_OF_CONDUCT.md`, `SECURITY.md`, `CHANGELOG.md`, templates de issue e de pull request | ADR-0001 |
-| 0.4 | Workspace `uv` com `packages/python` e workspace Cargo com `packages/rust/vlade_rag_core` | ADR-0003 |
-| 0.5 | Esqueleto dos módulos da seção 3 do `ARCHITECTURE.md`, com `__init__.py` e testes vazios | ARCHITECTURE §3 |
-| 0.6 | CI no GitHub Actions: `ruff`, `mypy --strict` no `core`, `pytest`, `cargo clippy`, `cargo fmt --check`, build das duas distribuições | RNF-05, RNF-10 |
-| 0.7 | Verificação de licenças na CI (`pip-licenses` e `cargo-deny`) | ADR-0001 |
-| 0.8 | Linter da skill `asd-ste100-pt-br` na CI para `docs/` e `skills/` | CLAUDE.md |
-| 0.9 | `docker-compose.yml` com o perfil `dev`: `api`, `postgres`, `valkey` | ARCHITECTURE §17 |
-| 0.10 | Endpoint `/health/live` | ARCHITECTURE §14.1 |
+| 0.3 | Arquivos open source: `README.md`, `CONTRIBUTING.md`, `CODE_OF_CONDUCT.md`, `SECURITY.md`, `CHANGELOG.md`, templates de issue e de pull request | ADR-0001 · Concluída |
+| 0.4 | Workspace `uv` com `packages/python` e workspace Cargo com `packages/rust/vlade_rag_core` | ADR-0003 · Concluída |
+| 0.5 | Esqueleto dos módulos da seção 3 do `ARCHITECTURE.md`, com `__init__.py` e testes vazios | ARCHITECTURE §3 · Concluída |
+| 0.6 | CI no GitHub Actions: `ruff`, `mypy --strict` no `core`, `pytest`, `cargo clippy`, `cargo fmt --check`, build das duas distribuições | RNF-05, RNF-10 · Concluída |
+| 0.7 | Verificação de licenças na CI (`pip-licenses` e `cargo-deny`) | ADR-0001 · Concluída |
+| 0.8 | Linter da skill `asd-ste100-pt-br` na CI para `docs/` e `skills/` | CLAUDE.md · Concluída |
+| 0.9 | `docker-compose.yml` com o perfil `dev`: `api`, `postgres`, `valkey` | ARCHITECTURE §17 · Concluída |
+| 0.10 | Endpoint `/health/live` | ARCHITECTURE §14.1 · Concluída |
 
 **Critérios de aceite:**
 
@@ -62,27 +62,27 @@ F0 Fundação
 
 | # | Tarefa | Referência |
 |---|---|---|
-| 1.1 | Domínio: entidades, objetos de valor, erros | ARCHITECTURE §4 |
-| 1.2 | Ports e suítes de contrato em `vlade_rag.testing.contracts` | ARCHITECTURE §5 |
-| 1.3 | Adapters em memória de todos os ports usados na fase 1 | ARCHITECTURE §2 |
-| 1.4 | Configuração tipada e registro de plugins | ARCHITECTURE §9 |
-| 1.5 | Motor Rust: `normalize_text`, `split_text`, `load_tokenizer`, `count_tokens`, `content_hash`, `simhash`, `rrf_fuse` | ADR-0003 |
-| 1.6 | Implementação de reserva em Python e teste de propriedade | ARCHITECTURE §8.2 |
-| 1.7 | Migrações Alembic, RLS e papéis do banco | ARCHITECTURE §7, ADR-0012 |
-| 1.8 | Adapters PostgreSQL: `KnowledgeRepository`, `VectorIndex` (pgvector), `LexicalIndex` (`tsvector`) | ADR-0004, ADR-0005 |
-| 1.9 | Parsers: texto, Markdown, HTML, PDF e DOCX com Docling | ADR-0010 |
-| 1.10 | `ObjectStorage` no sistema de arquivos | ADR-0006 |
-| 1.11 | Embeddings: Ollama, API compatível com OpenAI | ADR-0008 |
-| 1.12 | LLM: Ollama, API compatível com OpenAI | VLADE-RAG §16 |
-| 1.13 | Pipeline de ingestão, fila de jobs e worker | ARCHITECTURE §10 |
-| 1.14 | Casos de uso `CreateKnowledgeBase`, `SubmitIngestion`, `RunIngestionJob`, `GetIngestionStatus`, `Search`, `AnswerQuery`, `GetDocument`, `DeleteDocument` | ARCHITECTURE §6 |
-| 1.15 | Pipeline de consulta linear, montagem de contexto, citações e validação | ARCHITECTURE §11 |
-| 1.16 | Prompts padrão em pt-BR e em inglês | RF-34 |
-| 1.17 | API REST, inclusive streaming SSE | ARCHITECTURE §14.1 |
-| 1.18 | CLI | ARCHITECTURE §14.3 |
-| 1.19 | OpenTelemetry: spans, métricas e logs JSON | ARCHITECTURE §16 |
-| 1.20 | Teste de isolamento entre tenants para API e CLI | RNF-07 |
-| 1.21 | Dataset de exemplo em pt-BR com 100 documentos de domínio público | `evals/datasets/` |
+| 1.1 | Domínio: entidades, objetos de valor, erros | ARCHITECTURE §4 · Concluída |
+| 1.2 | Ports e suítes de contrato em `vlade_rag.testing.contracts` | ARCHITECTURE §5 · Concluída |
+| 1.3 | Adapters em memória de todos os ports usados na fase 1 | ARCHITECTURE §2 · Concluída |
+| 1.4 | Configuração tipada e registro de plugins | ARCHITECTURE §9 · Concluída |
+| 1.5 | Motor Rust: `normalize_text`, `split_text`, `load_tokenizer`, `count_tokens`, `content_hash`, `simhash`, `rrf_fuse` | ADR-0003 · Concluída |
+| 1.6 | Implementação de reserva em Python e teste de propriedade | ARCHITECTURE §8.2 · Concluída |
+| 1.7 | Migrações Alembic, RLS e papéis do banco | ARCHITECTURE §7, ADR-0012 · Concluída |
+| 1.8 | Adapters PostgreSQL: `KnowledgeRepository`, `VectorIndex` (pgvector), `LexicalIndex` (`tsvector`) | ADR-0004, ADR-0005 · Concluída |
+| 1.9 | Parsers: texto, Markdown, HTML, PDF e DOCX com Docling | ADR-0010 · Implementada. Falta o teste com o Docling instalado |
+| 1.10 | `ObjectStorage` no sistema de arquivos | ADR-0006 · Concluída |
+| 1.11 | Embeddings: Ollama, API compatível com OpenAI | ADR-0008 · Concluída |
+| 1.12 | LLM: Ollama, API compatível com OpenAI | VLADE-RAG §16 · Concluída |
+| 1.13 | Pipeline de ingestão, fila de jobs e worker | ARCHITECTURE §10 · Concluída |
+| 1.14 | Casos de uso `CreateKnowledgeBase`, `SubmitIngestion`, `RunIngestionJob`, `GetIngestionStatus`, `Search`, `AnswerQuery`, `GetDocument`, `DeleteDocument` | ARCHITECTURE §6 · Concluída |
+| 1.15 | Pipeline de consulta linear, montagem de contexto, citações e validação | ARCHITECTURE §11 · Concluída |
+| 1.16 | Prompts padrão em pt-BR e em inglês | RF-34 · Concluída |
+| 1.17 | API REST, inclusive streaming SSE | ARCHITECTURE §14.1 · Concluída |
+| 1.18 | CLI | ARCHITECTURE §14.3 · Concluída |
+| 1.19 | OpenTelemetry: spans, métricas e logs JSON | ARCHITECTURE §16 · Concluída |
+| 1.20 | Teste de isolamento entre tenants para API e CLI | RNF-07 · Concluída |
+| 1.21 | Dataset de exemplo em pt-BR com 100 documentos de domínio público | `evals/datasets/` · Concluída |
 
 **Critérios de aceite:**
 

@@ -40,28 +40,23 @@ O projeto publica duas distribuições (ADR-0003):
 | `vlade-rag` | Núcleo Python, ports, casos de uso, adapters, interfaces | `hatchling`, wheel Python puro | MIT |
 | `vlade-rag-core` | Motor Rust com binding PyO3 | `maturin`, wheels `abi3` por plataforma | MIT |
 
-Extras de `vlade-rag`:
+Extras de `vlade-rag` disponíveis na fase 1:
 
 | Extra | Instala |
 |---|---|
 | `native` | `vlade-rag-core` |
-| `postgres` | SQLAlchemy 2, asyncpg, pgvector-python, Alembic |
-| `qdrant` | qdrant-client |
-| `ollama` | cliente Ollama |
-| `openai` | SDK OpenAI. Atende também OpenRouter e qualquer API compatível com OpenAI |
-| `gemini` | SDK Google Gen AI |
-| `local-models` | sentence-transformers (embeddings e reranking locais) |
-| `parsers` | Docling, BeautifulSoup |
-| `s3` | cliente S3 assíncrono |
-| `cache` | cliente Redis, compatível com Valkey |
-| `api` | FastAPI, Uvicorn |
-| `mcp` | SDK oficial `mcp` |
-| `langgraph` | LangGraph |
-| `eval` | RAGAS |
-| `langfuse` | SDK Langfuse |
-| `otel` | SDK OpenTelemetry e exportadores OTLP |
-| `server` | `api`, `mcp`, `postgres`, `s3`, `cache`, `otel`, `parsers`, `native` |
-| `all` | Todos os extras de licença permissiva |
+| `postgres` | asyncpg, pgvector (ADR-0016) |
+| `ollama` | httpx2 |
+| `openai` | httpx2. Atende OpenAI, OpenRouter e qualquer API compatível com OpenAI |
+| `docling` | Docling, para PDF e DOCX. Instala PyTorch e modelos de layout |
+| `api` | FastAPI, Uvicorn, python-multipart |
+| `cli` | Typer |
+| `otel` | SDK OpenTelemetry e exportador OTLP por HTTP |
+| `server` | `native`, `api`, `cli`, `postgres`, `ollama`, `openai`, `otel` |
+
+Extras previstos para as fases seguintes: `qdrant`, `gemini`, `local-models` (sentence-transformers), `s3`, `cache` (Valkey), `mcp`, `langgraph`, `eval` (RAGAS), `langfuse` e `all`.
+
+Os parsers de texto, Markdown e HTML não precisam de extra. Eles usam só a biblioteca padrão.
 
 A instalação sem extras traz só o domínio, os ports, os casos de uso, a configuração e os adapters em memória. Os adapters em memória servem para testes e protótipos.
 
@@ -161,7 +156,7 @@ class DocumentVersion:
     id: UUID
     document_id: UUID
     version: int
-    content_hash: str          # BLAKE3, hexadecimal
+    content_hash: str          # SHA-256, hexadecimal
     storage_key: str
     size_bytes: int
     status: VersionStatus      # INDEXING, PUBLISHED, SUPERSEDED, FAILED
@@ -337,6 +332,17 @@ class Tracer(Protocol):
     def span(self, name: str, attributes: Mapping[str, AttrValue] | None = None) -> AbstractContextManager[Span]: ...
     def record_generation(self, span: Span, generation: Generation, prompt: PromptTemplate) -> None: ...
 ```
+
+Ports acrescentados na fase 1. O código em `vlade_rag/core/ports/__init__.py` tem as assinaturas finais:
+
+| Port ou método | Motivo |
+|---|---|
+| `JobQueue` | Fila de jobs: `enqueue`, `get`, `claim`, `heartbeat`, `record_step`, `complete`, `fail`, `requeue_expired` |
+| `AuditLog` | Eventos de auditoria (`record`) e registro de consultas (`record_query`) |
+| `TenantDirectory` | Tenants e chaves de API: `create_tenant`, `get_tenant`, `issue_api_key`, `authenticate` |
+| `KnowledgeRepository.get_version` | O worker carrega a versão do job |
+| `VectorIndex.count` | A etapa `validate_indexes` confere o número de vetores |
+| `Retriever.retrieve(ctx, kb, query, top_k)` | O retriever recebe a base para ler a configuração |
 
 Regras dos ports:
 
@@ -614,24 +620,38 @@ Toda tabela com `tenant_id` usa RLS. O papel da aplicação não é dono das tab
 ```sql
 ALTER TABLE <tabela> ENABLE ROW LEVEL SECURITY;
 ALTER TABLE <tabela> FORCE ROW LEVEL SECURITY;
-CREATE POLICY tenant_isolation ON <tabela>
-  USING (tenant_id = current_setting('app.tenant_id', true)::uuid)
-  WITH CHECK (tenant_id = current_setting('app.tenant_id', true)::uuid);
+CREATE POLICY tenant_isolation ON <tabela> TO vlade_app_group
+  USING (tenant_id = NULLIF(current_setting('app.tenant_id', true), '')::uuid)
+  WITH CHECK (tenant_id = NULLIF(current_setting('app.tenant_id', true), '')::uuid);
 ```
+
+O `NULLIF` trata uma conexão do pool que já usou `app.tenant_id`. Nessa conexão, o valor volta como texto vazio. Com o `NULLIF`, a política devolve zero linhas em vez de um erro.
 
 Papéis do banco:
 
 | Papel | Uso | RLS |
 |---|---|---|
-| `vlade_owner` | Dono das tabelas. Usado só pelas migrações | Não se aplica ao dono |
-| `vlade_app` | API, MCP, CLI, worker | Aplica |
-| `vlade_auth` | Leitura de `api_keys` antes de existir um tenant na sessão | Política própria, só `SELECT` em `api_keys` e `tenants` |
+| `vlade_owner` | Dono das tabelas. Usado só pelas migrações | Não se aplica ao dono superusuário |
+| `vlade_app_group` | Grupo sem login com os privilégios da aplicação | Aplica |
+| Papel de login da aplicação | Usuário de `VLADE_DATABASE__URL`. Membro de `vlade_app_group`. A migração cria o papel | Aplica |
+| `vlade_definer` | Dono das funções `SECURITY DEFINER`. Sem login | Política própria em `api_keys`, `tenants` e `ingestion_jobs` |
 
-O adapter de banco abre cada transação com `SET LOCAL app.tenant_id = '<uuid>'`. Se a sessão não tem `app.tenant_id`, a política devolve zero linhas. O adapter também filtra por `tenant_id` em cada consulta. O RLS é a segunda barreira.
+Funções `SECURITY DEFINER` (ADR-0016):
+
+| Função | Uso |
+|---|---|
+| `vlade_authenticate(prefix)` | Lê a chave de API antes de existir um tenant na sessão |
+| `vlade_tenant_by_slug(slug)` | Busca um tenant pelo slug (CLI) |
+| `vlade_claim_job(worker, lease)` | Reserva o job pendente mais antigo de qualquer tenant |
+| `vlade_heartbeat_job(job, worker, lease)` | Renova o prazo do job |
+| `vlade_requeue_expired_jobs(max_attempts)` | Devolve à fila os jobs com prazo vencido |
+| `vlade_ensure_space_index(space, dimension, distance)` | Cria o índice HNSW parcial de um espaço. O dono é o dono da tabela |
+
+O adapter de banco abre cada transação com `set_config('app.tenant_id', '<uuid>', true)`. Se a sessão não tem `app.tenant_id`, a política devolve zero linhas. O adapter também filtra por `tenant_id` em cada consulta. O RLS é a segunda barreira.
 
 ### 7.5. Migrações
 
-O Alembic gerencia as migrações em `packages/python/vlade_rag/knowledge/postgres/migrations/`. O comando `vlade-rag db upgrade` roda as migrações com o papel `vlade_owner`. Uma migração nunca apaga dados sem uma etapa anterior de cópia.
+As migrações são arquivos SQL numerados em `packages/python/vlade_rag/knowledge/postgres/migrations/` (ADR-0016). O comando `vlade-rag db upgrade` aplica as migrações com a credencial `VLADE_DATABASE__OWNER_URL` e registra cada arquivo na tabela `vlade_schema_migrations`. Depois, o comando cria ou atualiza o papel de login da aplicação com o usuário e a senha de `VLADE_DATABASE__URL`. Uma migração nunca apaga dados sem uma etapa anterior de cópia.
 
 ### 7.6. Imagem PostgreSQL
 
@@ -650,15 +670,29 @@ O módulo Python `vlade_rag_core` expõe:
 
 | Função | Assinatura Python | Observação |
 |---|---|---|
-| `normalize_text` | `(text: str, options: NormalizeOptions) -> str` | Unicode NFC, espaços, hifenização de fim de linha, caracteres de controle |
-| `split_text` | `(text: str, strategy: str, max_tokens: int, overlap_tokens: int, tokenizer: Tokenizer) -> list[tuple[int, int, int]]` | Devolve `(início, fim, tokens)`. Não copia o texto |
-| `load_tokenizer` | `(tokenizer_json: bytes) -> Tokenizer` | Recebe o conteúdo do `tokenizer.json`. O Python baixa o arquivo |
-| `count_tokens` | `(texts: list[str], tokenizer: Tokenizer) -> list[int]` | Libera o GIL |
-| `content_hash` | `(data: bytes) -> str` | BLAKE3 em hexadecimal |
+| `normalize_text` | `(text: str, dehyphenate: bool = True) -> str` | Unicode NFC, espaços, hifenização de fim de linha, caracteres de controle e de formato |
+| `token_spans` | `(text: str) -> list[tuple[int, int]]` | Tokens aproximados: sequência de letras e dígitos, ou um outro caractere visível |
+| `count_tokens` | `(texts: list[str]) -> list[int]` | Número de tokens aproximados de cada texto |
+| `split_text` | `(text: str, strategy: str, max_tokens: int, overlap_tokens: int) -> list[tuple[int, int, int]]` | Devolve `(início, fim, tokens)`. Não copia o texto |
+| `content_hash` | `(data: bytes) -> str` | SHA-256 em hexadecimal |
 | `simhash` | `(text: str) -> int` | Para deduplicação aproximada |
 | `rrf_fuse` | `(rankings: list[list[str]], k: float, weights: list[float] \| None, top_k: int) -> list[tuple[str, float]]` | Identificadores como texto |
 
 Estratégias de `split_text`: `tokens`, `recursive`, `markdown`, `sentence`.
+
+Os offsets são índices de caracteres (code points), iguais aos índices de string do Python.
+
+A especificação de cada função é a implementação de referência em `vlade_rag/native/_reference.py`. Resumo do chunking:
+
+1. Cada fronteira entre dois tokens recebe uma pontuação: título Markdown 5, linha em branco 4, quebra de linha 3, fim de frase 2, espaço 1.
+2. O corte acontece na fronteira de maior pontuação dentro da janela `[início + max_tokens / 4, início + max_tokens]`. Em empate, o corte mais distante vence.
+3. O chunk seguinte começa `overlap_tokens` tokens antes do corte. Depois de um corte num título Markdown, o chunk seguinte começa no título, sem sobreposição.
+
+Decisões da fase 1:
+
+- O hash usa SHA-256, e não BLAKE3. O SHA-256 existe na biblioteca padrão do Python, e a reserva em Python precisa dar o mesmo resultado que o Rust (ADR-0003).
+- O tamanho dos chunks e do contexto usa tokens aproximados. Um tokenizador Hugging Face real pode entrar depois como opção. A medida aproximada fica perto do número de palavras, e os modelos padrão aceitam milhares de tokens.
+- O chunking usa um algoritmo próprio, e não o crate `text-splitter`. Assim a implementação em Python consegue reproduzir exatamente o resultado do Rust.
 
 ### 8.2. Implementação de reserva
 
@@ -669,10 +703,8 @@ O módulo `vlade_rag.native` importa `vlade_rag_core`. Se o import falha, o mód
 | Crate | Uso | Licença |
 |---|---|---|
 | `pyo3` | Binding Python | MIT ou Apache-2.0 |
-| `tokenizers` | Contagem de tokens | Apache-2.0 |
-| `text-splitter` | Base das estratégias de chunking | MIT |
 | `unicode-normalization` | NFC | MIT ou Apache-2.0 |
-| `blake3` | Hash | CC0 ou Apache-2.0 |
+| `sha2` | Hash SHA-256 | MIT ou Apache-2.0 |
 
 ## 9. Configuração
 
@@ -681,16 +713,24 @@ O módulo `vlade_rag.native` importa `vlade_rag_core`. Se o import falha, o mód
 A configuração do processo vem de variáveis de ambiente com o prefixo `VLADE_`. O separador de níveis é `__`. Um arquivo YAML opcional (`VLADE_CONFIG_FILE`) define os valores padrão. A variável de ambiente vence o arquivo.
 
 ```bash
-VLADE_DATABASE__URL=postgresql+asyncpg://vlade_app:***@postgres:5432/vlade
-VLADE_DATABASE__AUTH_URL=postgresql+asyncpg://vlade_auth:***@postgres:5432/vlade
-VLADE_OBJECT_STORAGE__ENDPOINT=http://minio:9000
-VLADE_OBJECT_STORAGE__BUCKET=vlade-rag
-VLADE_CACHE__URL=redis://valkey:6379/0
+VLADE_DATABASE__URL=postgresql://vlade_app:***@postgres:5432/vlade
+VLADE_DATABASE__OWNER_URL=postgresql://vlade_owner:***@postgres:5432/vlade   # só para db upgrade
+VLADE_STORAGE__BACKEND=postgres                  # postgres ou memory
+VLADE_OBJECT_STORAGE__BACKEND=filesystem         # filesystem ou memory (S3 na fase 2)
+VLADE_OBJECT_STORAGE__PATH=/data/objects
 VLADE_SECURITY__API_KEY_PEPPER=***
 VLADE_PROVIDERS__OLLAMA__BASE_URL=http://ollama:11434
+VLADE_PROVIDERS__OLLAMA__THINK=false
 VLADE_PROVIDERS__OPENAI__API_KEY=***
-VLADE_OTEL__ENDPOINT=http://alloy:4317
-VLADE_LANGFUSE__ENABLED=false
+VLADE_PROVIDERS__OPENROUTER__API_KEY=***
+VLADE_PROVIDERS__OPENCODE__API_KEY=***                 # OpenCode Zen, https://opencode.ai/zen/v1
+VLADE_PROVIDERS__COMPATIBLE__GROQ__BASE_URL=https://api.groq.com/openai/v1   # qualquer API compatível
+VLADE_PROVIDERS__COMPATIBLE__GROQ__API_KEY=***
+VLADE_DEFAULT_KB_CONFIG={"embeddings": {"provider": "openrouter", ...}}      # padrão das bases novas
+VLADE_API__EMBEDDED_WORKER=true
+VLADE_WORKER__CONCURRENCY=2
+VLADE_OTEL__ENABLED=true
+VLADE_OTEL__ENDPOINT=http://alloy:4318
 ```
 
 ### 9.2. Configuração da base de conhecimento
@@ -734,6 +774,19 @@ generation:
 
 O modelo de geração padrão é só um exemplo de configuração local. A aplicação escolhe o modelo.
 
+O servidor pode trocar esses valores padrão com `VLADE_DEFAULT_KB_CONFIG` (JSON). A configuração enviada na criação de uma base é mesclada sobre esse padrão: os campos enviados vencem, e os outros vêm do padrão.
+
+Nomes de provedor aceitos em `embeddings.provider` e `generation.provider`:
+
+| Nome | Tipo | Endereço |
+|---|---|---|
+| `ollama` | Ollama | `VLADE_PROVIDERS__OLLAMA__BASE_URL` |
+| `openai` | API OpenAI | `https://api.openai.com/v1` |
+| `openrouter` | API compatível com OpenAI | `https://openrouter.ai/api/v1` |
+| `opencode` | API compatível com OpenAI (OpenCode Zen, só modelos de `/chat/completions`) | `https://opencode.ai/zen/v1` |
+| Nome livre | Qualquer API compatível com OpenAI declarada em `VLADE_PROVIDERS__COMPATIBLE__<NOME>__*` | Configurável |
+| `hashing`, `extractive` | Provedores offline para testes e demonstrações | Nenhum |
+
 Uma mudança em `embeddings` exige uma reindexação no modo `embeddings`. Uma mudança em `chunking` exige uma reindexação no modo `full`. O caso de uso de atualização de configuração recusa a mudança e informa a reindexação necessária.
 
 ### 9.3. Registro de plugins
@@ -776,16 +829,17 @@ O processo `vlade-rag worker` roda o worker. No perfil `dev`, a API pode rodar u
 | Etapa | Ação | Falha |
 |---|---|---|
 | `validate` | Tipo MIME, tamanho, cota, scanner opcional | `failed`, sem nova tentativa |
-| `store_original` | Grava em `{tenant_id}/kb/{kb_id}/docs/{document_id}/v{n}/original` | Nova tentativa |
+| `store_original` | Grava em `{tenant_id}/kb/{kb_id}/docs/{document_id}/{content_hash}/original`. O hash na chave evita gravar o mesmo conteúdo duas vezes | Nova tentativa |
 | `extract` | `DocumentParser` gera `ParsedDocument` | `failed` se o arquivo é inválido |
 | `normalize` | `TextNormalizer` | Nova tentativa |
 | `dedupe` | Compara `content_hash` com a versão publicada | Encerra o job com `succeeded` e `result.skipped = true` |
-| `chunk` | `Chunker` | `failed` |
+| `chunk` | `Chunker`. Grava os chunks com o `tsv` e grava o texto normalizado em `.../{content_hash}/text.md` | `failed` |
 | `embed` | `EmbeddingProvider.embed_documents` em lotes | Nova tentativa com backoff exponencial |
 | `index_vectors` | `VectorIndex.upsert` | Nova tentativa |
-| `index_text` | Preenche `chunks.tsv` | Nova tentativa |
 | `validate_indexes` | Confere a contagem de chunks e de vetores | `failed` |
 | `publish` | Transação única: marca os chunks novos como publicados, marca os chunks antigos como não publicados, troca `current_version_id`, marca a versão antiga como `superseded`, invalida o cache da base | Nova tentativa |
+
+As etapas `validate`, `store_original` e `dedupe` acontecem no caso de uso `SubmitIngestion`, antes de o job existir. O job registra as etapas de `extract` a `publish`.
 
 Depois de `publish`, uma tarefa de manutenção apaga os chunks e os vetores das versões `superseded`. O período de espera padrão é de 24 horas.
 
