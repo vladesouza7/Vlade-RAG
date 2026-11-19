@@ -124,10 +124,12 @@ def builtin_plugins() -> list[PluginSpec]:
 
 def default_parsers() -> list[DocumentParser]:
     parsers: list[DocumentParser] = list(basic_parsers())
-    try:
-        from vlade_rag.ingestion.parsers.docling import DoclingParser
-    except ImportError:
+    import importlib.util
+
+    if importlib.util.find_spec("docling") is None:
         return parsers
+    from vlade_rag.ingestion.parsers.docling import DoclingParser
+
     parsers.append(DoclingParser())
     return parsers
 

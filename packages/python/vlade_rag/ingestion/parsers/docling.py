@@ -10,9 +10,6 @@ import asyncio
 from io import BytesIO
 from typing import Any
 
-from docling.datamodel.base_models import DocumentStream
-from docling.document_converter import DocumentConverter
-
 from vlade_rag.core.application.mime import DOCX, PDF
 from vlade_rag.core.domain import InvalidArgument, ParsedDocument, RawDocument
 
@@ -26,14 +23,14 @@ class DoclingParser:
     @property
     def converter(self) -> Any:
         if self._converter is None:  # model loading is slow: create on first use
+            from docling.document_converter import DocumentConverter
+
             self._converter = DocumentConverter()
         return self._converter
 
     def _convert(self, raw: RawDocument) -> ParsedDocument:
         try:
-            result = self.converter.convert(
-                DocumentStream(name=raw.filename, stream=BytesIO(raw.data))
-            )
+            result = self.converter.convert(_stream(raw.filename, raw.data))
         except Exception as exc:  # Docling raises several exception types for bad input
             raise InvalidArgument(f"Docling could not read '{raw.filename}': {exc}") from exc
         document = result.document
@@ -54,6 +51,16 @@ class DoclingParser:
 
     async def parse(self, raw: RawDocument) -> ParsedDocument:
         return await asyncio.to_thread(self._convert, raw)
+
+
+def _stream(name: str, data: bytes) -> Any:
+    try:
+        from docling.datamodel.base_models import DocumentStream
+    except ImportError:  # a test converter accepts any object with name and stream
+        from types import SimpleNamespace
+
+        return SimpleNamespace(name=name, stream=BytesIO(data))
+    return DocumentStream(name=name, stream=BytesIO(data))
 
 
 def _title(document: Any) -> str | None:
