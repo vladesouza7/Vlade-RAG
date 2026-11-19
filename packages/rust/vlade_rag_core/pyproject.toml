@@ -1,0 +1,22 @@
+[build-system]
+requires = ["maturin>=1.16,<2"]
+build-backend = "maturin"
+
+[project]
+name = "vlade-rag-core"
+# Static version: keep in sync with Cargo.toml. Static metadata lets uv lock without a Rust toolchain.
+version = "0.0.1"
+description = "Native (Rust) engine for Vlade-RAG: text normalization, chunking, hashing, RRF fusion."
+readme = "README.md"
+requires-python = ">=3.12"
+license = "MIT"
+authors = [{ name = "Vlade-RAG contributors" }]
+classifiers = [
+    "Development Status :: 2 - Pre-Alpha",
+    "Programming Language :: Rust",
+    "Programming Language :: Python :: Implementation :: CPython",
+]
+
+[tool.maturin]
+module-name = "vlade_rag_core"
+features = ["python", "pyo3/extension-module"]

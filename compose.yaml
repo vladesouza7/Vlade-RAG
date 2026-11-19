@@ -1,0 +1,7 @@
+# Entry point for Docker Compose at the repository root.
+# Service definitions live in deploy/compose/docker-compose.yml.
+# Usage: cp .env.example .env  (fill POSTGRES_PASSWORD), then: docker compose --profile dev up
+name: vlade-rag
+
+include:
+  - path: deploy/compose/docker-compose.yml

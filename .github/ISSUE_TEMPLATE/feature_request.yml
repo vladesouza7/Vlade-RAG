@@ -1,0 +1,31 @@
+name: Propor uma funcionalidade
+description: Sugira uma funcionalidade, um adapter novo ou uma mudança de arquitetura.
+labels: ["enhancement"]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problema
+      description: Descreva o problema que a funcionalidade resolve.
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposta
+      description: Descreva a solução. Cite o port, o caso de uso ou a seção da arquitetura afetada.
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternativas avaliadas
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Verificações
+      options:
+        - label: Li o VLADE-RAG.md e o ROADMAP.md.
+          required: true
+        - label: A proposta precisa de um ADR novo.
+        - label: A proposta acrescenta uma dependência. Verifiquei a licença contra o ADR-0001.

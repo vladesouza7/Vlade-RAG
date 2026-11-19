@@ -1,6 +1,6 @@
 # ADR-0004: PostgreSQL com pgvector como armazenamento padrão
 
-- Status: Aceito
+- Status: Aceito. O item 4 foi substituído pelo ADR-0016.
 - Data: 2026-11-19
 
 ## Contexto
