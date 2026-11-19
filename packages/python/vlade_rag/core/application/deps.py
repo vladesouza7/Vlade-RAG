@@ -5,6 +5,7 @@ from __future__ import annotations
 from collections.abc import Callable, Iterator, Mapping, Sequence
 from contextlib import contextmanager
 from dataclasses import dataclass, field
+from typing import Any
 
 from vlade_rag.core.domain.kb_config import EmbeddingsConfig, GenerationConfig, RerankConfig
 from vlade_rag.core.ports import (
@@ -76,6 +77,7 @@ class Dependencies:
     cache: Cache | None = None
     tracer: Tracer = field(default_factory=NoopTracer)
     limits: Limits = field(default_factory=Limits)
+    default_kb_config: Mapping[str, Any] = field(default_factory=dict)
 
     def parser_for(self, mime_type: str) -> DocumentParser | None:
         for parser in self.parsers:

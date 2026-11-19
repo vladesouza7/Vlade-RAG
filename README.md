@@ -52,30 +52,29 @@ uv run pytest
 
 ## Usar com Docker Compose
 
+O caminho recomendado usa provedores remotos de modelos (OpenRouter, OpenCode, OpenAI ou outra API compatível com a OpenAI). Assim a máquina local roda só a API, o PostgreSQL e o Valkey, com menos de 3 GB de memória.
+
 1. Copie `.env.example` para `.env`. Preencha `POSTGRES_PASSWORD`, `VLADE_APP_DB_PASSWORD` e `VLADE_API_KEY_PEPPER`.
-2. Suba a pilha. O perfil `ollama` sobe também um servidor Ollama local:
+2. Preencha a chave do provedor, por exemplo `OPENROUTER_API_KEY`. Em `VLADE_DEFAULT_KB_CONFIG`, troque `provedor/modelo` por um modelo de geração do provedor.
+3. Suba a pilha:
 
    ```bash
-   docker compose --profile dev --profile ollama up -d --build
-   docker compose exec ollama ollama pull bge-m3
-   docker compose exec ollama ollama pull qwen3:1.7b
+   docker compose --profile dev up -d --build
    ```
 
-   Com o perfil `ollama`, defina `OLLAMA_BASE_URL=http://ollama:11434` no `.env`.
-3. Crie um tenant e uma chave de API:
+4. Crie um tenant e uma chave de API:
 
    ```bash
    docker compose exec api vlade-rag tenant create minha-empresa
    docker compose exec api vlade-rag key create --tenant minha-empresa --roles admin
    ```
 
-4. Crie uma base, envie um documento e faça uma pergunta pela API:
+5. Crie uma base, envie um documento e faça uma pergunta pela API:
 
    ```bash
    export KEY=vrag_...
    curl -H "Authorization: Bearer $KEY" -H "Content-Type: application/json" \
-     -d '{"slug": "docs", "name": "Documentos", "config": {"generation": {"model": "qwen3:1.7b"}}}' \
-     http://127.0.0.1:8000/v1/knowledge-bases
+     -d '{"slug": "docs", "name": "Documentos"}' http://127.0.0.1:8000/v1/knowledge-bases
    curl -H "Authorization: Bearer $KEY" -F "file=@manual.md" \
      http://127.0.0.1:8000/v1/knowledge-bases/docs/documents
    curl -H "Authorization: Bearer $KEY" -H "Content-Type: application/json" \
@@ -83,9 +82,20 @@ uv run pytest
      http://127.0.0.1:8000/v1/knowledge-bases/docs/query
    ```
 
+A base usa a configuração de `VLADE_DEFAULT_KB_CONFIG`. Para mudar só uma parte numa base, envie o campo `config` com os campos que mudam, por exemplo `{"generation": {"model": "outro/modelo"}}`. Os arquivos em [`deploy/examples/`](deploy/examples/) têm exemplos completos.
+
 A imagem padrão lê texto, Markdown e HTML. Para PDF e DOCX, instale o extra `docling`.
 
 A documentação interativa da API fica em `http://127.0.0.1:8000/docs` fora do ambiente `prod`. Se a porta 8000 já estiver em uso, mude `VLADE_API_HOST_PORT` no `.env`.
+
+### Modelos locais com Ollama (opcional)
+
+O Ollama roda os modelos na própria máquina e precisa de muita memória e CPU. Para usar, suba o perfil `ollama`, defina `OLLAMA_BASE_URL=http://ollama:11434` e baixe os modelos:
+
+```bash
+docker compose --profile dev --profile ollama up -d
+docker compose exec ollama ollama pull bge-m3
+```
 
 ## Estrutura do repositório
 

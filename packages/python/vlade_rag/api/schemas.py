@@ -28,7 +28,9 @@ class _Model(BaseModel):
 class KnowledgeBaseCreate(_Model):
     slug: str = Field(min_length=1, max_length=63)
     name: str = Field(min_length=1, max_length=200)
-    config: KnowledgeBaseConfig = Field(default_factory=KnowledgeBaseConfig)
+    config: dict[str, Any] | None = Field(
+        default=None, description="Partial configuration, merged over the server default."
+    )
 
 
 class KnowledgeBaseOut(_Model):

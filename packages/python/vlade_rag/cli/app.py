@@ -15,7 +15,7 @@ import typer
 
 from vlade_rag import __version__
 from vlade_rag.core.config import get_settings
-from vlade_rag.core.domain import KnowledgeBaseConfig, Role, TenantContext, VladeError
+from vlade_rag.core.domain import Role, TenantContext, VladeError
 from vlade_rag.native import backend, engine_version
 
 app = typer.Typer(name="vlade-rag", no_args_is_help=True, add_completion=False)
@@ -169,9 +169,10 @@ def key_create(
 # ---------------------------------------------------------------- knowledge bases
 
 
-def _load_config(path: Path | None) -> KnowledgeBaseConfig:
+def _load_config(path: Path | None) -> dict[str, Any] | None:
+    """Read a (possibly partial) configuration. None: use the server default."""
     if path is None:
-        return KnowledgeBaseConfig()
+        return None
     text = path.read_text(encoding="utf-8")
     if path.suffix in (".yaml", ".yml"):
         try:
@@ -179,8 +180,13 @@ def _load_config(path: Path | None) -> KnowledgeBaseConfig:
         except ImportError as exc:
             typer.echo("YAML needs PyYAML. Use a .json file instead.", err=True)
             raise typer.Exit(2) from exc
-        return KnowledgeBaseConfig.model_validate(yaml.safe_load(text))
-    return KnowledgeBaseConfig.model_validate_json(text)
+        data = yaml.safe_load(text)
+    else:
+        data = json.loads(text)
+    if not isinstance(data, dict):
+        typer.echo("The configuration file must contain an object.", err=True)
+        raise typer.Exit(2)
+    return data
 
 
 @kb_app.command("create")

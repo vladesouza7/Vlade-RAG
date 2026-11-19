@@ -7,7 +7,7 @@ separator, for example ``VLADE_API__PORT=8000``. See docs/ARCHITECTURE.md sectio
 from __future__ import annotations
 
 from functools import lru_cache
-from typing import Literal
+from typing import Any, Literal
 
 from pydantic import BaseModel, Field, SecretStr, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -62,10 +62,32 @@ class OpenRouterSettings(OpenAICompatibleSettings):
     base_url: str = "https://openrouter.ai/api/v1"
 
 
+class OpenCodeSettings(OpenAICompatibleSettings):
+    """OpenCode Zen. Only models served on ``/chat/completions`` work with this adapter."""
+
+    base_url: str = "https://opencode.ai/zen/v1"
+
+
 class ProvidersSettings(BaseModel):
     ollama: OllamaSettings = Field(default_factory=OllamaSettings)
     openai: OpenAICompatibleSettings = Field(default_factory=OpenAICompatibleSettings)
     openrouter: OpenRouterSettings = Field(default_factory=OpenRouterSettings)
+    opencode: OpenCodeSettings = Field(default_factory=OpenCodeSettings)
+    # Any other OpenAI-compatible API, by name. Example:
+    # VLADE_PROVIDERS__COMPATIBLE__GROQ__BASE_URL=https://api.groq.com/openai/v1
+    # VLADE_PROVIDERS__COMPATIBLE__GROQ__API_KEY=...
+    # The knowledge base then uses provider "groq".
+    compatible: dict[str, OpenAICompatibleSettings] = Field(default_factory=dict)
+
+    def openai_compatible(self) -> dict[str, OpenAICompatibleSettings]:
+        """Every OpenAI-compatible provider by name: built-in ones and ``compatible``."""
+        return {
+            "openai": self.openai,
+            "openrouter": self.openrouter,
+            "opencode": self.opencode,
+            **{name.lower(): cfg for name, cfg in self.compatible.items()},
+        }
+
     retries: int = Field(default=3, ge=0, le=10)
 
 
@@ -113,6 +135,9 @@ class Settings(BaseSettings):
     worker: WorkerSettings = Field(default_factory=WorkerSettings)
     limits: LimitsSettings = Field(default_factory=LimitsSettings)
     otel: OtelSettings = Field(default_factory=OtelSettings)
+    # Server default for new knowledge bases, as JSON. A config sent on creation is merged
+    # over it. Example: {"embeddings": {"provider": "openrouter", ...}, "generation": {...}}
+    default_kb_config: dict[str, Any] = Field(default_factory=dict)
 
 
 @lru_cache(maxsize=1)

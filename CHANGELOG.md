@@ -26,6 +26,8 @@ Este arquivo registra as mudanças relevantes de cada versão. O formato segue o
 - OpenTelemetry básico e logs JSON.
 - Dataset `legal-ptbr` com 100 documentos e 20 perguntas.
 - Compose: serviço de migração, worker, Ollama opcional (`--profile ollama`).
+- Provedores remotos prontos: OpenRouter, OpenCode Zen e qualquer API compatível com a OpenAI por variável de ambiente.
+- `VLADE_DEFAULT_KB_CONFIG`: configuração padrão das bases novas, com mesclagem parcial.
 
 ### Corrigido
 

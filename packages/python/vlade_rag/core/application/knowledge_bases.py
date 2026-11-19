@@ -3,7 +3,11 @@
 from __future__ import annotations
 
 import re
+from collections.abc import Mapping
 from dataclasses import dataclass
+from typing import Any
+
+from pydantic import ValidationError
 
 from vlade_rag.core.application.deps import Dependencies
 from vlade_rag.core.domain import (
@@ -34,8 +38,9 @@ class CreateKnowledgeBase:
         *,
         slug: str,
         name: str,
-        config: KnowledgeBaseConfig | None = None,
+        config: KnowledgeBaseConfig | Mapping[str, Any] | None = None,
     ) -> KnowledgeBase:
+        """``config`` may be partial: it is merged over the server default configuration."""
         ctx.require(Role.ADMIN)
         if not _SLUG.match(slug):
             raise InvalidArgument(
@@ -44,7 +49,7 @@ class CreateKnowledgeBase:
         if not name.strip():
             raise InvalidArgument("The name must not be empty.")
         kb = await self.deps.repository.create_knowledge_base(
-            ctx, slug=slug, name=name.strip(), config=config or KnowledgeBaseConfig()
+            ctx, slug=slug, name=name.strip(), config=self.resolve_config(config)
         )
         space = await self.deps.repository.get_embedding_space(ctx, kb.active_embedding_space_id)
         await self.deps.vector_index.ensure_space(ctx, space)
@@ -62,6 +67,27 @@ class CreateKnowledgeBase:
             ),
         )
         return kb
+
+    def resolve_config(
+        self, config: KnowledgeBaseConfig | Mapping[str, Any] | None
+    ) -> KnowledgeBaseConfig:
+        if isinstance(config, KnowledgeBaseConfig):
+            return config
+        merged = _deep_merge(self.deps.default_kb_config, config or {})
+        try:
+            return KnowledgeBaseConfig.model_validate(merged)
+        except ValidationError as exc:
+            raise InvalidArgument(f"Invalid knowledge base configuration: {exc}") from exc
+
+
+def _deep_merge(base: Mapping[str, Any], override: Mapping[str, Any]) -> dict[str, Any]:
+    out = dict(base)
+    for key, value in override.items():
+        if isinstance(value, Mapping) and isinstance(out.get(key), Mapping):
+            out[key] = _deep_merge(out[key], value)
+        else:
+            out[key] = value
+    return out
 
 
 class ListKnowledgeBases:

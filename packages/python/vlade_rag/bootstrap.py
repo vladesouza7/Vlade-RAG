@@ -50,8 +50,8 @@ class ProviderClients:
             client = ProviderHttpClient(
                 "ollama", p.ollama.base_url, timeout=p.ollama.timeout, retries=p.retries
             )
-        elif provider in ("openai", "openrouter"):
-            cfg = p.openai if provider == "openai" else p.openrouter
+        elif provider in p.openai_compatible():
+            cfg = p.openai_compatible()[provider]
             headers = {}
             if cfg.api_key is not None:
                 headers["Authorization"] = f"Bearer {cfg.api_key.get_secret_value()}"
@@ -69,7 +69,11 @@ class ProviderClients:
         self._clients.clear()
 
 
-def builtin_plugins() -> list[PluginSpec]:
+def builtin_plugins(
+    compatible: tuple[str, ...] = ("openai", "openrouter", "opencode"),
+) -> list[PluginSpec]:
+    """Built-in adapters. ``compatible`` lists the OpenAI-compatible provider names."""
+
     def ollama_embeddings(cfg: EmbeddingsConfig, clients: ProviderClients) -> EmbeddingProvider:
         from vlade_rag.generation.providers.ollama import OllamaEmbeddingProvider
 
@@ -100,10 +104,8 @@ def builtin_plugins() -> list[PluginSpec]:
 
         return factory
 
-    return [
+    specs = [
         PluginSpec("embeddings", "ollama", ollama_embeddings, "Ollama /api/embed"),
-        PluginSpec("embeddings", "openai", openai_embeddings("openai"), "OpenAI API"),
-        PluginSpec("embeddings", "openrouter", openai_embeddings("openrouter"), "OpenRouter"),
         PluginSpec(
             "embeddings",
             "hashing",
@@ -111,8 +113,6 @@ def builtin_plugins() -> list[PluginSpec]:
             "Offline feature hashing (tests and demos)",
         ),
         PluginSpec("llm", "ollama", ollama_llm, "Ollama /api/chat"),
-        PluginSpec("llm", "openai", openai_llm("openai"), "OpenAI API"),
-        PluginSpec("llm", "openrouter", openai_llm("openrouter"), "OpenRouter"),
         PluginSpec(
             "llm",
             "extractive",
@@ -120,6 +120,12 @@ def builtin_plugins() -> list[PluginSpec]:
             "Offline extractive answers (tests and demos)",
         ),
     ]
+    for name in compatible:
+        specs.append(
+            PluginSpec("embeddings", name, openai_embeddings(name), f"{name} (OpenAI-compatible)")
+        )
+        specs.append(PluginSpec("llm", name, openai_llm(name), f"{name} (OpenAI-compatible)"))
+    return specs
 
 
 def default_parsers() -> list[DocumentParser]:
@@ -178,7 +184,8 @@ async def build_runtime(
 ) -> Runtime:
     settings = settings or get_settings()
     registry = Registry()
-    registry.register_all(builtin_plugins())
+    compatible = tuple(settings.providers.openai_compatible())
+    registry.register_all(builtin_plugins(compatible))
     if load_plugins:
         registry.load_entry_points()
     clients = ProviderClients(settings)
@@ -261,6 +268,7 @@ async def build_runtime(
             job_max_attempts=limits.job_max_attempts,
             store_query_text=limits.store_query_text,
         ),
+        default_kb_config=settings.default_kb_config,
         **ports,
     )
     return Runtime(

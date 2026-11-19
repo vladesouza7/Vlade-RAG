@@ -1,5 +1,6 @@
 # Vlade-RAG services. Profiles: dev, staging, prod (docs/ARCHITECTURE.md section 17).
 # Run from the repository root: docker compose --profile dev up
+# Models: remote providers (OpenRouter, OpenCode, OpenAI) need only API keys in .env.
 # Optional local model server: add --profile ollama and set OLLAMA_BASE_URL=http://ollama:11434
 # Memory limits keep the dev profile under 3 GB without Ollama (RNF-11).
 
@@ -12,6 +13,9 @@ x-app-env: &app-env
   VLADE_PROVIDERS__OLLAMA__THINK: ${OLLAMA_THINK:-false}
   VLADE_PROVIDERS__OPENAI__API_KEY: ${OPENAI_API_KEY:-}
   VLADE_PROVIDERS__OPENROUTER__API_KEY: ${OPENROUTER_API_KEY:-}
+  VLADE_PROVIDERS__OPENCODE__API_KEY: ${OPENCODE_API_KEY:-}
+  # Server default for new knowledge bases (JSON). See .env.example.
+  VLADE_DEFAULT_KB_CONFIG: ${VLADE_DEFAULT_KB_CONFIG:-{}}
 
 services:
   migrate:

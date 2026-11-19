@@ -723,6 +723,10 @@ VLADE_PROVIDERS__OLLAMA__BASE_URL=http://ollama:11434
 VLADE_PROVIDERS__OLLAMA__THINK=false
 VLADE_PROVIDERS__OPENAI__API_KEY=***
 VLADE_PROVIDERS__OPENROUTER__API_KEY=***
+VLADE_PROVIDERS__OPENCODE__API_KEY=***                 # OpenCode Zen, https://opencode.ai/zen/v1
+VLADE_PROVIDERS__COMPATIBLE__GROQ__BASE_URL=https://api.groq.com/openai/v1   # qualquer API compatível
+VLADE_PROVIDERS__COMPATIBLE__GROQ__API_KEY=***
+VLADE_DEFAULT_KB_CONFIG={"embeddings": {"provider": "openrouter", ...}}      # padrão das bases novas
 VLADE_API__EMBEDDED_WORKER=true
 VLADE_WORKER__CONCURRENCY=2
 VLADE_OTEL__ENABLED=true
@@ -769,6 +773,19 @@ generation:
 ```
 
 O modelo de geração padrão é só um exemplo de configuração local. A aplicação escolhe o modelo.
+
+O servidor pode trocar esses valores padrão com `VLADE_DEFAULT_KB_CONFIG` (JSON). A configuração enviada na criação de uma base é mesclada sobre esse padrão: os campos enviados vencem, e os outros vêm do padrão.
+
+Nomes de provedor aceitos em `embeddings.provider` e `generation.provider`:
+
+| Nome | Tipo | Endereço |
+|---|---|---|
+| `ollama` | Ollama | `VLADE_PROVIDERS__OLLAMA__BASE_URL` |
+| `openai` | API OpenAI | `https://api.openai.com/v1` |
+| `openrouter` | API compatível com OpenAI | `https://openrouter.ai/api/v1` |
+| `opencode` | API compatível com OpenAI (OpenCode Zen, só modelos de `/chat/completions`) | `https://opencode.ai/zen/v1` |
+| Nome livre | Qualquer API compatível com OpenAI declarada em `VLADE_PROVIDERS__COMPATIBLE__<NOME>__*` | Configurável |
+| `hashing`, `extractive` | Provedores offline para testes e demonstrações | Nenhum |
 
 Uma mudança em `embeddings` exige uma reindexação no modo `embeddings`. Uma mudança em `chunking` exige uma reindexação no modo `full`. O caso de uso de atualização de configuração recusa a mudança e informa a reindexação necessária.
 
