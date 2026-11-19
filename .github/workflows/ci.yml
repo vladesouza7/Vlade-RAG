@@ -47,6 +47,9 @@ jobs:
           uv sync --locked --package vlade-rag
           --extra api --extra cli --extra postgres --extra ollama --extra openai --extra otel
           ${{ matrix.native && '--extra native' || '' }}
+      - name: Install dev tools
+        # Recent uv versions do not install the root dev group with --package.
+        run: uv sync --locked --inexact --only-group dev
       - name: Check native backend
         run: |
           backend=$(uv run --no-sync python -c "from vlade_rag.native import backend; print(backend())")
@@ -87,7 +90,9 @@ jobs:
       - name: Python runtime dependencies
         run: |
           uv venv /tmp/lic
-          uv export --frozen --no-dev --package vlade-rag --all-extras --no-emit-workspace -o /tmp/req.txt
+          # The docling extra pulls PyTorch and NVIDIA CUDA libraries (proprietary). ADR-0001
+          # item 4 keeps non-permissive dependencies in optional extras, so it is not checked here.
+          uv export --frozen --no-dev --package vlade-rag --extra server --extra api --extra cli --extra postgres --extra ollama --extra openai --extra otel --no-emit-workspace -o /tmp/req.txt
           uv pip install --python /tmp/lic/bin/python -r /tmp/req.txt
           uvx pip-licenses==5.5.5 --python /tmp/lic/bin/python --from=mixed --format=json > /tmp/licenses.json
           python3 scripts/check_licenses.py /tmp/licenses.json

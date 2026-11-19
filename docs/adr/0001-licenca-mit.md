@@ -16,7 +16,7 @@ O Vlade-RAG é um framework para outros projetos, inclusive projetos comerciais.
 5. Um serviço externo que roda em processo separado não entra no pacote Python. A documentação de implantação informa a licença do serviço.
 6. A CI verifica as licenças com `pip-licenses` (Python) e `cargo-deny` (Rust).
 
-Dependências registradas com licença MPL-2.0: nenhuma.
+Dependências registradas com licença MPL-2.0: `certifi` (certificados raiz, dependência indireta do cliente HTTP). O projeto usa o `certifi` sem modificação.
 
 ## Alternativas avaliadas
 
