@@ -1,6 +1,8 @@
-"""End-to-end use cases with in-memory adapters."""
+"""End-to-end use cases. Runs with in-memory adapters and with PostgreSQL (see ``world``)."""
 
 from __future__ import annotations
+
+from uuid import UUID
 
 import pytest
 
@@ -57,13 +59,15 @@ def kb_config() -> KnowledgeBaseConfig:
     )
 
 
-async def ingest(world: World, filename: str, data: str, **kw: object) -> None:
-    await SubmitIngestion(world.deps).execute(
+async def ingest(world: World, filename: str, data: str, **kw: object) -> UUID:
+    result = await SubmitIngestion(world.deps).execute(
         world.admin,
         knowledge_base="vendas",
         raw=RawDocument(filename=filename, mime_type="", data=data.encode()),
         **kw,  # type: ignore[arg-type]
     )
+    world.extra.setdefault("docs", {})[filename] = result.document.id
+    return result.document.id
 
 
 @pytest.fixture
@@ -190,7 +194,7 @@ async def test_answer_without_sources(world: World) -> None:
 async def test_get_document_with_text(loaded: World) -> None:
     kbs = await ListKnowledgeBases(loaded.deps).execute(loaded.reader)
     assert [(s.knowledge_base.slug, s.document_count) for s in kbs] == [("vendas", 2)]
-    doc_id = next(iter(loaded.adapters.store.data(loaded.admin).documents))
+    doc_id = loaded.extra["docs"]["manual.md"]
     view = await GetDocument(loaded.deps).execute(
         loaded.reader, knowledge_base="vendas", document_id=doc_id, include_text=True, max_chars=20
     )
@@ -199,20 +203,22 @@ async def test_get_document_with_text(loaded: World) -> None:
 
 
 async def test_delete_document_preview_then_confirm(loaded: World) -> None:
-    data = loaded.adapters.store.data(loaded.admin)
-    doc_id = next(d.id for d in data.documents.values() if d.external_id == "manual")
+    doc_id = loaded.extra["docs"]["manual.md"]
     preview = await DeleteDocument(loaded.deps).execute(
         loaded.admin, knowledge_base="vendas", document_id=doc_id, confirm=False
     )
     assert not preview.executed and preview.chunks > 0
-    assert doc_id in data.documents
+    assert any(str(doc_id) in key for key in loaded.object_keys(loaded.admin))
     report = await DeleteDocument(loaded.deps).execute(
         loaded.admin, knowledge_base="vendas", document_id=doc_id, confirm=True
     )
     assert report.executed
-    assert doc_id not in data.documents
-    assert all(str(doc_id) not in key for key in data.objects)
-    actions = [(e.action, e.outcome) for e in data.audit]
+    with pytest.raises(NotFound):
+        await GetDocument(loaded.deps).execute(
+            loaded.reader, knowledge_base="vendas", document_id=doc_id
+        )
+    assert all(str(doc_id) not in key for key in loaded.object_keys(loaded.admin))
+    actions = await loaded.audit_actions(loaded.admin)
     assert ("document.delete", "preview") in actions
     assert ("document.delete", "success") in actions
 
@@ -224,7 +230,7 @@ async def test_roles_are_enforced(loaded: World) -> None:
             knowledge_base="vendas",
             raw=RawDocument(filename="x.txt", mime_type="text/plain", data=b"x"),
         )
-    doc_id = next(iter(loaded.adapters.store.data(loaded.admin).documents))
+    doc_id = loaded.extra["docs"]["manual.md"]
     with pytest.raises(PermissionDenied):
         await DeleteDocument(loaded.deps).execute(
             loaded.reader, knowledge_base="vendas", document_id=doc_id, confirm=True
@@ -236,8 +242,10 @@ async def test_tenant_isolation(loaded: World) -> None:
     assert await ListKnowledgeBases(loaded.deps).execute(other) == []
     with pytest.raises(NotFound):
         await Search(loaded.deps).execute(other, knowledge_base="vendas", text="prazo")
-    doc_id = next(iter(loaded.adapters.store.data(loaded.admin).documents))
-    await CreateKnowledgeBase(loaded.deps).execute(other, slug="vendas", name="Vendas Globex")
+    doc_id = loaded.extra["docs"]["manual.md"]
+    await CreateKnowledgeBase(loaded.deps).execute(
+        other, slug="vendas", name="Vendas Globex", config=kb_config()
+    )
     with pytest.raises(NotFound):
         await GetDocument(loaded.deps).execute(other, knowledge_base="vendas", document_id=doc_id)
     result = await Search(loaded.deps).execute(other, knowledge_base="vendas", text="prazo")

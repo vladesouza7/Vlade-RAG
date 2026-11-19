@@ -35,7 +35,13 @@ api = [
     "uvicorn>=0.54.0",
 ]
 cli = ["typer>=0.29.2"]
-server = ["vlade-rag[native,api,cli]"]
+postgres = [
+    "asyncpg>=0.32.0",
+    "pgvector>=0.5.1",
+]
+ollama = ["httpx2>=2.16.2"]
+openai = ["httpx2>=2.16.2"]
+server = ["vlade-rag[native,api,cli,postgres,ollama,openai]"]
 
 [project.scripts]
 vlade-rag = "vlade_rag.cli:main"

@@ -400,6 +400,8 @@ class MemoryVectorIndex:
         *,
         ef_search: int = 100,
     ) -> list[ChunkHit]:
+        if len(vector) != space.dimension:
+            raise InvalidArgument("The query vector has the wrong dimension.")
         data = self.store.data(ctx)
         hits = []
         for chunk_id, stored in data.vectors.get(space.id, {}).items():
