@@ -1,25 +1,73 @@
 # Vlade-RAG services. Profiles: dev, staging, prod (docs/ARCHITECTURE.md section 17).
 # Run from the repository root: docker compose --profile dev up
-# Memory limits keep the dev profile under 3 GB (RNF-11).
+# Optional local model server: add --profile ollama and set OLLAMA_BASE_URL=http://ollama:11434
+# Memory limits keep the dev profile under 3 GB without Ollama (RNF-11).
+
+x-app-env: &app-env
+  VLADE_ENVIRONMENT: ${VLADE_ENVIRONMENT:-dev}
+  VLADE_LOG_LEVEL: ${VLADE_LOG_LEVEL:-INFO}
+  VLADE_DATABASE__URL: postgresql://vlade_app:${VLADE_APP_DB_PASSWORD:?Defina VLADE_APP_DB_PASSWORD no arquivo .env}@postgres:5432/vlade
+  VLADE_SECURITY__API_KEY_PEPPER: ${VLADE_API_KEY_PEPPER:?Defina VLADE_API_KEY_PEPPER no arquivo .env}
+  VLADE_PROVIDERS__OLLAMA__BASE_URL: ${OLLAMA_BASE_URL:-http://host.docker.internal:11434}
+  VLADE_PROVIDERS__OLLAMA__THINK: ${OLLAMA_THINK:-false}
+  VLADE_PROVIDERS__OPENAI__API_KEY: ${OPENAI_API_KEY:-}
+  VLADE_PROVIDERS__OPENROUTER__API_KEY: ${OPENROUTER_API_KEY:-}
 
 services:
-  api:
+  migrate:
     profiles: [dev, staging, prod]
+    image: vlade-rag:dev
     build:
       context: ../..
       dockerfile: deploy/docker/Dockerfile
-    image: vlade-rag:dev
+    command: ["vlade-rag", "db", "upgrade"]
+    healthcheck:
+      disable: true
     environment:
-      VLADE_ENVIRONMENT: ${VLADE_ENVIRONMENT:-dev}
-      VLADE_LOG_LEVEL: ${VLADE_LOG_LEVEL:-INFO}
-    ports:
-      - "127.0.0.1:${VLADE_API_HOST_PORT:-8000}:8000"
+      <<: *app-env
+      VLADE_DATABASE__OWNER_URL: postgresql://vlade_owner:${POSTGRES_PASSWORD:?Defina POSTGRES_PASSWORD no arquivo .env}@postgres:5432/vlade
     depends_on:
       postgres:
         condition: service_healthy
+    restart: "no"
+
+  api:
+    profiles: [dev, staging, prod]
+    image: vlade-rag:dev
+    environment:
+      <<: *app-env
+      # dev: the API also runs the ingestion worker. staging/prod: use the worker service.
+      VLADE_API__EMBEDDED_WORKER: ${VLADE_EMBEDDED_WORKER:-true}
+    volumes:
+      - objects:/data/objects
+    ports:
+      - "127.0.0.1:${VLADE_API_HOST_PORT:-8000}:8000"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
       valkey:
         condition: service_healthy
-    mem_limit: 512m
+    mem_limit: 768m
+    restart: unless-stopped
+
+  worker:
+    profiles: [staging, prod]
+    image: vlade-rag:dev
+    command: ["vlade-rag", "worker"]
+    healthcheck:
+      disable: true
+    environment:
+      <<: *app-env
+    volumes:
+      - objects:/data/objects
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+    mem_limit: 1g
     restart: unless-stopped
 
   postgres:
@@ -58,5 +106,16 @@ services:
     mem_limit: 320m
     restart: unless-stopped
 
+  ollama:
+    profiles: [ollama]
+    image: ollama/ollama:0.40.16
+    volumes:
+      - ollama:/root/.ollama
+    ports:
+      - "127.0.0.1:${OLLAMA_HOST_PORT:-11434}:11434"
+    restart: unless-stopped
+
 volumes:
   pgdata:
+  objects:
+  ollama:

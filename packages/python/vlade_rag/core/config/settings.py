@@ -9,7 +9,7 @@ from __future__ import annotations
 from functools import lru_cache
 from typing import Literal
 
-from pydantic import BaseModel, Field, SecretStr
+from pydantic import BaseModel, Field, SecretStr, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 Environment = Literal["dev", "staging", "prod"]
@@ -48,19 +48,24 @@ class OllamaSettings(BaseModel):
 
 
 class OpenAICompatibleSettings(BaseModel):
-    base_url: str
+    base_url: str = "https://api.openai.com/v1"
     api_key: SecretStr | None = None
     timeout: float = 120.0
+
+    @field_validator("api_key", mode="before")
+    @classmethod
+    def _empty_is_none(cls, value: object) -> object:
+        return None if value in ("", None) else value
+
+
+class OpenRouterSettings(OpenAICompatibleSettings):
+    base_url: str = "https://openrouter.ai/api/v1"
 
 
 class ProvidersSettings(BaseModel):
     ollama: OllamaSettings = Field(default_factory=OllamaSettings)
-    openai: OpenAICompatibleSettings = Field(
-        default_factory=lambda: OpenAICompatibleSettings(base_url="https://api.openai.com/v1")
-    )
-    openrouter: OpenAICompatibleSettings = Field(
-        default_factory=lambda: OpenAICompatibleSettings(base_url="https://openrouter.ai/api/v1")
-    )
+    openai: OpenAICompatibleSettings = Field(default_factory=OpenAICompatibleSettings)
+    openrouter: OpenRouterSettings = Field(default_factory=OpenRouterSettings)
     retries: int = Field(default=3, ge=0, le=10)
 
 

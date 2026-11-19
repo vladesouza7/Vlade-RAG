@@ -21,6 +21,19 @@ jobs:
       matrix:
         python: ["3.12", "3.13"]
         native: [false, true]
+    services:
+      postgres:
+        image: pgvector/pgvector:0.8.7-pg17-trixie
+        env:
+          POSTGRES_USER: vlade_owner
+          POSTGRES_PASSWORD: ci-only-password
+          POSTGRES_DB: postgres
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U vlade_owner" --health-interval 5s
+          --health-timeout 3s --health-retries 20
+    env:
+      VLADE_TEST_DATABASE_URL: postgresql://vlade_owner:ci-only-password@localhost:5432/postgres
     steps:
       - uses: actions/checkout@v7
       - uses: dtolnay/rust-toolchain@stable
@@ -31,7 +44,8 @@ jobs:
           enable-cache: true
       - name: Install
         run: >
-          uv sync --locked --package vlade-rag --extra api --extra cli
+          uv sync --locked --package vlade-rag
+          --extra api --extra cli --extra postgres --extra ollama --extra openai --extra otel
           ${{ matrix.native && '--extra native' || '' }}
       - name: Check native backend
         run: |
@@ -105,7 +119,7 @@ jobs:
             VLADE-RAG.md CLAUDE.md README.md CONTRIBUTING.md CODE_OF_CONDUCT.md \
             SECURITY.md CHANGELOG.md docs/*.md docs/adr/*.md \
             packages/python/README.md packages/rust/*/README.md \
-            evals/datasets/README.md skills/*/SKILL.md
+            evals/datasets/README.md evals/datasets/*/README.md skills/*/SKILL.md
 
   build:
     name: Build distributions
@@ -131,6 +145,8 @@ jobs:
     runs-on: ubuntu-latest
     env:
       POSTGRES_PASSWORD: ci-only-password
+      VLADE_APP_DB_PASSWORD: ci-only-app-password
+      VLADE_API_KEY_PEPPER: ci-only-pepper
     steps:
       - uses: actions/checkout@v7
       - name: Validate
@@ -141,6 +157,7 @@ jobs:
         run: |
           curl --fail --silent http://127.0.0.1:8000/health/live | tee /tmp/live.json
           grep -q '"native_backend":"rust"' /tmp/live.json
+          curl --fail --silent http://127.0.0.1:8000/health/ready
       - name: Logs on failure
         if: failure()
         run: docker compose --profile dev logs

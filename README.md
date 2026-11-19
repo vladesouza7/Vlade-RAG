@@ -4,7 +4,7 @@ Framework open source de Retrieval-Augmented Generation (RAG), modular e extens�
 
 O Vlade-RAG não é um chatbot. O Vlade-RAG entrega um núcleo reutilizável para ingestão, indexação, recuperação, geração e avaliação. Uma aplicação usa esse núcleo e troca provedores por configuração: LLM, embeddings, reranker, banco vetorial, estratégia de chunking e fontes de documentos.
 
-> **Situação:** fase 0 (fundação). O repositório tem a especificação, a arquitetura, a estrutura do código, a CI e o ambiente de desenvolvimento. As funções de RAG chegam na fase 1. Veja o [roadmap](docs/ROADMAP.md).
+> **Situação:** fase 1 (núcleo mínimo) implementada. O framework ingere documentos, busca com recuperação híbrida e responde com citações, pela biblioteca Python, pela API REST e pela CLI. Veja o [roadmap](docs/ROADMAP.md).
 
 ## Para quem
 
@@ -39,19 +39,53 @@ Requisitos:
 Instale o ambiente Python e rode os testes:
 
 ```bash
-uv sync --package vlade-rag --extra api --extra cli
+uv sync --package vlade-rag --extra api --extra cli --extra postgres --extra ollama --extra openai
 uv run pytest
 ```
 
-Suba o perfil `dev` (API, PostgreSQL e Valkey):
+Para rodar também os testes com PostgreSQL, informe um banco de teste com um usuário superusuário:
 
 ```bash
-cp .env.example .env          # preencha POSTGRES_PASSWORD
-docker compose --profile dev up --build
-curl http://127.0.0.1:8000/health/live
+export VLADE_TEST_DATABASE_URL=postgresql://usuario:senha@127.0.0.1:5432/postgres
+uv run pytest
 ```
 
-Se a porta 8000 já estiver em uso, mude `VLADE_API_HOST_PORT` no `.env`.
+## Usar com Docker Compose
+
+1. Copie `.env.example` para `.env`. Preencha `POSTGRES_PASSWORD`, `VLADE_APP_DB_PASSWORD` e `VLADE_API_KEY_PEPPER`.
+2. Suba a pilha. O perfil `ollama` sobe também um servidor Ollama local:
+
+   ```bash
+   docker compose --profile dev --profile ollama up -d --build
+   docker compose exec ollama ollama pull bge-m3
+   docker compose exec ollama ollama pull qwen3:1.7b
+   ```
+
+   Com o perfil `ollama`, defina `OLLAMA_BASE_URL=http://ollama:11434` no `.env`.
+3. Crie um tenant e uma chave de API:
+
+   ```bash
+   docker compose exec api vlade-rag tenant create minha-empresa
+   docker compose exec api vlade-rag key create --tenant minha-empresa --roles admin
+   ```
+
+4. Crie uma base, envie um documento e faça uma pergunta pela API:
+
+   ```bash
+   export KEY=vrag_...
+   curl -H "Authorization: Bearer $KEY" -H "Content-Type: application/json" \
+     -d '{"slug": "docs", "name": "Documentos", "config": {"generation": {"model": "qwen3:1.7b"}}}' \
+     http://127.0.0.1:8000/v1/knowledge-bases
+   curl -H "Authorization: Bearer $KEY" -F "file=@manual.md" \
+     http://127.0.0.1:8000/v1/knowledge-bases/docs/documents
+   curl -H "Authorization: Bearer $KEY" -H "Content-Type: application/json" \
+     -d '{"question": "Qual é o prazo de entrega?"}' \
+     http://127.0.0.1:8000/v1/knowledge-bases/docs/query
+   ```
+
+A imagem padrão lê texto, Markdown e HTML. Para PDF e DOCX, instale o extra `docling`.
+
+A documentação interativa da API fica em `http://127.0.0.1:8000/docs` fora do ambiente `prod`. Se a porta 8000 já estiver em uso, mude `VLADE_API_HOST_PORT` no `.env`.
 
 ## Estrutura do repositório
 

@@ -529,7 +529,7 @@ Alertas:
 | Binding Rust | PyO3 e Maturin | 1 |
 | API | FastAPI | 1 |
 | Banco | PostgreSQL 17 | 1 |
-| Acesso ao banco | SQLAlchemy 2 (assíncrono), asyncpg, pgvector-python, Alembic (ADR-0004) | 1 |
+| Acesso ao banco | asyncpg, pgvector, migrações em SQL (ADR-0016) | 1 |
 | Busca vetorial | pgvector (índice HNSW) | 1 |
 | Busca textual | `tsvector`, `unaccent` | 1 |
 | Busca fuzzy | `pg_trgm` | 1 |
