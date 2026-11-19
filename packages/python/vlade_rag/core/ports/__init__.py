@@ -36,6 +36,7 @@ from vlade_rag.core.domain import (
     MetadataFilter,
     ParsedDocument,
     Query,
+    QueryLogEntry,
     RawDocument,
     Role,
     ScoredChunk,
@@ -132,6 +133,7 @@ class KnowledgeRepository(Protocol):
         storage_key: str,
         size_bytes: int,
     ) -> DocumentVersion: ...
+    async def get_version(self, ctx: TenantContext, version_id: UUID) -> DocumentVersion: ...
     async def get_current_version(
         self, ctx: TenantContext, document_id: UUID
     ) -> DocumentVersion | None: ...
@@ -325,6 +327,7 @@ class JobQueue(Protocol):
 @runtime_checkable
 class AuditLog(Protocol):
     async def record(self, ctx: TenantContext, event: AuditEvent) -> None: ...
+    async def record_query(self, ctx: TenantContext, entry: QueryLogEntry) -> None: ...
 
 
 @dataclass(frozen=True, slots=True)

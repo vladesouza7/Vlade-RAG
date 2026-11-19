@@ -9,6 +9,7 @@ package = false
 
 [dependency-groups]
 dev = [
+    "anyio>=4.16.0",
     "httpx2>=2.16.2",
     "hypothesis>=6.170.16",
     "mypy>=2.4.1",

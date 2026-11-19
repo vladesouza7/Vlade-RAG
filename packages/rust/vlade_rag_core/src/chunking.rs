@@ -2,6 +2,8 @@
 
 use crate::tokens::token_spans;
 
+const HEADING_SCORE: u8 = 5;
+
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Strategy {
     Tokens,
@@ -59,7 +61,7 @@ fn boundary_scores(chars: &[char], spans: &[(usize, usize)], strategy: Strategy)
             0
         };
         if strategy == Strategy::Markdown && newlines >= 1 && chars[spans[i].0] == '#' {
-            base = 5;
+            base = HEADING_SCORE;
         }
         scores[i] = base;
     }
@@ -104,7 +106,12 @@ pub fn split_text(
         if cut >= n {
             break;
         }
-        s = cut.saturating_sub(overlap).max(s + 1);
+        // No overlap across a Markdown heading: the next chunk starts at the heading.
+        s = if scores[cut] == HEADING_SCORE {
+            cut
+        } else {
+            cut.saturating_sub(overlap).max(s + 1)
+        };
     }
     chunks
 }

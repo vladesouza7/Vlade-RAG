@@ -133,6 +133,7 @@ def count_tokens(texts: Sequence[str]) -> list[int]:
 # ---------------------------------------------------------------- chunking
 
 _SENTENCE_END = frozenset(".!?…")
+_HEADING_SCORE = 5
 STRATEGIES = ("tokens", "recursive", "markdown", "sentence")
 
 
@@ -161,7 +162,7 @@ def _boundary_scores(text: str, spans: list[tuple[int, int]], strategy: str) -> 
         else:
             base = 0
         if strategy == "markdown" and newlines >= 1 and text[spans[i][0]] == "#":
-            base = 5
+            base = _HEADING_SCORE
         scores[i] = base
     return scores
 
@@ -174,7 +175,7 @@ def split_text(
     Returns ``(start_offset, end_offset, token_count)`` for each chunk. The algorithm cuts at
     the best boundary inside the window ``[start + max_tokens // 4, start + max_tokens]``.
     Ties go to the latest boundary. The next chunk starts ``overlap_tokens`` tokens before
-    the cut.
+    the cut, except after a Markdown heading cut, where it starts at the heading.
     """
     if strategy not in STRATEGIES:
         raise ValueError(f"unknown strategy {strategy!r}")
@@ -203,7 +204,8 @@ def split_text(
         chunks.append((spans[s][0], spans[cut - 1][1], cut - s))
         if cut >= n:
             break
-        s = max(cut - overlap, s + 1)
+        # No overlap across a Markdown heading: the next chunk starts at the heading.
+        s = cut if scores[cut] == _HEADING_SCORE else max(cut - overlap, s + 1)
     return chunks
 
 

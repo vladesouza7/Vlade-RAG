@@ -223,3 +223,19 @@ class AuditEvent:
     resource_id: str | None = None
     details: Metadata = field(default_factory=dict)
     trace_id: str | None = None
+
+
+@dataclass(frozen=True, slots=True)
+class QueryLogEntry:
+    """One search or query. Stores the hash of the query text by default (RF-42)."""
+
+    interface: str
+    mode: str  # search, query
+    query_hash: bytes
+    result_count: int
+    latency_ms: int
+    knowledge_base_id: UUID | None = None
+    principal_id: UUID | None = None
+    query_text: str | None = None
+    grounded: bool | None = None
+    trace_id: str | None = None
