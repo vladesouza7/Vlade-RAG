@@ -16,8 +16,8 @@
 
 | Fase | Nome | Versão | Situação |
 |---|---|---|---|
-| 0 | Fundação | `0.0.x` | Tarefas 0.1 a 0.10 concluídas em 2026-11-19. Falta a primeira execução da CI no GitHub |
-| 1 | Núcleo mínimo | `0.1.0` | Em andamento. Tarefas 1.1 a 1.21 implementadas em 2026-11-19. Falta rodar o teste de aceite com um provedor remoto e a revisão humana do relatório |
+| 0 | Fundação | `0.0.x` | Tarefas 0.1 a 0.10 concluídas em 2026-11-19. A CI passou no GitHub em 2026-11-19, inclusive licenças, linter de documentação e `GET /health/live` no perfil `dev`. Falta medir o consumo de memória do perfil `dev` (RNF-11). A fase está integrada na branch `homolog` |
+| 1 | Núcleo mínimo | `0.1.0` | Em andamento. Tarefas 1.1 a 1.21 implementadas em 2026-11-19. A CI passou no GitHub em 2026-11-19 (PR #1) e a fase está integrada na branch `homolog`. Falta rodar o teste de aceite com um provedor remoto e a revisão humana do relatório |
 | 2 | Interfaces e armazenamento | `0.2.0` | Não iniciada |
 | 3 | Qualidade | `0.3.0` | Não iniciada |
 | 4 | Operação | `0.4.0` | Não iniciada |
