@@ -2,7 +2,8 @@
 
 - ``vlade_rag.core`` imports only the standard library, pydantic, pydantic-settings
   and other ``vlade_rag.core`` modules.
-- ``vlade_rag.core.domain`` imports only the standard library and ``vlade_rag.core.domain``.
+- ``vlade_rag.core.domain`` imports only the standard library, pydantic and
+  ``vlade_rag.core.domain``.
 """
 
 from __future__ import annotations
@@ -48,4 +49,4 @@ def test_core_does_not_import_outer_layers() -> None:
 
 
 def test_domain_is_pure() -> None:
-    assert _violations("core/domain", "vlade_rag.core.domain", set()) == []
+    assert _violations("core/domain", "vlade_rag.core.domain", {"pydantic"}) == []

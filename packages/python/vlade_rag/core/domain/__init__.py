@@ -1,4 +1,107 @@
 """Entities, value objects and domain errors.
 
-No I/O, no third-party imports except the standard library.
+The domain does no I/O. It imports only the standard library, pydantic (validation of the
+knowledge base configuration) and other ``vlade_rag.core.domain`` modules.
 """
+
+from vlade_rag.core.domain.documents import ParsedDocument, RawDocument, Section, SourceItem
+from vlade_rag.core.domain.errors import (
+    Conflict,
+    InvalidArgument,
+    NotFound,
+    PermissionDenied,
+    ProviderUnavailable,
+    QuotaExceeded,
+    RateLimited,
+    Unauthenticated,
+    UnsupportedFilter,
+    VladeError,
+)
+from vlade_rag.core.domain.ids import uuid7
+from vlade_rag.core.domain.kb_config import KnowledgeBaseConfig
+from vlade_rag.core.domain.models import (
+    AuditEvent,
+    Chunk,
+    ChunkDraft,
+    ChunkHit,
+    DeletionReport,
+    Distance,
+    Document,
+    DocumentVersion,
+    EmbeddingSpace,
+    IngestionJob,
+    IngestionStep,
+    JobKind,
+    JobStatus,
+    KnowledgeBase,
+    Metadata,
+    ScoredChunk,
+    SpaceStatus,
+    Tenant,
+    VersionStatus,
+)
+from vlade_rag.core.domain.query import (
+    Answer,
+    Citation,
+    Generation,
+    GenerationDelta,
+    GenerationParams,
+    Message,
+    MetadataFilter,
+    Query,
+    TokenUsage,
+    matches,
+    parse_filter,
+)
+from vlade_rag.core.domain.tenancy import Role, TenantContext
+
+__all__ = [
+    "Answer",
+    "AuditEvent",
+    "Chunk",
+    "ChunkDraft",
+    "ChunkHit",
+    "Citation",
+    "Conflict",
+    "DeletionReport",
+    "Distance",
+    "Document",
+    "DocumentVersion",
+    "EmbeddingSpace",
+    "Generation",
+    "GenerationDelta",
+    "GenerationParams",
+    "IngestionJob",
+    "IngestionStep",
+    "InvalidArgument",
+    "JobKind",
+    "JobStatus",
+    "KnowledgeBase",
+    "KnowledgeBaseConfig",
+    "Message",
+    "Metadata",
+    "MetadataFilter",
+    "NotFound",
+    "ParsedDocument",
+    "PermissionDenied",
+    "ProviderUnavailable",
+    "Query",
+    "QuotaExceeded",
+    "RateLimited",
+    "RawDocument",
+    "Role",
+    "ScoredChunk",
+    "Section",
+    "SourceItem",
+    "SpaceStatus",
+    "Tenant",
+    "TenantContext",
+    "TokenUsage",
+    "Unauthenticated",
+    "UnsupportedFilter",
+    "VersionStatus",
+    "VladeError",
+    "matches",
+    "parse_filter",
+    "uuid7",
+]
