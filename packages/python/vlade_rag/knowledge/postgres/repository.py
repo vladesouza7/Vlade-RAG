@@ -45,6 +45,7 @@ def _kb(row: Mapping[str, Any]) -> KnowledgeBase:
         config=KnowledgeBaseConfig.model_validate(row["config"]),
         active_embedding_space_id=row["active_embedding_space_id"],
         epoch=row["epoch"],
+        updated_at=row["updated_at"],
     )
 
 

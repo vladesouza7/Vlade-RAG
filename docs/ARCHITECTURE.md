@@ -52,9 +52,11 @@ Extras de `vlade-rag` disponíveis na fase 1:
 | `api` | FastAPI, Uvicorn, python-multipart |
 | `cli` | Typer |
 | `otel` | SDK OpenTelemetry e exportador OTLP por HTTP |
-| `server` | `native`, `api`, `cli`, `postgres`, `ollama`, `openai`, `otel` |
+| `cache` | redis-py (fase 2). Atende Valkey e Redis |
+| `mcp` | SDK oficial `mcp` e `jsonschema` (fase 2). Traz o servidor MCP |
+| `server` | `native`, `api`, `cli`, `postgres`, `ollama`, `openai`, `otel`, `cache`, `mcp` |
 
-Extras previstos para as fases seguintes: `qdrant`, `gemini`, `local-models` (sentence-transformers), `s3`, `cache` (Valkey), `mcp`, `langgraph`, `eval` (RAGAS), `langfuse` e `all`.
+Extras previstos para as fases seguintes: `qdrant`, `gemini`, `local-models` (sentence-transformers), `s3`, `langgraph`, `eval` (RAGAS), `langfuse` e `all`.
 
 Os parsers de texto, Markdown e HTML não precisam de extra. Eles usam só a biblioteca padrão.
 
@@ -1012,7 +1014,17 @@ Eventos SSE do modo `query`: `delta` (texto parcial), `citations` (lista final),
 
 ### 14.2. MCP
 
-O [`MCP_SPEC.md`](MCP_SPEC.md) define o servidor MCP.
+O [`MCP_SPEC.md`](MCP_SPEC.md) define o servidor MCP. A implementação fica em `vlade_rag.mcp` e chama só os casos de uso:
+
+| Módulo | Função |
+|---|---|
+| `mcp/tools` | As ferramentas de leitura: schemas do contrato, papel mínimo, grupo de limite e o handler de cada uma |
+| `mcp/resources` e `mcp/prompts` | Os resources `vlade://` e os dois prompts |
+| `mcp/auth` | Chave de API: `ApiKeyMiddleware` no transporte HTTP (401 sem chave válida) |
+| `mcp/policies` | Limites por grupo, mapeamento de erros e auditoria |
+| `mcp/server` | O `Server` do SDK com os handlers e os transportes `stdio` e Streamable HTTP |
+
+O servidor HTTP não guarda sessão (*stateless*): cada requisição traz a própria chave e o tenant vem dela. O servidor usa o `Server` de baixo nível do SDK, e não o `MCPServer`. Assim ele controla, em cada chamada, a autenticação, a lista de ferramentas por papel, os limites e a auditoria. O serviço `mcp` do Compose (perfis `staging` e `prod`) roda `vlade-rag mcp serve --transport http`.
 
 ### 14.3. CLI
 
@@ -1033,7 +1045,7 @@ vlade-rag reindex <kb> --mode embeddings|full [--confirm]
 vlade-rag eval run <kb> --dataset <arquivo>
 vlade-rag worker
 vlade-rag api serve
-vlade-rag mcp serve --transport stdio|http
+vlade-rag mcp serve --transport stdio|http [--host 127.0.0.1] [--port 8765]
 ```
 
 A CLI fala com o banco diretamente pelos casos de uso. A CLI lê a chave de `VLADE_API_KEY`. Os comandos `db`, `tenant` e `key` exigem a credencial de dono do banco.

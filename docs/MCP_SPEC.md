@@ -247,7 +247,35 @@ Entrada:
 }
 ```
 
-Saída: objeto `document` com `id`, `title`, `source_type`, `source_uri`, `mime_type`, `version`, `metadata`, `created_at`, `updated_at`, e, se pedido, `text` e `truncated`.
+Saída:
+
+```json
+{
+  "type": "object",
+  "required": ["document"],
+  "properties": {
+    "document": {
+      "type": "object",
+      "required": ["id", "title", "source_type", "mime_type", "metadata"],
+      "properties": {
+        "id": { "type": "string", "format": "uuid" },
+        "title": { "type": "string" },
+        "source_type": { "type": "string" },
+        "source_uri": { "type": ["string", "null"] },
+        "mime_type": { "type": "string" },
+        "version": { "type": ["integer", "null"] },
+        "metadata": { "type": "object", "additionalProperties": true },
+        "created_at": { "type": ["string", "null"], "format": "date-time" },
+        "updated_at": { "type": ["string", "null"], "format": "date-time" },
+        "text": { "type": "string" },
+        "truncated": { "type": "boolean" }
+      }
+    }
+  }
+}
+```
+
+`text` e `truncated` aparecem só se `include_text` é `true`.
 
 ### 5.6. `vlade_get_ingestion_status`
 
@@ -266,7 +294,43 @@ Entrada:
 }
 ```
 
-Saída: objeto `job` com `id`, `kind`, `status`, `steps` (nome, estado, tentativa, erro), `result`, `error`, `created_at`, `started_at`, `finished_at`.
+Saída:
+
+```json
+{
+  "type": "object",
+  "required": ["job"],
+  "properties": {
+    "job": {
+      "type": "object",
+      "required": ["id", "kind", "status", "steps"],
+      "properties": {
+        "id": { "type": "string", "format": "uuid" },
+        "kind": { "type": "string" },
+        "status": { "type": "string" },
+        "steps": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["name", "status", "attempt"],
+            "properties": {
+              "name": { "type": "string" },
+              "status": { "type": "string" },
+              "attempt": { "type": "integer" },
+              "error": { "type": ["object", "null"], "additionalProperties": true }
+            }
+          }
+        },
+        "result": { "type": ["object", "null"], "additionalProperties": true },
+        "error": { "type": ["object", "null"], "additionalProperties": true },
+        "created_at": { "type": ["string", "null"], "format": "date-time" },
+        "started_at": { "type": ["string", "null"], "format": "date-time" },
+        "finished_at": { "type": ["string", "null"], "format": "date-time" }
+      }
+    }
+  }
+}
+```
 
 ### 5.7. `vlade_ingest_document`
 

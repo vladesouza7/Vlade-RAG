@@ -135,6 +135,7 @@ class MemoryKnowledgeRepository:
             name=name,
             config=config,
             active_embedding_space_id=space.id,
+            updated_at=_now(),
         )
         data.spaces[space.id] = space
         data.kbs[kb.id] = kb
@@ -341,7 +342,7 @@ class MemoryKnowledgeRepository:
         data.versions[version_id] = replace(version, status=VersionStatus.PUBLISHED)
         data.documents[doc.id] = replace(doc, current_version_id=version_id, updated_at=_now())
         kb = data.kbs[doc.knowledge_base_id]
-        data.kbs[kb.id] = replace(kb, epoch=kb.epoch + 1)
+        data.kbs[kb.id] = replace(kb, epoch=kb.epoch + 1, updated_at=_now())
 
     async def delete_document(
         self, ctx: TenantContext, document_id: UUID, *, dry_run: bool
@@ -372,7 +373,7 @@ class MemoryKnowledgeRepository:
                 data.versions.pop(v.id, None)
             data.documents.pop(document_id, None)
             kb = data.kbs[doc.knowledge_base_id]
-            data.kbs[kb.id] = replace(kb, epoch=kb.epoch + 1)
+            data.kbs[kb.id] = replace(kb, epoch=kb.epoch + 1, updated_at=_now())
         return report, keys
 
 
