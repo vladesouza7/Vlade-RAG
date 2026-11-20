@@ -39,6 +39,20 @@ O produto deve estar sem uso e na embalagem original.
 """
 
 
+def error_of(result: Any) -> dict[str, Any]:
+    """The ``error`` object of a failed tool call (MCP_SPEC section 9).
+
+    The JSON is in the text block. A failed call has no ``structuredContent``.
+    """
+    import json
+
+    assert result.is_error, result
+    assert result.structured_content is None
+    error = json.loads(result.content[0].text)["error"]
+    assert isinstance(error, dict)
+    return error
+
+
 @dataclass
 class McpWorld:
     runtime: Runtime

@@ -230,9 +230,13 @@ async def _get_ingestion_status(
 # ---------------------------------------------------------------- schemas
 
 _UUID = {"type": "string", "format": "uuid"}
-_NULLABLE_STRING = {"type": ["string", "null"]}
-_NULLABLE_INT = {"type": ["integer", "null"]}
-_NULLABLE_TIME = {"type": ["string", "null"], "format": "date-time"}
+# Nullable fields use anyOf, not a list in "type": clients that map the schemas to a dialect with
+# one "type" (for example the function declarations of Gemini) reject the list.
+_NULL = {"type": "null"}
+_NULLABLE_STRING = {"anyOf": [{"type": "string"}, _NULL]}
+_NULLABLE_INT = {"anyOf": [{"type": "integer"}, _NULL]}
+_NULLABLE_TIME = {"anyOf": [{"type": "string", "format": "date-time"}, _NULL]}
+_NULLABLE_OBJECT = {"anyOf": [{"type": "object", "additionalProperties": True}, _NULL]}
 _OBJECT = {"type": "object", "additionalProperties": True}
 
 _LIST_IN = {"type": "object", "properties": {}, "additionalProperties": False}
@@ -415,12 +419,12 @@ _JOB_OUT = {
                             "name": {"type": "string"},
                             "status": {"type": "string"},
                             "attempt": {"type": "integer"},
-                            "error": {"type": ["object", "null"], "additionalProperties": True},
+                            "error": _NULLABLE_OBJECT,
                         },
                     },
                 },
-                "result": {"type": ["object", "null"], "additionalProperties": True},
-                "error": {"type": ["object", "null"], "additionalProperties": True},
+                "result": _NULLABLE_OBJECT,
+                "error": _NULLABLE_OBJECT,
                 "created_at": _NULLABLE_TIME,
                 "started_at": _NULLABLE_TIME,
                 "finished_at": _NULLABLE_TIME,

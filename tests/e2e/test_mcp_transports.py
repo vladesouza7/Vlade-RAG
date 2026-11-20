@@ -17,7 +17,7 @@ import httpx2
 from mcp import Client, StdioServerParameters
 from mcp.client.streamable_http import streamable_http_client
 
-from tests.e2e.conftest import McpWorld
+from tests.e2e.conftest import McpWorld, error_of
 from vlade_rag.mcp.server import create_http_app, serve_stdio
 
 pytestmark = pytest.mark.anyio
@@ -80,7 +80,7 @@ async def test_http_client_sees_only_its_own_tenant(mcp_world: McpWorld) -> None
             denied = await globex.call_tool(
                 "vlade_search", {"knowledge_base": "vendas", "query": "sete dias corridos"}
             )
-            assert dict(denied.structured_content)["error"]["code"] == "not_found"  # type: ignore[arg-type]
+            assert error_of(denied)["code"] == "not_found"
 
 
 async def test_http_each_request_uses_its_own_key(mcp_world: McpWorld) -> None:

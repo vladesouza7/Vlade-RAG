@@ -18,7 +18,7 @@
 |---|---|---|---|
 | 0 | Fundação | `0.0.x` | Tarefas 0.1 a 0.10 concluídas em 2026-11-19. A CI passou no GitHub em 2026-11-19, inclusive licenças, linter de documentação e `GET /health/live` no perfil `dev`. Falta medir o consumo de memória do perfil `dev` (RNF-11). A fase está integrada na branch `homolog` |
 | 1 | Núcleo mínimo | `0.1.0` | Em andamento. Tarefas 1.1 a 1.21 implementadas em 2026-11-19. A CI passou no GitHub em 2026-11-19 (PR #1) e a fase está integrada na branch `homolog`. O teste de aceite rodou em 2026-11-19 com o OpenRouter: 100 documentos ingeridos, 19 de 20 perguntas respondidas com a citação certa, 121 testes aprovados e cobertura de 88,40%. Falta a revisão humana das 20 respostas e o teste do Docling (tarefa 1.9). A limitação L1 está registrada na seção da fase |
-| 2 | Interfaces e armazenamento | `0.2.0` | Em andamento. Tarefas 2.1, 2.2, 2.3, 2.5, 2.7 e 2.10 implementadas em 2026-11-19 (cotas, chaves, auditoria, limite de requisições, cache no Valkey e servidor MCP de leitura). Faltam 2.4, 2.6, 2.8 e 2.9. O teste com dois clientes MCP e a Agent Skill ainda não rodaram |
+| 2 | Interfaces e armazenamento | `0.2.0` | Em andamento. Tarefas 2.1, 2.2, 2.3, 2.5, 2.7, 2.8, 2.9 e 2.10 implementadas. Elas cobrem cotas, chaves, auditoria, limite de requisições, cache no Valkey, servidor MCP de leitura, teste com o Inspector e Agent Skill. Faltam 2.4 e 2.6. O critério de aceite ainda não rodou. Ele pede dois clientes MCP reais com a skill instalada |
 | 3 | Qualidade | `0.3.0` | Não iniciada |
 | 4 | Operação | `0.4.0` | Não iniciada |
 | 5 | Extensões | `1.0.0` | Não iniciada |
@@ -116,8 +116,8 @@ F0 Fundação
 | 2.5 | `Cache` Valkey para embeddings de consulta e resultados de busca | ARCHITECTURE §11.6 · Implementada em 2026-11-19: `ValkeyCache` (extra `cache`), cache de resultados de busca com `kb_epoch` e `VLADE_CACHE__URL` no Compose. Ver a limitação L4 |
 | 2.6 | Provedores Gemini e OpenRouter | VLADE-RAG §16 |
 | 2.7 | Servidor MCP com as ferramentas de leitura, resources e prompts | MCP_SPEC §5.2 a §5.6, §6, §7 · Implementada em 2026-11-19: 5 ferramentas de leitura, 2 resources, 2 prompts, transportes `stdio` e Streamable HTTP, papel por ferramenta, limites por grupo e auditoria. Serviço `mcp` no Compose (`staging` e `prod`). Ver as limitações L5 e L6 |
-| 2.8 | Teste do servidor MCP com o MCP Inspector na CI | MCP_SPEC §12 |
-| 2.9 | Agent Skill `skills/vlade-rag/` | VLADE-RAG §12.1 |
+| 2.8 | Teste do servidor MCP com o MCP Inspector na CI | MCP_SPEC §12 · Implementada em 2026-11-20: job `MCP server (Inspector)` e `scripts/mcp_inspector.sh` (Inspector 2.16.0, modo CLI, 24 verificações). O teste achou um erro do servidor: o resultado de erro trazia `structuredContent` fora do `outputSchema`. Corrigido |
+| 2.9 | Agent Skill `skills/vlade-rag/` | VLADE-RAG §12.1 · Implementada em 2026-11-20: `skills/vlade-rag/SKILL.md` no padrão agentskills.io, sem violações duras no linter. Falta instalar a skill em dois clientes reais (critério de aceite da fase) |
 | 2.10 | Teste de isolamento para o MCP | RNF-07 · Concluída em 2026-11-19: `tests/e2e/test_mcp_isolation.py` chama cada ferramenta e cada resource com a chave de um tenant e os identificadores de outro. A resposta é `not_found` e é igual à resposta de um identificador que não existe |
 
 **Critérios de aceite:**
