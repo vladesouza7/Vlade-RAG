@@ -17,7 +17,7 @@
 | Fase | Nome | Versão | Situação |
 |---|---|---|---|
 | 0 | Fundação | `0.0.x` | Tarefas 0.1 a 0.10 concluídas em 2026-11-19. A CI passou no GitHub em 2026-11-19, inclusive licenças, linter de documentação e `GET /health/live` no perfil `dev`. Falta medir o consumo de memória do perfil `dev` (RNF-11). A fase está integrada na branch `homolog` |
-| 1 | Núcleo mínimo | `0.1.0` | Em andamento. Tarefas 1.1 a 1.21 implementadas em 2026-11-19. A CI passou no GitHub em 2026-11-19 (PR #1) e a fase está integrada na branch `homolog`. Falta rodar o teste de aceite com um provedor remoto e a revisão humana do relatório |
+| 1 | Núcleo mínimo | `0.1.0` | Em andamento. Tarefas 1.1 a 1.21 implementadas em 2026-11-19. A CI passou no GitHub em 2026-11-19 (PR #1) e a fase está integrada na branch `homolog`. O teste de aceite rodou em 2026-11-19 com o OpenRouter: 100 documentos ingeridos, 19 de 20 perguntas respondidas com a citação certa, 121 testes aprovados e cobertura de 88,40%. Falta a revisão humana das 20 respostas e o teste do Docling (tarefa 1.9). A limitação L1 está registrada na seção da fase |
 | 2 | Interfaces e armazenamento | `0.2.0` | Não iniciada |
 | 3 | Qualidade | `0.3.0` | Não iniciada |
 | 4 | Operação | `0.4.0` | Não iniciada |
@@ -91,6 +91,19 @@ F0 Fundação
 - O teste de isolamento passa.
 - As suítes de contrato passam para cada adapter.
 - A cobertura de testes de `core`, `retrieval` e `ingestion` fica em 85% ou mais.
+
+**Resultado do teste de aceite (2026-11-19):**
+
+- Provedores: embeddings `openai/text-embedding-3-small` e geração `tencent/hy4-flash`, pelo OpenRouter.
+- A CLI ingeriu os 100 documentos em 1 min 21 s.
+- 19 das 20 perguntas receberam a resposta esperada, com citação do documento relevante. A revisão humana das 20 respostas continua pendente.
+- O teste de isolamento e as suítes de contrato passaram com o PostgreSQL. A cobertura total é de 88,40%.
+
+**Limitações conhecidas:**
+
+| ID | Limitação | Efeito | Tratamento |
+|---|---|---|---|
+| L1 | A recuperação da fase 1 usa só busca vetorial e lexical com fusão simples. Uma palavra comum em muitos documentos faz o trecho da definição cair abaixo da posição 8 | A pergunta 20 do dataset ("O que é fornecedor segundo o CDC?") recebeu "Não encontrei essa informação nas fontes disponíveis". O `cdc-001` ficou na posição 10. O sistema recusou e não inventou resposta | Fase 3: tarefas 3.1 (reranker) e 3.2 (reescrita de consulta). Depois, repita a pergunta 20 |
 
 ### Fase 2 — Interfaces e armazenamento
 
