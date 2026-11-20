@@ -10,7 +10,7 @@ import math
 import time
 import unicodedata
 from collections import Counter
-from collections.abc import Sequence
+from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, field, replace
 from datetime import UTC, datetime, timedelta
 from uuid import UUID
@@ -40,13 +40,15 @@ from vlade_rag.core.domain import (
     SpaceStatus,
     Tenant,
     TenantContext,
+    TenantQuotas,
+    TenantUsage,
     Unauthenticated,
     VersionStatus,
     matches,
     uuid7,
 )
 from vlade_rag.core.domain.api_keys import generate_api_key, hash_secret, parse_api_key
-from vlade_rag.core.ports import ClaimedJob, IssuedApiKey
+from vlade_rag.core.ports import ApiKeyInfo, ClaimedJob, IssuedApiKey
 from vlade_rag.native import token_spans
 
 
@@ -77,6 +79,7 @@ class _KeyRecord:
     key_hash: bytes
     roles: frozenset[Role]
     revoked: bool = False
+    principal_name: str = ""
 
 
 @dataclass
@@ -156,11 +159,27 @@ class MemoryKnowledgeRepository:
         docs = self.store.data(ctx).documents.values()
         return sum(1 for d in docs if d.knowledge_base_id == kb_id)
 
+    async def get_usage(self, ctx: TenantContext) -> TenantUsage:
+        data = self.store.data(ctx)
+        counted = {VersionStatus.INDEXING, VersionStatus.PUBLISHED}
+        return TenantUsage(
+            documents=len(data.documents),
+            bytes=sum(v.size_bytes for v in data.versions.values() if v.status in counted),
+        )
+
     async def get_embedding_space(self, ctx: TenantContext, space_id: UUID) -> EmbeddingSpace:
         space = self.store.data(ctx).spaces.get(space_id)
         if space is None:
             raise NotFound("Embedding space does not exist.")
         return space
+
+    async def find_document(
+        self, ctx: TenantContext, *, knowledge_base_id: UUID, external_id: str
+    ) -> Document | None:
+        for doc in self.store.data(ctx).documents.values():
+            if doc.knowledge_base_id == knowledge_base_id and doc.external_id == external_id:
+                return doc
+        return None
 
     async def upsert_document(
         self,
@@ -639,10 +658,25 @@ class MemoryAuditLog:
         self.store = store
 
     async def record(self, ctx: TenantContext, event: AuditEvent) -> None:
-        self.store.data(ctx).audit.append(event)
+        self.store.data(ctx).audit.append(replace(event, created_at=_now()))
 
     async def record_query(self, ctx: TenantContext, entry: QueryLogEntry) -> None:
         self.store.data(ctx).queries.append(entry)
+
+    async def list_events(
+        self,
+        ctx: TenantContext,
+        *,
+        action: str | None = None,
+        outcome: str | None = None,
+        limit: int = 100,
+    ) -> list[AuditEvent]:
+        events = [
+            e
+            for e in reversed(self.store.data(ctx).audit)
+            if (action is None or e.action == action) and (outcome is None or e.outcome == outcome)
+        ]
+        return events[: max(limit, 0)]
 
 
 class MemoryTenantDirectory:
@@ -662,6 +696,36 @@ class MemoryTenantDirectory:
                 return tenant
         raise NotFound(f"Tenant '{slug}' does not exist.")
 
+    def _audit(
+        self, tenant_id: UUID, action: str, resource_id: str, details: Mapping[str, object]
+    ) -> None:
+        self.store.data(tenant_id).audit.append(
+            AuditEvent(
+                tenant_id=tenant_id,
+                interface="cli",
+                action=action,
+                outcome="success",
+                resource_type="tenant" if action.startswith("tenant.") else "api_key",
+                resource_id=resource_id,
+                details=details,
+                created_at=_now(),
+            )
+        )
+
+    async def get_quotas(self, tenant_id: UUID) -> TenantQuotas:
+        tenant = self.store.tenants.get(tenant_id)
+        if tenant is None:
+            raise NotFound("Tenant does not exist.")
+        return TenantQuotas.from_settings(tenant.settings)
+
+    async def set_quotas(self, tenant_id: UUID, quotas: TenantQuotas) -> None:
+        tenant = self.store.tenants.get(tenant_id)
+        if tenant is None:
+            raise NotFound("Tenant does not exist.")
+        settings = {**tenant.settings, "quotas": quotas.to_settings()}
+        self.store.tenants[tenant_id] = replace(tenant, settings=settings)
+        self._audit(tenant_id, "tenant.quota_update", str(tenant_id), quotas.to_settings())
+
     async def issue_api_key(
         self, tenant_id: UUID, *, principal_name: str, roles: frozenset[Role]
     ) -> IssuedApiKey:
@@ -670,9 +734,33 @@ class MemoryTenantDirectory:
         key, prefix, secret = generate_api_key()
         principal_id = uuid7()
         self.store.keys[prefix] = _KeyRecord(
-            tenant_id, principal_id, hash_secret(secret, self.store.pepper), roles
+            tenant_id,
+            principal_id,
+            hash_secret(secret, self.store.pepper),
+            roles,
+            principal_name=principal_name,
+        )
+        self._audit(
+            tenant_id,
+            "api_key.issue",
+            prefix,
+            {"principal": principal_name, "roles": sorted(r.value for r in roles)},
         )
         return IssuedApiKey(key=key, key_prefix=prefix, principal_id=principal_id, roles=roles)
+
+    async def list_api_keys(self, tenant_id: UUID) -> list[ApiKeyInfo]:
+        return [
+            ApiKeyInfo(prefix, r.principal_id, r.principal_name, r.roles, r.revoked)
+            for prefix, r in self.store.keys.items()
+            if r.tenant_id == tenant_id
+        ]
+
+    async def revoke_api_key(self, tenant_id: UUID, key_prefix: str) -> None:
+        record = self.store.keys.get(key_prefix)
+        if record is None or record.tenant_id != tenant_id:
+            raise NotFound("API key does not exist.")
+        record.revoked = True
+        self._audit(tenant_id, "api_key.revoke", key_prefix, {})
 
     async def authenticate(self, api_key: str, *, interface: str) -> TenantContext:
         from vlade_rag.core.domain.api_keys import verify_secret

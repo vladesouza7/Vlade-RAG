@@ -28,6 +28,9 @@ Este arquivo registra as mudanças relevantes de cada versão. O formato segue o
 - Compose: serviço de migração, worker, Ollama opcional (`--profile ollama`).
 - Provedores remotos prontos: OpenRouter, OpenCode Zen e qualquer API compatível com a OpenAI por variável de ambiente.
 - `VLADE_DEFAULT_KB_CONFIG`: configuração padrão das bases novas, com mesclagem parcial.
+- Cotas por tenant de documentos e de bytes, com `GET /v1/usage`, `vlade-rag usage` e `vlade-rag tenant quota`. Um arquivo acima da cota recebe `quota_exceeded` (HTTP 413).
+- Lista e revogação de chaves de API: `vlade-rag key list` e `vlade-rag key revoke`.
+- Leitura da auditoria: `GET /v1/audit-events` e `vlade-rag audit list`. Eventos novos: cota negada, cota alterada, chave emitida e chave revogada.
 
 ### Corrigido
 

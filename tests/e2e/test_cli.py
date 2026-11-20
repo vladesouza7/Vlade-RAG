@@ -72,3 +72,42 @@ def test_cli_flow_and_isolation(cli: Any, tmp_path: Path) -> None:
     assert "docs" not in cli("kb", "list", key=other).stdout
     cli("kb", "create", "docs", "--config", str(config), key=other)
     assert json.loads(cli("search", "docs", "férias", "--json", key=other).stdout) == []
+
+
+def test_cli_quota_keys_and_audit(cli: Any, tmp_path: Path) -> None:
+    slug = f"acme-{secrets.token_hex(3)}"
+    cli("tenant", "create", slug)
+    admin = _key(cli, slug, "admin")
+    assert "documents=unlimited bytes=unlimited" in cli("tenant", "quota", slug).stdout
+    assert "Updated: documents=1" in cli("tenant", "quota", slug, "--documents", "1").stdout
+    # Only the given limit changes.
+    assert "documents=1 bytes=5000" in cli("tenant", "quota", slug, "--bytes", "5000").stdout
+
+    config = tmp_path / "kb.json"
+    config.write_text(
+        json.dumps(
+            {
+                "embeddings": {"provider": "hashing", "model": "h", "dimension": 64},
+                "generation": {"provider": "extractive", "model": "extractive"},
+            }
+        )
+    )
+    cli("kb", "create", "docs", "--config", str(config), key=admin)
+    (tmp_path / "a.md").write_text("# A\n\num")
+    (tmp_path / "b.md").write_text("# B\n\ndois")
+    cli("ingest", "docs", str(tmp_path / "a.md"), "--wait", key=admin)
+    assert "Skipped" in cli("ingest", "docs", str(tmp_path / "b.md"), key=admin).output
+    usage = json.loads(cli("usage", "--json", key=admin).stdout)
+    assert usage["documents"] == 1 and usage["quotas"] == {"documents": 1, "bytes": 5000}
+
+    audit = json.loads(cli("audit", "list", "--json", key=admin).stdout)
+    pairs = {(e["action"], e["outcome"]) for e in audit}
+    assert ("document.ingest", "denied") in pairs
+    assert ("tenant.quota_update", "success") in pairs
+    assert ("api_key.issue", "success") in pairs
+
+    prefix = cli("key", "list", "--tenant", slug).stdout.split("\t")[0]
+    cli("key", "revoke", prefix, "--tenant", slug)
+    assert "revoked" in cli("key", "list", "--tenant", slug).stdout
+    cli("tenant", "quota", slug, "--clear")
+    assert "documents=unlimited bytes=unlimited" in cli("tenant", "quota", slug).stdout

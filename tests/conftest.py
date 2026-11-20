@@ -110,6 +110,7 @@ async def _memory_world() -> World:
         job_queue=adapters.job_queue,
         audit_log=adapters.audit_log,
         cache=adapters.cache,
+        tenants=adapters.tenants,
     )
     admin, reader, other = await _make_contexts(adapters.tenants)
     return World(
@@ -185,6 +186,7 @@ async def _postgres_world(app_url: str) -> World:
     db = await PostgresDatabase.connect(app_url, min_size=1, max_size=4)
     objects = MemoryStore()
     queue = PostgresJobQueue(db)
+    tenants = PostgresTenantDirectory(db, pepper="test-pepper")
     deps = _common(
         repository=PostgresKnowledgeRepository(db),
         vector_index=PgVectorIndex(db),
@@ -193,8 +195,8 @@ async def _postgres_world(app_url: str) -> World:
         job_queue=queue,
         audit_log=PostgresAuditLog(db),
         cache=MemoryCache(objects),
+        tenants=tenants,
     )
-    tenants = PostgresTenantDirectory(db, pepper="test-pepper")
     admin, reader, other = await _make_contexts(tenants)
     return World("postgres", deps, tenants, queue, admin, reader, other, objects, {"db": db})
 

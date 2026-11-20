@@ -269,6 +269,7 @@ async def build_runtime(
             store_query_text=limits.store_query_text,
         ),
         default_kb_config=settings.default_kb_config,
+        tenants=tenants,
         **ports,
     )
     return Runtime(

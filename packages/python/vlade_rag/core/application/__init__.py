@@ -1,5 +1,6 @@
 """Use cases. Each use case receives ``Dependencies`` and a ``TenantContext`` in execute()."""
 
+from vlade_rag.core.application.admin import GetUsage, ListAuditEvents, UsageView
 from vlade_rag.core.application.answer import (
     AnswerDelta,
     AnswerEvent,
@@ -36,8 +37,10 @@ __all__ = [
     "GetDocument",
     "GetIngestionStatus",
     "GetKnowledgeBase",
+    "GetUsage",
     "KnowledgeBaseSummary",
     "Limits",
+    "ListAuditEvents",
     "ListKnowledgeBases",
     "NoopTracer",
     "RunIngestionJob",
@@ -45,6 +48,7 @@ __all__ = [
     "SearchResult",
     "SubmitIngestion",
     "SubmitResult",
+    "UsageView",
     "assemble_context",
     "validate_answer",
 ]

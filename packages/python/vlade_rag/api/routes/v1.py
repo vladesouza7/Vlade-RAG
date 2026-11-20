@@ -13,6 +13,7 @@ from fastapi.responses import StreamingResponse
 from vlade_rag.api.deps import CtxDep, RuntimeDep
 from vlade_rag.api.schemas import (
     AnswerOut,
+    AuditEventOut,
     CitationOut,
     DeletionOut,
     DocumentOut,
@@ -24,6 +25,7 @@ from vlade_rag.api.schemas import (
     SearchHit,
     SearchIn,
     SearchOut,
+    TenantUsageOut,
 )
 from vlade_rag.core.application import (
     AnswerDelta,
@@ -34,7 +36,9 @@ from vlade_rag.core.application import (
     GetDocument,
     GetIngestionStatus,
     GetKnowledgeBase,
+    GetUsage,
     KnowledgeBaseSummary,
+    ListAuditEvents,
     ListKnowledgeBases,
     Search,
     SubmitIngestion,
@@ -132,6 +136,25 @@ async def delete_document(
         ctx, knowledge_base=kb, document_id=document_id, confirm=confirm
     )
     return DeletionOut.of(report)
+
+
+@router.get("/usage", response_model=TenantUsageOut)
+async def get_usage(ctx: CtxDep, rt: RuntimeDep) -> TenantUsageOut:
+    return TenantUsageOut.of(await GetUsage(rt.deps).execute(ctx))
+
+
+@router.get("/audit-events", response_model=list[AuditEventOut])
+async def list_audit_events(
+    ctx: CtxDep,
+    rt: RuntimeDep,
+    action: str | None = None,
+    outcome: str | None = None,
+    limit: Annotated[int, Query(ge=1, le=1000)] = 100,
+) -> list[AuditEventOut]:
+    events = await ListAuditEvents(rt.deps).execute(
+        ctx, action=action, outcome=outcome, limit=limit
+    )
+    return [AuditEventOut.of(e) for e in events]
 
 
 @router.get("/jobs/{job_id}", response_model=JobOut)

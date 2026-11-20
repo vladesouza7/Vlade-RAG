@@ -23,6 +23,7 @@ from vlade_rag.core.domain import (
     NotFound,
     SpaceStatus,
     TenantContext,
+    TenantUsage,
     VersionStatus,
     uuid7,
 )
@@ -176,6 +177,18 @@ class PostgresKnowledgeRepository:
             )
         return int(count)
 
+    async def get_usage(self, ctx: TenantContext) -> TenantUsage:
+        async with self.db.tenant(ctx) as conn:
+            documents = await conn.fetchval(
+                "SELECT count(*) FROM documents WHERE tenant_id = $1", ctx.tenant_id
+            )
+            size = await conn.fetchval(
+                "SELECT COALESCE(sum(size_bytes), 0) FROM document_versions "
+                "WHERE tenant_id = $1 AND status IN ('indexing', 'published')",
+                ctx.tenant_id,
+            )
+        return TenantUsage(documents=int(documents), bytes=int(size))
+
     async def get_embedding_space(self, ctx: TenantContext, space_id: UUID) -> EmbeddingSpace:
         async with self.db.tenant(ctx) as conn:
             row = await conn.fetchrow(
@@ -197,6 +210,19 @@ class PostgresKnowledgeRepository:
         )
 
     # ------------------------------------------------------------ documents
+
+    async def find_document(
+        self, ctx: TenantContext, *, knowledge_base_id: UUID, external_id: str
+    ) -> Document | None:
+        async with self.db.tenant(ctx) as conn:
+            row = await conn.fetchrow(
+                "SELECT * FROM documents WHERE tenant_id = $1 AND knowledge_base_id = $2 "
+                "AND external_id = $3",
+                ctx.tenant_id,
+                knowledge_base_id,
+                external_id,
+            )
+        return None if row is None else _document(row)
 
     async def upsert_document(
         self,
