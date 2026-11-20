@@ -1,0 +1,17 @@
+{
+  "language": "pt",
+  "chunking": {"strategy": "markdown", "max_tokens": 400, "overlap_tokens": 40},
+  "embeddings": {
+    "provider": "gemini",
+    "model": "modelo-de-embedding-do-gemini",
+    "dimension": 768,
+    "batch_size": 32
+  },
+  "generation": {
+    "provider": "gemini",
+    "model": "modelo-de-geracao-do-gemini",
+    "temperature": 0.1,
+    "max_context_tokens": 6000,
+    "max_output_tokens": 4000
+  }
+}

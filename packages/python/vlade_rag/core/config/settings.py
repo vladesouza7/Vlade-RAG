@@ -36,9 +36,29 @@ class StorageSettings(BaseModel):
     backend: Literal["postgres", "memory"] = "postgres"
 
 
+class S3Settings(BaseModel):
+    """The S3 API of AWS or of any S3-compatible service (ADR-0006)."""
+
+    bucket: str = ""
+    endpoint_url: str | None = None  # empty for AWS S3; the URL of an S3-compatible service
+    region: str = "us-east-1"
+    # Without keys, boto3 uses its default chain (environment, shared files, instance role).
+    access_key_id: SecretStr | None = None
+    secret_access_key: SecretStr | None = None
+    path_style: bool = True  # most S3-compatible services need path-style; AWS accepts it too
+    create_bucket: bool = False  # create the bucket at start-up (a local service, not the cloud)
+    timeout: float = Field(default=30.0, gt=0)
+
+    @field_validator("endpoint_url", "access_key_id", "secret_access_key", mode="before")
+    @classmethod
+    def _empty_is_none(cls, value: object) -> object:
+        return None if value in ("", None) else value
+
+
 class ObjectStorageSettings(BaseModel):
-    backend: Literal["filesystem", "memory"] = "filesystem"
+    backend: Literal["filesystem", "memory", "s3"] = "filesystem"
     path: str = "./data/objects"
+    s3: S3Settings = Field(default_factory=S3Settings)
 
 
 class OllamaSettings(BaseModel):
@@ -51,6 +71,10 @@ class OpenAICompatibleSettings(BaseModel):
     base_url: str = "https://api.openai.com/v1"
     api_key: SecretStr | None = None
     timeout: float = 120.0
+    # Send "dimensions" with each embeddings request, so a model with a larger default vector
+    # returns the dimension of the knowledge base (OpenAI text-embedding-3 does this). Leave it off
+    # for a service that rejects the field.
+    embedding_dimensions: bool = False
 
     @field_validator("api_key", mode="before")
     @classmethod
@@ -60,6 +84,12 @@ class OpenAICompatibleSettings(BaseModel):
 
 class OpenRouterSettings(OpenAICompatibleSettings):
     base_url: str = "https://openrouter.ai/api/v1"
+
+
+class GeminiSettings(OpenAICompatibleSettings):
+    """Google Gemini through its OpenAI-compatible endpoint (a Gemini API key)."""
+
+    base_url: str = "https://generativelanguage.googleapis.com/v1beta/openai"
 
 
 class OpenCodeSettings(OpenAICompatibleSettings):
@@ -73,6 +103,7 @@ class ProvidersSettings(BaseModel):
     openai: OpenAICompatibleSettings = Field(default_factory=OpenAICompatibleSettings)
     openrouter: OpenRouterSettings = Field(default_factory=OpenRouterSettings)
     opencode: OpenCodeSettings = Field(default_factory=OpenCodeSettings)
+    gemini: GeminiSettings = Field(default_factory=GeminiSettings)
     # Any other OpenAI-compatible API, by name. Example:
     # VLADE_PROVIDERS__COMPATIBLE__GROQ__BASE_URL=https://api.groq.com/openai/v1
     # VLADE_PROVIDERS__COMPATIBLE__GROQ__API_KEY=...
@@ -85,6 +116,7 @@ class ProvidersSettings(BaseModel):
             "openai": self.openai,
             "openrouter": self.openrouter,
             "opencode": self.opencode,
+            "gemini": self.gemini,
             **{name.lower(): cfg for name, cfg in self.compatible.items()},
         }
 

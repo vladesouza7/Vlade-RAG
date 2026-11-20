@@ -70,7 +70,7 @@ class ProviderClients:
 
 
 def builtin_plugins(
-    compatible: tuple[str, ...] = ("openai", "openrouter", "opencode"),
+    compatible: tuple[str, ...] = ("openai", "openrouter", "opencode", "gemini"),
 ) -> list[PluginSpec]:
     """Built-in adapters. ``compatible`` lists the OpenAI-compatible provider names."""
 
@@ -85,8 +85,15 @@ def builtin_plugins(
                 OpenAICompatibleEmbeddingProvider,
             )
 
+            send_dimensions = clients.settings.providers.openai_compatible()[
+                provider
+            ].embedding_dimensions
             return OpenAICompatibleEmbeddingProvider(
-                clients.get(provider), provider, cfg.model, cfg.dimension
+                clients.get(provider),
+                provider,
+                cfg.model,
+                cfg.dimension,
+                send_dimensions=send_dimensions,
             )
 
         return factory
@@ -243,15 +250,32 @@ async def build_runtime(
         tenants = PostgresTenantDirectory(db, settings.security.api_key_pepper.get_secret_value())
         object_storage = None
 
-    if object_storage is None or settings.object_storage.backend == "filesystem":
-        if settings.object_storage.backend == "filesystem":
-            from vlade_rag.knowledge.filesystem import FilesystemObjectStorage
+    storage_backend = settings.object_storage.backend
+    if storage_backend == "s3":
+        s3 = settings.object_storage.s3
+        if not s3.bucket:
+            raise InvalidArgument(
+                "VLADE_OBJECT_STORAGE__S3__BUCKET is required for the s3 backend."
+            )
+        try:
+            from vlade_rag.knowledge.s3 import S3ObjectStorage
+        except ImportError as exc:
+            raise InvalidArgument(
+                'The s3 backend needs the "s3" extra: pip install "vlade-rag[s3]"'
+            ) from exc
+        s3_storage = S3ObjectStorage.from_settings(s3)
+        if s3.create_bucket:
+            await s3_storage.ensure_bucket()
+        checks["object_storage"] = s3_storage.ping
+        object_storage = s3_storage
+    elif storage_backend == "filesystem":
+        from vlade_rag.knowledge.filesystem import FilesystemObjectStorage
 
-            object_storage = FilesystemObjectStorage(settings.object_storage.path)
-        else:
-            from vlade_rag.knowledge.memory import MemoryObjectStorage, MemoryStore
+        object_storage = FilesystemObjectStorage(settings.object_storage.path)
+    elif object_storage is None:
+        from vlade_rag.knowledge.memory import MemoryObjectStorage, MemoryStore
 
-            object_storage = MemoryObjectStorage(MemoryStore())
+        object_storage = MemoryObjectStorage(MemoryStore())
 
     if settings.cache.url is not None:
         try:

@@ -19,16 +19,28 @@ from vlade_rag.integrations.external.http import ProviderHttpClient, parse_sse_d
 class OpenAICompatibleEmbeddingProvider:
     max_batch_size = 256
 
-    def __init__(self, http: ProviderHttpClient, provider: str, model: str, dimension: int) -> None:
+    def __init__(
+        self,
+        http: ProviderHttpClient,
+        provider: str,
+        model: str,
+        dimension: int,
+        *,
+        send_dimensions: bool = False,
+    ) -> None:
         self.http = http
         self.provider = provider
         self.model = model
         self.dimension = dimension
+        self.send_dimensions = send_dimensions
 
     async def embed_documents(self, texts: Sequence[str]) -> list[list[float]]:
         if not texts:
             return []
-        data = await self.http.post_json("/embeddings", {"model": self.model, "input": list(texts)})
+        payload: dict[str, Any] = {"model": self.model, "input": list(texts)}
+        if self.send_dimensions:
+            payload["dimensions"] = self.dimension
+        data = await self.http.post_json("/embeddings", payload)
         items = sorted(data.get("data", []), key=lambda d: int(d.get("index", 0)))
         vectors = [[float(x) for x in item["embedding"]] for item in items]
         if len(vectors) != len(texts):

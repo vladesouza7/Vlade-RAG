@@ -49,6 +49,7 @@ from vlade_rag.core.domain import (
 )
 from vlade_rag.core.domain.api_keys import generate_api_key, hash_secret, parse_api_key
 from vlade_rag.core.ports import ApiKeyInfo, ClaimedJob, IssuedApiKey, RateDecision
+from vlade_rag.knowledge.object_keys import validate_object_key
 from vlade_rag.native import token_spans
 
 
@@ -510,20 +511,21 @@ class MemoryObjectStorage:
         self.store = store
 
     async def put(self, ctx: TenantContext, key: str, data: bytes, content_type: str) -> None:
-        self.store.data(ctx).objects[key] = bytes(data)
+        self.store.data(ctx).objects[validate_object_key(key)] = bytes(data)
 
     async def get(self, ctx: TenantContext, key: str) -> bytes:
         try:
-            return self.store.data(ctx).objects[key]
+            return self.store.data(ctx).objects[validate_object_key(key)]
         except KeyError:
             raise NotFound(f"Object '{key}' does not exist.") from None
 
     async def delete(self, ctx: TenantContext, key: str) -> None:
-        self.store.data(ctx).objects.pop(key, None)
+        self.store.data(ctx).objects.pop(validate_object_key(key), None)
 
     async def delete_prefix(self, ctx: TenantContext, prefix: str) -> int:
+        start = validate_object_key(prefix, prefix=True) + "/"
         objects = self.store.data(ctx).objects
-        keys = [k for k in objects if k.startswith(prefix)]
+        keys = [k for k in objects if k.startswith(start)]
         for k in keys:
             del objects[k]
         return len(keys)
