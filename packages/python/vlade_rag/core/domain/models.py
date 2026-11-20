@@ -223,6 +223,7 @@ class AuditEvent:
     resource_id: str | None = None
     details: Metadata = field(default_factory=dict)
     trace_id: str | None = None
+    created_at: datetime | None = None  # set by the audit log when it stores the event
 
 
 @dataclass(frozen=True, slots=True)

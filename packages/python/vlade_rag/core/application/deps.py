@@ -24,6 +24,7 @@ from vlade_rag.core.ports import (
     PromptRegistry,
     Reranker,
     Span,
+    TenantDirectory,
     TextNormalizer,
     Tracer,
     VectorIndex,
@@ -75,6 +76,7 @@ class Dependencies:
     llms: Callable[[GenerationConfig], LLMProvider]
     rerankers: Callable[[RerankConfig], Reranker] | None = None
     cache: Cache | None = None
+    tenants: TenantDirectory | None = None  # needed for quotas; without it no quota applies
     tracer: Tracer = field(default_factory=NoopTracer)
     limits: Limits = field(default_factory=Limits)
     default_kb_config: Mapping[str, Any] = field(default_factory=dict)

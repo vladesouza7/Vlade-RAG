@@ -18,7 +18,7 @@
 |---|---|---|---|
 | 0 | Fundação | `0.0.x` | Tarefas 0.1 a 0.10 concluídas em 2026-11-19. A CI passou no GitHub em 2026-11-19, inclusive licenças, linter de documentação e `GET /health/live` no perfil `dev`. Falta medir o consumo de memória do perfil `dev` (RNF-11). A fase está integrada na branch `homolog` |
 | 1 | Núcleo mínimo | `0.1.0` | Em andamento. Tarefas 1.1 a 1.21 implementadas em 2026-11-19. A CI passou no GitHub em 2026-11-19 (PR #1) e a fase está integrada na branch `homolog`. O teste de aceite rodou em 2026-11-19 com o OpenRouter: 100 documentos ingeridos, 19 de 20 perguntas respondidas com a citação certa, 121 testes aprovados e cobertura de 88,40%. Falta a revisão humana das 20 respostas e o teste do Docling (tarefa 1.9). A limitação L1 está registrada na seção da fase |
-| 2 | Interfaces e armazenamento | `0.2.0` | Não iniciada |
+| 2 | Interfaces e armazenamento | `0.2.0` | Em andamento. Tarefas 2.1 e 2.3 implementadas em 2026-11-19 (cotas, chaves e auditoria). Faltam 2.2 e 2.4 a 2.10 e a cota de requisições por dia |
 | 3 | Qualidade | `0.3.0` | Não iniciada |
 | 4 | Operação | `0.4.0` | Não iniciada |
 | 5 | Extensões | `1.0.0` | Não iniciada |
@@ -109,9 +109,9 @@ F0 Fundação
 
 | # | Tarefa | Referência |
 |---|---|---|
-| 2.1 | Chaves de API, papéis, cotas | ARCHITECTURE §15 |
+| 2.1 | Chaves de API, papéis, cotas | ARCHITECTURE §15 · Implementada em 2026-11-19: cotas de documentos e de bytes, lista e revogação de chaves, `GET /v1/usage`. Falta a cota de requisições por dia, que depende do contador da tarefa 2.2 |
 | 2.2 | Limite de requisições com Valkey | ADR-0007 |
-| 2.3 | Auditoria | ARCHITECTURE §7.2 |
+| 2.3 | Auditoria | ARCHITECTURE §7.2 · Implementada em 2026-11-19: eventos de cota negada, de cota alterada e de chave emitida ou revogada, `GET /v1/audit-events` e `vlade-rag audit list`. Ver a limitação L2 |
 | 2.4 | `ObjectStorage` S3 e MinIO no perfil `staging` | ADR-0006 |
 | 2.5 | `Cache` Valkey para embeddings de consulta e resultados de busca | ARCHITECTURE §11.6 |
 | 2.6 | Provedores Gemini e OpenRouter | VLADE-RAG §16 |
@@ -125,6 +125,13 @@ F0 Fundação
 - Dois clientes MCP diferentes, por exemplo Claude Code e Hermes Agent, consultam uma base com a Agent Skill instalada.
 - Uma chave de outro tenant recebe `not_found` em cada ferramenta MCP e em cada endpoint.
 - O limite de requisições devolve `rate_limited` acima do limite configurado.
+
+**Limitações conhecidas:**
+
+| ID | Limitação | Efeito | Tratamento |
+|---|---|---|---|
+| L2 | Os casos de uso gravam o `AuditEvent` logo depois da escrita, em outra transação. Só as operações de cotas e de chaves (`TenantDirectory`) gravam o evento na mesma transação | Se o processo cai entre a escrita e o evento, a escrita fica sem evento de auditoria | Introduzir uma unidade de trabalho (transação compartilhada entre repositório e auditoria) com um ADR. Ainda sem tarefa |
+| L3 | Os casos de uso não gravam evento para uma chamada negada por papel insuficiente (`PermissionDenied`) | Uma tentativa sem permissão não aparece na auditoria | Gravar o evento na camada da interface, junto com a tarefa 2.7 |
 
 ### Fase 3 — Qualidade
 

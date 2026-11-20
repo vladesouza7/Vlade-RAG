@@ -344,6 +344,16 @@ Ports acrescentados na fase 1. O código em `vlade_rag/core/ports/__init__.py` t
 | `VectorIndex.count` | A etapa `validate_indexes` confere o número de vetores |
 | `Retriever.retrieve(ctx, kb, query, top_k)` | O retriever recebe a base para ler a configuração |
 
+Ports acrescentados na fase 2 (grupo de cotas e auditoria):
+
+| Port ou método | Motivo |
+|---|---|
+| `KnowledgeRepository.get_usage` | Documentos do tenant e bytes das versões em `indexing` e `published`. A cota usa esses números |
+| `KnowledgeRepository.find_document` | `SubmitIngestion` precisa saber se o arquivo atualiza um documento existente antes de contar a cota |
+| `AuditLog.list_events` | Leitura dos eventos do tenant, do mais novo para o mais antigo, com filtro por ação e por resultado |
+| `TenantDirectory.get_quotas` e `set_quotas` | Leitura e troca das cotas em `tenants.settings.quotas`. A troca grava `tenant.quota_update` |
+| `TenantDirectory.list_api_keys` e `revoke_api_key` | Lista as chaves sem o segredo e revoga uma chave. A revogação grava `api_key.revoke` |
+
 Regras dos ports:
 
 1. Os adapters de `ObjectStorage` e de `Cache` acrescentam o prefixo `{tenant_id}/` a toda chave. O caso de uso não monta esse prefixo.
@@ -368,8 +378,10 @@ Os casos de uso ficam em `vlade_rag.core.application`. Cada caso de uso é uma c
 | `AnswerQuery` | `reader` | `Query`, parâmetros de geração | `Answer` ou fluxo de `AnswerDelta` |
 | `ReindexKnowledgeBase` | `admin` | base, modo, modelo novo, `confirm` | prévia ou `IngestionJob` |
 | `RunEvaluation` | `admin` | base, dataset, métricas | `IngestionJob` do tipo `evaluation` |
+| `GetUsage` | `reader` | nenhuma | cotas e uso do tenant |
+| `ListAuditEvents` | `admin` | ação, resultado, limite | lista de `AuditEvent` |
 
-Toda operação de escrita grava um `AuditEvent` na mesma transação da escrita.
+Toda operação de escrita grava um `AuditEvent`. As operações do `TenantDirectory` (cotas e chaves) gravam o evento na mesma transação da escrita. Os casos de uso gravam o evento logo depois da escrita, em outra transação. Ver a limitação L2 no [`ROADMAP.md`](ROADMAP.md).
 
 ## 7. Modelo de dados (PostgreSQL)
 
@@ -974,6 +986,8 @@ Prefixo `/v1`. O cabeçalho `Authorization: Bearer <chave>` autentica. Erros usa
 | `POST` | `/v1/knowledge-bases/{kb}/sources/{id}/sync` | Sincronização (fase 5) |
 | `POST` | `/v1/evaluations` | `RunEvaluation` |
 | `GET` | `/v1/jobs/{id}` | `GetIngestionStatus` |
+| `GET` | `/v1/usage` | `GetUsage` |
+| `GET` | `/v1/audit-events` | `ListAuditEvents`. Parâmetros `action`, `outcome` e `limit` (1 a 1000) |
 | `GET` | `/health/live` | Processo vivo |
 | `GET` | `/health/ready` | Banco, cache e armazenamento acessíveis |
 | `GET` | `/metrics` | Métricas Prometheus |
@@ -989,7 +1003,12 @@ O [`MCP_SPEC.md`](MCP_SPEC.md) define o servidor MCP.
 ```text
 vlade-rag db upgrade
 vlade-rag tenant create <slug>
+vlade-rag tenant quota <slug> [--documents N] [--bytes N] [--clear]
 vlade-rag key create --tenant <slug> --roles reader,writer
+vlade-rag key list --tenant <slug>
+vlade-rag key revoke <prefixo> --tenant <slug>
+vlade-rag usage [--json]
+vlade-rag audit list [--action A] [--outcome R] [--limit N] [--json]
 vlade-rag kb create <slug> --config kb.yaml
 vlade-rag ingest <kb> <caminho>... [--wait]
 vlade-rag search <kb> "<consulta>"
@@ -1010,7 +1029,7 @@ A CLI fala com o banco diretamente pelos casos de uso. A CLI lê a chave de `VLA
 | Chaves de API | Formato `vrag_<prefixo>_<segredo>`. O segredo tem 32 bytes aleatórios. O banco guarda o prefixo e `HMAC-SHA256(segredo, pepper)`. A comparação usa tempo constante |
 | Papéis | `reader`, `writer`, `admin`. Verificação no caso de uso, não só na interface |
 | Limite de requisições | Token bucket no Valkey por chave e por tenant. Sem cache configurado, o limite é por processo |
-| Cotas | `tenants.settings.quotas`: documentos, bytes, requisições por dia |
+| Cotas | `tenants.settings.quotas`: `documents`, `bytes` e, na tarefa 2.2, `requests_per_day`. Sem valor, a cota é ilimitada. `SubmitIngestion` recusa o arquivo com `quota_exceeded` (HTTP 413) e grava o evento `document.ingest` com resultado `denied`. Um arquivo que atualiza um documento existente não conta como documento novo. Um arquivo igual à versão atual não conta bytes |
 | Upload | Tamanho máximo padrão de 50 MB. Lista de tipos MIME permitidos. Verificação do tipo pelo conteúdo, não só pela extensão |
 | URI de origem | Download por URL desativado por padrão. Quando ativo, aceita só domínios de uma lista permitida e bloqueia endereços privados e de link-local |
 | Segredos | Só por variável de ambiente ou gerenciador de segredos. O processador de logs remove campos com nomes de segredo |

@@ -24,6 +24,8 @@ db_app = typer.Typer(help="Database commands (owner credentials).", no_args_is_h
 tenant_app = typer.Typer(help="Tenant administration.", no_args_is_help=True)
 key_app = typer.Typer(help="API key administration.", no_args_is_help=True)
 kb_app = typer.Typer(help="Knowledge bases.", no_args_is_help=True)
+audit_app = typer.Typer(help="Audit log of the tenant.", no_args_is_help=True)
+app.add_typer(audit_app, name="audit")
 app.add_typer(api_app, name="api")
 app.add_typer(db_app, name="db")
 app.add_typer(tenant_app, name="tenant")
@@ -58,6 +60,10 @@ async def _ctx(runtime: Any) -> TenantContext:
         raise typer.Exit(2)
     ctx: TenantContext = await runtime.tenants.authenticate(key, interface="cli")
     return ctx
+
+
+def _limit_text(value: int | None) -> str:
+    return "unlimited" if value is None else str(value)
 
 
 def _print_json(data: Any) -> None:
@@ -146,6 +152,68 @@ def tenant_create(slug: str, name: str = typer.Option(None, help="Display name."
 
     tenant = _run(_with_runtime(go))
     typer.echo(f"Tenant '{tenant.slug}' created: {tenant.id}")
+
+
+@tenant_app.command("quota")
+def tenant_quota(
+    slug: str,
+    documents: int | None = typer.Option(None, min=0, help="Maximum number of documents."),
+    size: int | None = typer.Option(None, "--bytes", min=0, help="Maximum stored bytes."),
+    clear: bool = typer.Option(False, help="Remove every limit."),
+) -> None:
+    """Show the quotas of a tenant. With options, change only the given limits."""
+    from vlade_rag.core.domain import TenantQuotas
+
+    async def go(rt: Any) -> tuple[TenantQuotas, bool]:
+        tenant = await rt.tenants.get_tenant(slug)
+        current = await rt.tenants.get_quotas(tenant.id)
+        if not clear and documents is None and size is None:
+            return current, False
+        new = (
+            TenantQuotas()
+            if clear
+            else TenantQuotas(
+                documents=current.documents if documents is None else documents,
+                bytes=current.bytes if size is None else size,
+            )
+        )
+        await rt.tenants.set_quotas(tenant.id, new)
+        return new, True
+
+    quotas, changed = _run(_with_runtime(go))
+    typer.echo(
+        f"{'Updated: ' if changed else ''}"
+        f"documents={_limit_text(quotas.documents)} bytes={_limit_text(quotas.bytes)}"
+    )
+
+
+@key_app.command("list")
+def key_list(tenant: str = typer.Option(..., help="Tenant slug.")) -> None:
+    """List the API keys of a tenant. The secret is never shown."""
+
+    async def go(rt: Any) -> Any:
+        t = await rt.tenants.get_tenant(tenant)
+        return await rt.tenants.list_api_keys(t.id)
+
+    for k in _run(_with_runtime(go)):
+        status = "revoked" if k.revoked else "active"
+        roles = ",".join(sorted(r.value for r in k.roles))
+        typer.echo(f"{k.key_prefix}\t{status}\t{roles}\t{k.principal_name}")
+
+
+@key_app.command("revoke")
+def key_revoke(
+    key_prefix: str,
+    tenant: str = typer.Option(..., help="Tenant slug."),
+) -> None:
+    """Revoke an API key by its prefix (see 'key list')."""
+
+    async def go(rt: Any) -> None:
+        t = await rt.tenants.get_tenant(tenant)
+        await rt.tenants.revoke_api_key(t.id, key_prefix)
+
+    _run(_with_runtime(go))
+    typer.echo(f"Key '{key_prefix}' revoked.")
 
 
 @key_app.command("create")
@@ -289,6 +357,66 @@ def ingest(
 
     submitted, skipped, jobs = _run(_with_runtime(go))
     typer.echo(f"Submitted {submitted} documents ({skipped} unchanged). Jobs: {len(jobs)}.")
+
+
+@app.command()
+def usage(as_json: bool = typer.Option(False, "--json")) -> None:
+    """Show the quotas and the usage of the tenant."""
+    from vlade_rag.core.application import GetUsage
+
+    async def go(rt: Any) -> Any:
+        return await GetUsage(rt.deps).execute(await _ctx(rt))
+
+    view = _run(_with_runtime(go))
+    data = {
+        "documents": view.usage.documents,
+        "bytes": view.usage.bytes,
+        "quotas": {"documents": view.quotas.documents, "bytes": view.quotas.bytes},
+    }
+    if as_json:
+        _print_json(data)
+        return
+    q = view.quotas
+    typer.echo(
+        f"documents: {view.usage.documents} / {'unlimited' if q.documents is None else q.documents}"
+    )
+    typer.echo(f"bytes: {view.usage.bytes} / {'unlimited' if q.bytes is None else q.bytes}")
+
+
+@audit_app.command("list")
+def audit_list(
+    action: str | None = typer.Option(None, help="Filter by action, for example document.ingest."),
+    outcome: str | None = typer.Option(None, help="Filter by outcome: success, denied, error."),
+    limit: int = typer.Option(50, min=1, max=1000),
+    as_json: bool = typer.Option(False, "--json"),
+) -> None:
+    """List audit events of the tenant, newest first. Needs the admin role."""
+    from vlade_rag.core.application import ListAuditEvents
+
+    async def go(rt: Any) -> Any:
+        return await ListAuditEvents(rt.deps).execute(
+            await _ctx(rt), action=action, outcome=outcome, limit=limit
+        )
+
+    events = _run(_with_runtime(go))
+    if as_json:
+        _print_json(
+            [
+                {
+                    "created_at": e.created_at,
+                    "action": e.action,
+                    "outcome": e.outcome,
+                    "interface": e.interface,
+                    "resource": f"{e.resource_type}:{e.resource_id}" if e.resource_type else None,
+                    "details": e.details,
+                }
+                for e in events
+            ]
+        )
+        return
+    for e in events:
+        when = e.created_at.isoformat(timespec="seconds") if e.created_at else "-"
+        typer.echo(f"{when}\t{e.outcome}\t{e.interface}\t{e.action}\t{e.resource_id or ''}")
 
 
 @app.command()

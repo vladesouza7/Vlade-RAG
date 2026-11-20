@@ -6,6 +6,7 @@ import json
 import secrets
 from collections.abc import Iterator
 from dataclasses import dataclass
+from functools import partial
 from typing import Any
 
 import pytest
@@ -17,7 +18,7 @@ from fastapi.testclient import TestClient
 from vlade_rag.api.app import create_app
 from vlade_rag.bootstrap import Runtime, build_runtime
 from vlade_rag.core.config import Settings
-from vlade_rag.core.domain import Role
+from vlade_rag.core.domain import Role, TenantQuotas
 from vlade_rag.ingestion.worker import Worker
 
 KB_CONFIG = {
@@ -230,3 +231,40 @@ def test_validation_errors(api: Api) -> None:
         headers=api.reader,
     )
     assert r.status_code == 403
+
+
+def test_usage_and_quota_over_http(api: Api) -> None:
+    _load(api)
+    usage = api.client.get("/v1/usage", headers=api.reader).json()
+    assert usage["documents"] == 1 and usage["bytes"] > 0
+    assert usage["quotas"] == {"documents": None, "bytes": None}
+
+    key = api.admin["Authorization"].split(" ", 1)[1]
+    ctx = api.client.portal.call(partial(api.runtime.tenants.authenticate, key, interface="api"))  # type: ignore[union-attr]
+    api.client.portal.call(  # type: ignore[union-attr]
+        partial(api.runtime.tenants.set_quotas, ctx.tenant_id, TenantQuotas(documents=1))
+    )
+    assert api.client.get("/v1/usage", headers=api.reader).json()["quotas"]["documents"] == 1
+    r = api.client.post(
+        "/v1/knowledge-bases/trocas/documents",
+        files={"file": ("outro.md", b"# Outro\n\ntexto", "text/markdown")},
+        data={"external_id": "outro"},
+        headers=api.admin,
+    )
+    assert r.status_code == 413 and r.json()["code"] == "quota_exceeded"
+    # The other tenant has no quota.
+    assert api.client.get("/v1/usage", headers=api.other).json()["quotas"]["documents"] is None
+
+
+def test_audit_events_over_http(api: Api) -> None:
+    _load(api)
+    assert api.client.get("/v1/audit-events", headers=api.reader).status_code == 403
+    events = api.client.get("/v1/audit-events", headers=api.admin).json()
+    actions = [e["action"] for e in events]
+    assert "knowledge_base.create" in actions and "document.ingest" in actions
+    assert all(e["created_at"] for e in events)
+    only = api.client.get("/v1/audit-events?action=document.ingest", headers=api.admin).json()
+    assert [e["action"] for e in only] == ["document.ingest"]
+    assert api.client.get("/v1/audit-events?limit=0", headers=api.admin).status_code == 422
+    other = api.client.get("/v1/audit-events", headers=api.other).json()
+    assert not any(e["action"].startswith("document.") for e in other)
