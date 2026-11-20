@@ -53,21 +53,39 @@ python3 .claude/skills/asd-ste100-pt-br/scripts/ste-lint-ptbr.py --disable rotac
 |---|---|
 | Idioma do código | Inglês: código, identificadores, mensagens de log, mensagens de commit |
 | Idioma da documentação | Português do Brasil, sem violações duras no linter ASD-STE100 pt-BR ([ADR-0009](docs/adr/0009-idiomas-do-projeto.md)) |
-| Commits | [Conventional Commits](https://www.conventionalcommits.org/): `feat:`, `fix:`, `docs:`, `test:`, `refactor:`, `chore:` |
-| Branches | `feat/<tema>`, `fix/<tema>`, `docs/<tema>` |
+| Commits | [Conventional Commits](https://www.conventionalcommits.org/): `feat:`, `fix:`, `docs:`, `test:`, `refactor:`, `ci:`, `chore:` |
+| Branches | `feat/<tema>`, `fix/<tema>`, `docs/<tema>`, `ci/<tema>`, `chore/<tema>`. Crie o branch a partir de `homolog` |
 | Camadas | O `core` não importa outras camadas. Um teste verifica essa regra ([ADR-0002](docs/adr/0002-arquitetura-ports-adapters.md)) |
 | Adapters | Escreva o teste de contrato do port antes do adapter |
 | Dependências | Verifique a licença contra o [ADR-0001](docs/adr/0001-licenca-mit.md). O núcleo aceita só licenças permissivas |
 | Segredos | Nunca faça commit de segredos. Use `.env`, que o Git ignora |
 | Testes com LLM real | Marque com `@pytest.mark.llm`. A CI padrão não roda esses testes |
 
+## Fluxo de branches
+
+O projeto usa dois branches de longa duração:
+
+| Branch | Função |
+|---|---|
+| `main` | Código pronto. Só recebe pull requests de `homolog` |
+| `homolog` | Ambiente de integração. Recebe os pull requests das tarefas |
+
+```text
+feat/<tema> ──► homolog ──► main
+```
+
+1. Crie o branch da tarefa a partir de `homolog` atualizada.
+2. Abra o pull request com destino em `homolog`.
+3. Quando os testes locais da `homolog` estiverem prontos, abra um pull request de `homolog` para `main`.
+4. Não apague `homolog` depois do merge.
+
 ## Pull requests
 
-1. Crie um branch a partir de `main`.
-2. Faça uma mudança por pull request.
-3. Preencha o modelo do pull request.
-4. Espere a CI passar.
-5. Responda aos comentários da revisão.
+1. Faça uma mudança por pull request.
+2. Preencha o modelo do pull request.
+3. Espere a CI passar.
+4. Responda aos comentários da revisão.
+5. Cite a tarefa do roadmap ou a issue no texto do pull request.
 
 ## Licença das contribuições
 
