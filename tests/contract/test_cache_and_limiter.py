@@ -116,11 +116,12 @@ async def test_bucket_allows_capacity_then_denies(backend: Backend) -> None:
 
 async def test_bucket_refills_over_time(backend: Backend) -> None:
     tenant = uuid7()
+    # One token every 200 ms: a short pause under load cannot refill the bucket by accident.
     for _ in range(2):
-        await backend.limiter.take(tenant, "k", capacity=2, refill_per_second=20)
-    assert not (await backend.limiter.take(tenant, "k", capacity=2, refill_per_second=20)).allowed
-    await asyncio.sleep(0.2)  # 4 tokens at 20 per second, capped at the capacity
-    assert (await backend.limiter.take(tenant, "k", capacity=2, refill_per_second=20)).allowed
+        await backend.limiter.take(tenant, "k", capacity=2, refill_per_second=5)
+    assert not (await backend.limiter.take(tenant, "k", capacity=2, refill_per_second=5)).allowed
+    await asyncio.sleep(0.45)  # more than two tokens, capped at the capacity
+    assert (await backend.limiter.take(tenant, "k", capacity=2, refill_per_second=5)).allowed
 
 
 async def test_bucket_cost_and_isolation(backend: Backend) -> None:

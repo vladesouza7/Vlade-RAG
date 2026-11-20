@@ -54,9 +54,10 @@ Extras de `vlade-rag` disponíveis na fase 1:
 | `otel` | SDK OpenTelemetry e exportador OTLP por HTTP |
 | `cache` | redis-py (fase 2). Atende Valkey e Redis |
 | `mcp` | SDK oficial `mcp` e `jsonschema` (fase 2). Traz o servidor MCP |
-| `server` | `native`, `api`, `cli`, `postgres`, `ollama`, `openai`, `otel`, `cache`, `mcp` |
+| `s3` | boto3 (fase 2). Traz o armazenamento de objetos pela API S3 |
+| `server` | `native`, `api`, `cli`, `postgres`, `ollama`, `openai`, `otel`, `cache`, `mcp`, `s3` |
 
-Extras previstos para as fases seguintes: `qdrant`, `gemini`, `local-models` (sentence-transformers), `s3`, `langgraph`, `eval` (RAGAS), `langfuse` e `all`.
+O Gemini usa o endpoint compatível com a API da OpenAI e não precisa de extra. Extras previstos para as fases seguintes: `qdrant`, `local-models` (sentence-transformers), `langgraph`, `eval` (RAGAS), `langfuse` e `all`.
 
 Os parsers de texto, Markdown e HTML não precisam de extra. Eles usam só a biblioteca padrão.
 
@@ -739,8 +740,15 @@ A configuração do processo vem de variáveis de ambiente com o prefixo `VLADE_
 VLADE_DATABASE__URL=postgresql://vlade_app:***@postgres:5432/vlade
 VLADE_DATABASE__OWNER_URL=postgresql://vlade_owner:***@postgres:5432/vlade   # só para db upgrade
 VLADE_STORAGE__BACKEND=postgres                  # postgres ou memory
-VLADE_OBJECT_STORAGE__BACKEND=filesystem         # filesystem ou memory (S3 na fase 2)
+VLADE_OBJECT_STORAGE__BACKEND=filesystem         # filesystem, s3 ou memory
 VLADE_OBJECT_STORAGE__PATH=/data/objects
+VLADE_OBJECT_STORAGE__S3__BUCKET=vlade           # backend s3: AWS ou qualquer serviço compatível (ADR-0006)
+VLADE_OBJECT_STORAGE__S3__ENDPOINT_URL=          # vazio na AWS; a URL do serviço compatível nos outros casos
+VLADE_OBJECT_STORAGE__S3__REGION=us-east-1
+VLADE_OBJECT_STORAGE__S3__ACCESS_KEY_ID=***      # vazio: cadeia padrão do boto3 (variáveis, arquivo, papel)
+VLADE_OBJECT_STORAGE__S3__SECRET_ACCESS_KEY=***
+VLADE_OBJECT_STORAGE__S3__PATH_STYLE=true
+VLADE_OBJECT_STORAGE__S3__CREATE_BUCKET=false    # true cria o bucket ao iniciar (serviço local)
 VLADE_SECURITY__API_KEY_PEPPER=***
 VLADE_CACHE__URL=redis://valkey:6379/0           # Valkey ou Redis. Sem URL, o cache e o limite ficam no processo
 VLADE_LIMITS__RATE_PER_KEY_PER_MINUTE=600        # 0 desliga o limite
@@ -750,6 +758,8 @@ VLADE_PROVIDERS__OLLAMA__THINK=false
 VLADE_PROVIDERS__OPENAI__API_KEY=***
 VLADE_PROVIDERS__OPENROUTER__API_KEY=***
 VLADE_PROVIDERS__OPENCODE__API_KEY=***                 # OpenCode Zen, https://opencode.ai/zen/v1
+VLADE_PROVIDERS__GEMINI__API_KEY=***                   # Gemini, pelo endpoint compatível com a API da OpenAI
+VLADE_PROVIDERS__GEMINI__EMBEDDING_DIMENSIONS=false    # true envia "dimensions" nos embeddings (não confirmado pelo Google)
 VLADE_PROVIDERS__COMPATIBLE__GROQ__BASE_URL=https://api.groq.com/openai/v1   # qualquer API compatível
 VLADE_PROVIDERS__COMPATIBLE__GROQ__API_KEY=***
 VLADE_DEFAULT_KB_CONFIG={"embeddings": {"provider": "openrouter", ...}}      # padrão das bases novas
@@ -1104,7 +1114,7 @@ Logs JSON em `stdout`, com `structlog`. Campos obrigatórios: `timestamp`, `leve
 | `mcp` | stdio local | sim | sim | MIT |
 | `postgres` | sim | sim | sim | PostgreSQL License |
 | `valkey` | sim | sim | sim | BSD-3-Clause |
-| `minio` | não (sistema de arquivos) | sim | sim | AGPL-3.0 (ADR-0006) |
+| Serviço S3 compatível | não (sistema de arquivos) | sim | sim | RustFS ou SeaweedFS, Apache-2.0 (ADR-0017). O Compose ainda não traz o serviço |
 | `kestra` | não | sim | sim | Apache-2.0 |
 | `langfuse` | não (Cloud ou desligado) | sim | sim | MIT |
 | `alloy` | não | sim | sim | Apache-2.0 |
