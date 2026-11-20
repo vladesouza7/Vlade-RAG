@@ -18,7 +18,7 @@
 |---|---|---|---|
 | 0 | Fundação | `0.0.x` | Tarefas 0.1 a 0.10 concluídas em 2026-11-19. A CI passou no GitHub em 2026-11-19, inclusive licenças, linter de documentação e `GET /health/live` no perfil `dev`. Falta medir o consumo de memória do perfil `dev` (RNF-11). A fase está integrada na branch `homolog` |
 | 1 | Núcleo mínimo | `0.1.0` | Em andamento. Tarefas 1.1 a 1.21 implementadas em 2026-11-19. A CI passou no GitHub em 2026-11-19 (PR #1) e a fase está integrada na branch `homolog`. O teste de aceite rodou em 2026-11-19 com o OpenRouter: 100 documentos ingeridos, 19 de 20 perguntas respondidas com a citação certa, 121 testes aprovados e cobertura de 88,40%. Falta a revisão humana das 20 respostas e o teste do Docling (tarefa 1.9). A limitação L1 está registrada na seção da fase |
-| 2 | Interfaces e armazenamento | `0.2.0` | Não iniciada |
+| 2 | Interfaces e armazenamento | `0.2.0` | Em andamento. Tarefas 2.1, 2.2, 2.3, 2.5, 2.6, 2.7, 2.8, 2.9 e 2.10 implementadas. Elas cobrem cotas, chaves, auditoria, limite de requisições, cache no Valkey, Gemini, servidor MCP de leitura, teste com o Inspector e Agent Skill. A tarefa 2.4 está parcial: o adapter S3 está pronto e falta o serviço S3 de exemplo. O critério de aceite ainda não rodou. Ele pede dois clientes MCP reais com a skill instalada |
 | 3 | Qualidade | `0.3.0` | Não iniciada |
 | 4 | Operação | `0.4.0` | Não iniciada |
 | 5 | Extensões | `1.0.0` | Não iniciada |
@@ -109,22 +109,34 @@ F0 Fundação
 
 | # | Tarefa | Referência |
 |---|---|---|
-| 2.1 | Chaves de API, papéis, cotas | ARCHITECTURE §15 |
-| 2.2 | Limite de requisições com Valkey | ADR-0007 |
-| 2.3 | Auditoria | ARCHITECTURE §7.2 |
-| 2.4 | `ObjectStorage` S3 e MinIO no perfil `staging` | ADR-0006 |
-| 2.5 | `Cache` Valkey para embeddings de consulta e resultados de busca | ARCHITECTURE §11.6 |
-| 2.6 | Provedores Gemini e OpenRouter | VLADE-RAG §16 |
-| 2.7 | Servidor MCP com as ferramentas de leitura, resources e prompts | MCP_SPEC §5.2 a §5.6, §6, §7 |
-| 2.8 | Teste do servidor MCP com o MCP Inspector na CI | MCP_SPEC §12 |
-| 2.9 | Agent Skill `skills/vlade-rag/` | VLADE-RAG §12.1 |
-| 2.10 | Teste de isolamento para o MCP | RNF-07 |
+| 2.1 | Chaves de API, papéis, cotas | ARCHITECTURE §15 · Implementada em 2026-11-19: cotas de documentos, de bytes e de requisições por dia, lista e revogação de chaves, `GET /v1/usage` |
+| 2.2 | Limite de requisições com Valkey | ADR-0007 · Implementada em 2026-11-19: token bucket por chave e por tenant (`VLADE_LIMITS__RATE_PER_KEY_PER_MINUTE` e `VLADE_LIMITS__RATE_PER_TENANT_PER_MINUTE`), `rate_limited` com `Retry-After` na API e cota diária. O servidor MCP (2.7) aplica o mesmo limite |
+| 2.3 | Auditoria | ARCHITECTURE §7.2 · Implementada em 2026-11-19: eventos de cota negada, de cota alterada e de chave emitida ou revogada, `GET /v1/audit-events` e `vlade-rag audit list`. Ver a limitação L2 |
+| 2.4 | `ObjectStorage` S3 e MinIO no perfil `staging` | ADR-0006, ADR-0017 · Parcial em 2026-11-20: o adapter S3 (extra `s3`, `boto3`) está pronto e passa no contrato do port com `moto`. O MinIO deixou de ser distribuído (ADR-0017). Falta o serviço S3 de exemplo no Compose (RustFS ou SeaweedFS) e o contrato rodando contra um serviço real. Ver a limitação L7 |
+| 2.5 | `Cache` Valkey para embeddings de consulta e resultados de busca | ARCHITECTURE §11.6 · Implementada em 2026-11-19: `ValkeyCache` (extra `cache`), cache de resultados de busca com `kb_epoch` e `VLADE_CACHE__URL` no Compose. Ver a limitação L4 |
+| 2.6 | Provedores Gemini e OpenRouter | VLADE-RAG §16 · Implementada em 2026-11-20. O OpenRouter vem da fase 1. O Gemini usa o endpoint compatível com a API da OpenAI (provedor `gemini`, `GEMINI_API_KEY`). Os testes usam um cliente HTTP falso: nenhuma chamada real ao Google rodou. Ver a limitação L8 |
+| 2.7 | Servidor MCP com as ferramentas de leitura, resources e prompts | MCP_SPEC §5.2 a §5.6, §6, §7 · Implementada em 2026-11-19: 5 ferramentas de leitura, 2 resources, 2 prompts, transportes `stdio` e Streamable HTTP, papel por ferramenta, limites por grupo e auditoria. Serviço `mcp` no Compose (`staging` e `prod`). Ver as limitações L5 e L6 |
+| 2.8 | Teste do servidor MCP com o MCP Inspector na CI | MCP_SPEC §12 · Implementada em 2026-11-20: job `MCP server (Inspector)` e `scripts/mcp_inspector.sh` (Inspector 2.16.0, modo CLI, 24 verificações). O teste achou um erro do servidor: o resultado de erro trazia `structuredContent` fora do `outputSchema`. Corrigido |
+| 2.9 | Agent Skill `skills/vlade-rag/` | VLADE-RAG §12.1 · Implementada em 2026-11-20: `skills/vlade-rag/SKILL.md` no padrão agentskills.io, sem violações duras no linter. Falta instalar a skill em dois clientes reais (critério de aceite da fase) |
+| 2.10 | Teste de isolamento para o MCP | RNF-07 · Concluída em 2026-11-19: `tests/e2e/test_mcp_isolation.py` chama cada ferramenta e cada resource com a chave de um tenant e os identificadores de outro. A resposta é `not_found` e é igual à resposta de um identificador que não existe |
 
 **Critérios de aceite:**
 
 - Dois clientes MCP diferentes, por exemplo Claude Code e Hermes Agent, consultam uma base com a Agent Skill instalada.
 - Uma chave de outro tenant recebe `not_found` em cada ferramenta MCP e em cada endpoint.
 - O limite de requisições devolve `rate_limited` acima do limite configurado.
+
+**Limitações conhecidas:**
+
+| ID | Limitação | Efeito | Tratamento |
+|---|---|---|---|
+| L2 | Os casos de uso gravam o `AuditEvent` logo depois da escrita, em outra transação. Só as operações de cotas e de chaves (`TenantDirectory`) gravam o evento na mesma transação | Se o processo cai entre a escrita e o evento, a escrita fica sem evento de auditoria | Introduzir uma unidade de trabalho (transação compartilhada entre repositório e auditoria) com um ADR. Ainda sem tarefa |
+| L3 | Os casos de uso não gravam evento para uma chamada negada por papel insuficiente (`PermissionDenied`). O servidor MCP já grava o evento `denied`. A API REST ainda não grava | Uma tentativa sem permissão na API REST não aparece na auditoria | Gravar o evento também na camada da API REST. Ainda sem tarefa |
+| L5 | O servidor MCP não envia notificações de progresso durante `vlade_query` (MCP_SPEC §5.4) | Um cliente que informa `progressToken` não recebe o progresso. A resposta final funciona | Enviar o progresso pelo `Context` do SDK, quando houver streaming de resposta pelo MCP |
+| L6 | Os limites por grupo do MCP (MCP_SPEC §8) são fixos no código. A configuração do tenant ainda não muda os valores | Um tenant não ajusta os limites do MCP | Ler `tenants.settings.mcp.rate_limits`. Ainda sem tarefa |
+| L7 | O Compose não traz um serviço S3. Ninguém rodou o container do RustFS nem o do SeaweedFS com o contrato do port | Quem usa `staging` aponta para um S3 existente com as variáveis `S3_*`. A compatibilidade com cada serviço compatível não está medida | Subir o serviço escolhido no Compose e na CI e rodar o contrato com `VLADE_TEST_S3_*` (tarefa 2.4) |
+| L8 | A documentação do Google não confirma o campo `dimensions` nos embeddings do endpoint compatível. O `gemini-embedding-001` tem 3072 dimensões por padrão, e o índice HNSW do pgvector aceita até 2000 | Sem `dimensions`, os embeddings do Gemini podem não caber no índice. Ninguém testou o Gemini com uma chave real | Testar com uma chave real. Se o campo falhar, usar `halfvec` ou outro modelo de embedding |
+| L4 | Se o Valkey falha, o cache perde a entrada e o limite de requisições deixa a requisição passar (ADR-0007). A API lê as cotas do tenant no banco a cada requisição, para conferir `requests_per_day` | Sem Valkey, o limite e a cota diária não protegem. Há uma leitura extra no banco por requisição | Monitorar o Valkey. Guardar as cotas no cache por alguns segundos, se a leitura pesar. Ainda sem tarefa |
 
 ### Fase 3 — Qualidade
 

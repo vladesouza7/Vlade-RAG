@@ -5,7 +5,8 @@ from __future__ import annotations
 import json
 import secrets
 from collections.abc import Iterator
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
+from functools import partial
 from typing import Any
 
 import pytest
@@ -17,7 +18,7 @@ from fastapi.testclient import TestClient
 from vlade_rag.api.app import create_app
 from vlade_rag.bootstrap import Runtime, build_runtime
 from vlade_rag.core.config import Settings
-from vlade_rag.core.domain import Role
+from vlade_rag.core.domain import Role, TenantQuotas
 from vlade_rag.ingestion.worker import Worker
 
 KB_CONFIG = {
@@ -230,3 +231,90 @@ def test_validation_errors(api: Api) -> None:
         headers=api.reader,
     )
     assert r.status_code == 403
+
+
+def test_usage_and_quota_over_http(api: Api) -> None:
+    _load(api)
+    usage = api.client.get("/v1/usage", headers=api.reader).json()
+    assert usage["documents"] == 1 and usage["bytes"] > 0
+    assert usage["quotas"] == {"documents": None, "bytes": None, "requests_per_day": None}
+
+    key = api.admin["Authorization"].split(" ", 1)[1]
+    ctx = api.client.portal.call(partial(api.runtime.tenants.authenticate, key, interface="api"))  # type: ignore[union-attr]
+    api.client.portal.call(  # type: ignore[union-attr]
+        partial(api.runtime.tenants.set_quotas, ctx.tenant_id, TenantQuotas(documents=1))
+    )
+    assert api.client.get("/v1/usage", headers=api.reader).json()["quotas"]["documents"] == 1
+    r = api.client.post(
+        "/v1/knowledge-bases/trocas/documents",
+        files={"file": ("outro.md", b"# Outro\n\ntexto", "text/markdown")},
+        data={"external_id": "outro"},
+        headers=api.admin,
+    )
+    assert r.status_code == 413 and r.json()["code"] == "quota_exceeded"
+    # The other tenant has no quota.
+    assert api.client.get("/v1/usage", headers=api.other).json()["quotas"]["documents"] is None
+
+
+def test_audit_events_over_http(api: Api) -> None:
+    _load(api)
+    assert api.client.get("/v1/audit-events", headers=api.reader).status_code == 403
+    events = api.client.get("/v1/audit-events", headers=api.admin).json()
+    actions = [e["action"] for e in events]
+    assert "knowledge_base.create" in actions and "document.ingest" in actions
+    assert all(e["created_at"] for e in events)
+    only = api.client.get("/v1/audit-events?action=document.ingest", headers=api.admin).json()
+    assert [e["action"] for e in only] == ["document.ingest"]
+    assert api.client.get("/v1/audit-events?limit=0", headers=api.admin).status_code == 422
+    other = api.client.get("/v1/audit-events", headers=api.other).json()
+    assert not any(e["action"].startswith("document.") for e in other)
+
+
+def _limits(api: Api, **changes: int) -> None:
+    api.runtime.deps.limits = replace(api.runtime.deps.limits, **changes)
+
+
+def test_rate_limit_per_key_returns_429_with_retry_after(api: Api) -> None:
+    _limits(api, rate_per_key_per_minute=3, rate_per_tenant_per_minute=0)
+    for _ in range(3):
+        assert api.client.get("/v1/knowledge-bases", headers=api.reader).status_code == 200
+    r = api.client.get("/v1/knowledge-bases", headers=api.reader)
+    assert r.status_code == 429
+    assert r.headers["content-type"].startswith("application/problem+json")
+    assert r.json()["code"] == "rate_limited" and r.json()["retryable"] is True
+    assert 1 <= int(r.headers["Retry-After"]) <= 60
+    # Another key of the same tenant has its own bucket, and so does another tenant.
+    assert api.client.get("/v1/knowledge-bases", headers=api.admin).status_code == 200
+    assert api.client.get("/v1/knowledge-bases", headers=api.other).status_code == 200
+    # A call without a valid key never reaches the limiter.
+    assert api.client.get("/v1/knowledge-bases").status_code == 401
+
+
+def test_rate_limit_per_tenant_is_shared_by_its_keys(api: Api) -> None:
+    _limits(api, rate_per_key_per_minute=0, rate_per_tenant_per_minute=4)
+    for headers in (api.admin, api.reader, api.admin, api.reader):
+        assert api.client.get("/v1/knowledge-bases", headers=headers).status_code == 200
+    assert api.client.get("/v1/knowledge-bases", headers=api.admin).status_code == 429
+    assert api.client.get("/v1/knowledge-bases", headers=api.other).status_code == 200
+
+
+def test_rate_limit_off_when_zero(api: Api) -> None:
+    _limits(api, rate_per_key_per_minute=0, rate_per_tenant_per_minute=0)
+    for _ in range(30):
+        assert api.client.get("/v1/knowledge-bases", headers=api.reader).status_code == 200
+
+
+def test_daily_request_quota(api: Api) -> None:
+    _limits(api, rate_per_key_per_minute=0, rate_per_tenant_per_minute=0)
+    key = api.admin["Authorization"].split(" ", 1)[1]
+    ctx = api.client.portal.call(partial(api.runtime.tenants.authenticate, key, interface="api"))  # type: ignore[union-attr]
+    api.client.portal.call(  # type: ignore[union-attr]
+        partial(api.runtime.tenants.set_quotas, ctx.tenant_id, TenantQuotas(requests_per_day=3))
+    )
+    usage = api.client.get("/v1/usage", headers=api.reader).json()  # request 1 of 3
+    assert usage["requests_today"] == 1 and usage["quotas"]["requests_per_day"] == 3
+    assert api.client.get("/v1/knowledge-bases", headers=api.reader).status_code == 200  # 2
+    assert api.client.get("/v1/knowledge-bases", headers=api.admin).status_code == 200  # 3
+    r = api.client.get("/v1/knowledge-bases", headers=api.reader)
+    assert r.status_code == 429 and r.json()["code"] == "quota_exceeded"
+    assert api.client.get("/v1/knowledge-bases", headers=api.other).status_code == 200

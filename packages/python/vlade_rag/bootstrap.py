@@ -70,7 +70,7 @@ class ProviderClients:
 
 
 def builtin_plugins(
-    compatible: tuple[str, ...] = ("openai", "openrouter", "opencode"),
+    compatible: tuple[str, ...] = ("openai", "openrouter", "opencode", "gemini"),
 ) -> list[PluginSpec]:
     """Built-in adapters. ``compatible`` lists the OpenAI-compatible provider names."""
 
@@ -85,8 +85,15 @@ def builtin_plugins(
                 OpenAICompatibleEmbeddingProvider,
             )
 
+            send_dimensions = clients.settings.providers.openai_compatible()[
+                provider
+            ].embedding_dimensions
             return OpenAICompatibleEmbeddingProvider(
-                clients.get(provider), provider, cfg.model, cfg.dimension
+                clients.get(provider),
+                provider,
+                cfg.model,
+                cfg.dimension,
+                send_dimensions=send_dimensions,
             )
 
         return factory
@@ -204,6 +211,7 @@ async def build_runtime(
             "job_queue": mem.job_queue,
             "audit_log": mem.audit_log,
             "cache": mem.cache,
+            "rate_limiter": mem.rate_limiter,
         }
         tenants: TenantDirectory = mem.tenants
         object_storage: Any = mem.object_storage
@@ -212,7 +220,7 @@ async def build_runtime(
             raise InvalidArgument("VLADE_DATABASE__URL is required for the postgres backend.")
         if settings.security.api_key_pepper is None:
             raise InvalidArgument("VLADE_SECURITY__API_KEY_PEPPER is required.")
-        from vlade_rag.knowledge.memory import MemoryCache, MemoryStore
+        from vlade_rag.knowledge.memory import MemoryCache, MemoryRateLimiter, MemoryStore
         from vlade_rag.knowledge.postgres import (
             PgVectorIndex,
             PostgresAuditLog,
@@ -236,20 +244,51 @@ async def build_runtime(
             "lexical_indexes": {"lexical": TsvectorLexicalIndex(db)},
             "job_queue": PostgresJobQueue(db),
             "audit_log": PostgresAuditLog(db),
-            "cache": MemoryCache(MemoryStore()),  # per process; Valkey arrives in phase 2
+            "cache": MemoryCache(MemoryStore()),  # per process unless VLADE_CACHE__URL is set
+            "rate_limiter": MemoryRateLimiter(),
         }
         tenants = PostgresTenantDirectory(db, settings.security.api_key_pepper.get_secret_value())
         object_storage = None
 
-    if object_storage is None or settings.object_storage.backend == "filesystem":
-        if settings.object_storage.backend == "filesystem":
-            from vlade_rag.knowledge.filesystem import FilesystemObjectStorage
+    storage_backend = settings.object_storage.backend
+    if storage_backend == "s3":
+        s3 = settings.object_storage.s3
+        if not s3.bucket:
+            raise InvalidArgument(
+                "VLADE_OBJECT_STORAGE__S3__BUCKET is required for the s3 backend."
+            )
+        try:
+            from vlade_rag.knowledge.s3 import S3ObjectStorage
+        except ImportError as exc:
+            raise InvalidArgument(
+                'The s3 backend needs the "s3" extra: pip install "vlade-rag[s3]"'
+            ) from exc
+        s3_storage = S3ObjectStorage.from_settings(s3)
+        if s3.create_bucket:
+            await s3_storage.ensure_bucket()
+        checks["object_storage"] = s3_storage.ping
+        object_storage = s3_storage
+    elif storage_backend == "filesystem":
+        from vlade_rag.knowledge.filesystem import FilesystemObjectStorage
 
-            object_storage = FilesystemObjectStorage(settings.object_storage.path)
-        else:
-            from vlade_rag.knowledge.memory import MemoryObjectStorage, MemoryStore
+        object_storage = FilesystemObjectStorage(settings.object_storage.path)
+    elif object_storage is None:
+        from vlade_rag.knowledge.memory import MemoryObjectStorage, MemoryStore
 
-            object_storage = MemoryObjectStorage(MemoryStore())
+        object_storage = MemoryObjectStorage(MemoryStore())
+
+    if settings.cache.url is not None:
+        try:
+            from vlade_rag.knowledge.valkey import ValkeyCache, ValkeyRateLimiter, connect
+        except ImportError as exc:
+            raise InvalidArgument(
+                'VLADE_CACHE__URL needs the "cache" extra: pip install "vlade-rag[cache]"'
+            ) from exc
+        client = connect(settings.cache.url.get_secret_value())
+        closers.append(client.aclose)
+        checks["cache"] = client.ping
+        ports["cache"] = ValkeyCache(client)
+        ports["rate_limiter"] = ValkeyRateLimiter(client)
 
     limits = settings.limits
     deps = Dependencies(
@@ -265,10 +304,13 @@ async def build_runtime(
             max_upload_bytes=limits.max_upload_bytes,
             max_query_chars=limits.max_query_chars,
             max_top_k=limits.max_top_k,
+            rate_per_key_per_minute=limits.rate_per_key_per_minute,
+            rate_per_tenant_per_minute=limits.rate_per_tenant_per_minute,
             job_max_attempts=limits.job_max_attempts,
             store_query_text=limits.store_query_text,
         ),
         default_kb_config=settings.default_kb_config,
+        tenants=tenants,
         **ports,
     )
     return Runtime(

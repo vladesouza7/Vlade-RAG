@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from collections.abc import Mapping
+from dataclasses import replace
 from typing import Any
 from uuid import UUID
 
@@ -21,6 +22,7 @@ from vlade_rag.core.domain import (
     Role,
     Tenant,
     TenantContext,
+    TenantQuotas,
     Unauthenticated,
     uuid7,
 )
@@ -30,8 +32,27 @@ from vlade_rag.core.domain.api_keys import (
     parse_api_key,
     verify_secret,
 )
-from vlade_rag.core.ports import ClaimedJob, IssuedApiKey
+from vlade_rag.core.ports import ApiKeyInfo, ClaimedJob, IssuedApiKey
 from vlade_rag.knowledge.postgres.db import PostgresDatabase
+
+
+async def _insert_audit(conn: asyncpg.Connection, event: AuditEvent) -> None:
+    """Insert an audit event on ``conn``, so it commits with the caller's transaction."""
+    await conn.execute(
+        "INSERT INTO audit_events (id, tenant_id, principal_id, interface, action, "
+        "resource_type, resource_id, outcome, details, trace_id) "
+        "VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)",
+        uuid7(),
+        event.tenant_id,
+        event.principal_id,
+        event.interface,
+        event.action,
+        event.resource_type,
+        event.resource_id,
+        event.outcome,
+        dict(event.details),
+        event.trace_id,
+    )
 
 
 def _job(row: Mapping[str, Any], steps: tuple[IngestionStep, ...] = ()) -> IngestionJob:
@@ -186,21 +207,41 @@ class PostgresAuditLog:
 
     async def record(self, ctx: TenantContext, event: AuditEvent) -> None:
         async with self.db.tenant(ctx) as conn:
-            await conn.execute(
-                "INSERT INTO audit_events (id, tenant_id, principal_id, interface, action, "
-                "resource_type, resource_id, outcome, details, trace_id) "
-                "VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)",
-                uuid7(),
+            await _insert_audit(conn, replace(event, tenant_id=ctx.tenant_id))
+
+    async def list_events(
+        self,
+        ctx: TenantContext,
+        *,
+        action: str | None = None,
+        outcome: str | None = None,
+        limit: int = 100,
+    ) -> list[AuditEvent]:
+        async with self.db.tenant(ctx) as conn:
+            rows = await conn.fetch(
+                "SELECT * FROM audit_events WHERE tenant_id = $1 "
+                "AND ($2::text IS NULL OR action = $2) AND ($3::text IS NULL OR outcome = $3) "
+                "ORDER BY created_at DESC, id DESC LIMIT $4",
                 ctx.tenant_id,
-                event.principal_id,
-                event.interface,
-                event.action,
-                event.resource_type,
-                event.resource_id,
-                event.outcome,
-                dict(event.details),
-                event.trace_id,
+                action,
+                outcome,
+                max(limit, 0),
             )
+        return [
+            AuditEvent(
+                tenant_id=r["tenant_id"],
+                principal_id=r["principal_id"],
+                interface=r["interface"],
+                action=r["action"],
+                outcome=r["outcome"],
+                resource_type=r["resource_type"],
+                resource_id=r["resource_id"],
+                details=r["details"],
+                trace_id=r["trace_id"],
+                created_at=r["created_at"],
+            )
+            for r in rows
+        ]
 
     async def record_query(self, ctx: TenantContext, entry: QueryLogEntry) -> None:
         async with self.db.tenant(ctx) as conn:
@@ -255,6 +296,44 @@ class PostgresTenantDirectory:
             raise NotFound(f"Tenant '{slug}' does not exist.")
         return Tenant(id=row["id"], slug=row["slug"], name=row["name"], settings=row["settings"])
 
+    @staticmethod
+    def _event(
+        tenant_id: UUID, action: str, resource_type: str, resource_id: str, details: Metadata
+    ) -> AuditEvent:
+        return AuditEvent(
+            tenant_id=tenant_id,
+            interface="cli",
+            action=action,
+            outcome="success",
+            resource_type=resource_type,
+            resource_id=resource_id,
+            details=details,
+        )
+
+    async def get_quotas(self, tenant_id: UUID) -> TenantQuotas:
+        async with self.db.tenant(self._ctx(tenant_id)) as conn:
+            settings = await conn.fetchval("SELECT settings FROM tenants WHERE id = $1", tenant_id)
+        if settings is None:
+            raise NotFound("Tenant does not exist.")
+        return TenantQuotas.from_settings(settings)
+
+    async def set_quotas(self, tenant_id: UUID, quotas: TenantQuotas) -> None:
+        async with self.db.tenant(self._ctx(tenant_id)) as conn:
+            updated = await conn.fetchval(
+                "UPDATE tenants SET settings = jsonb_set(settings, '{quotas}', $2::jsonb, true) "
+                "WHERE id = $1 RETURNING id",
+                tenant_id,
+                quotas.to_settings(),
+            )
+            if updated is None:
+                raise NotFound("Tenant does not exist.")
+            await _insert_audit(
+                conn,
+                self._event(
+                    tenant_id, "tenant.quota_update", "tenant", str(tenant_id), quotas.to_settings()
+                ),
+            )
+
     async def issue_api_key(
         self, tenant_id: UUID, *, principal_name: str, roles: frozenset[Role]
     ) -> IssuedApiKey:
@@ -279,7 +358,50 @@ class PostgresTenantDirectory:
                 hash_secret(secret, self.pepper),
                 sorted(r.value for r in roles),
             )
+            await _insert_audit(
+                conn,
+                self._event(
+                    tenant_id,
+                    "api_key.issue",
+                    "api_key",
+                    prefix,
+                    {"principal": principal_name, "roles": sorted(r.value for r in roles)},
+                ),
+            )
         return IssuedApiKey(key=key, key_prefix=prefix, principal_id=principal_id, roles=roles)
+
+    async def list_api_keys(self, tenant_id: UUID) -> list[ApiKeyInfo]:
+        async with self.db.tenant(self._ctx(tenant_id)) as conn:
+            rows = await conn.fetch(
+                "SELECT k.key_prefix, k.principal_id, p.name, k.roles, k.revoked_at "
+                "FROM api_keys k JOIN principals p ON p.id = k.principal_id "
+                "WHERE k.tenant_id = $1 ORDER BY k.created_at, k.id",
+                tenant_id,
+            )
+        return [
+            ApiKeyInfo(
+                key_prefix=r["key_prefix"],
+                principal_id=r["principal_id"],
+                principal_name=r["name"],
+                roles=frozenset(Role(x) for x in r["roles"]),
+                revoked=r["revoked_at"] is not None,
+            )
+            for r in rows
+        ]
+
+    async def revoke_api_key(self, tenant_id: UUID, key_prefix: str) -> None:
+        async with self.db.tenant(self._ctx(tenant_id)) as conn:
+            revoked = await conn.fetchval(
+                "UPDATE api_keys SET revoked_at = COALESCE(revoked_at, now()) "
+                "WHERE tenant_id = $1 AND key_prefix = $2 RETURNING id",
+                tenant_id,
+                key_prefix,
+            )
+            if revoked is None:
+                raise NotFound("API key does not exist.")
+            await _insert_audit(
+                conn, self._event(tenant_id, "api_key.revoke", "api_key", key_prefix, {})
+            )
 
     async def authenticate(self, api_key: str, *, interface: str) -> TenantContext:
         prefix, secret = parse_api_key(api_key)

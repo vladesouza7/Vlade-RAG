@@ -11,6 +11,7 @@ import shutil
 from pathlib import Path
 
 from vlade_rag.core.domain import InvalidArgument, NotFound, TenantContext
+from vlade_rag.knowledge.object_keys import validate_object_key
 
 
 class FilesystemObjectStorage:
@@ -18,8 +19,7 @@ class FilesystemObjectStorage:
         self.root = Path(root).resolve()
 
     def _path(self, ctx: TenantContext, key: str) -> Path:
-        if not key or key.startswith("/") or ".." in Path(key).parts:
-            raise InvalidArgument(f"Invalid object key '{key}'.")
+        validate_object_key(key)
         base = (self.root / str(ctx.tenant_id)).resolve()
         path = (base / key).resolve()
         if base not in path.parents:
@@ -49,7 +49,7 @@ class FilesystemObjectStorage:
         await asyncio.to_thread(path.unlink, True)
 
     async def delete_prefix(self, ctx: TenantContext, prefix: str) -> int:
-        directory = self._path(ctx, prefix.rstrip("/"))
+        directory = self._path(ctx, validate_object_key(prefix, prefix=True))
 
         def _remove() -> int:
             if not directory.exists():

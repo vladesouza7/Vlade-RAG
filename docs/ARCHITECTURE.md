@@ -52,9 +52,12 @@ Extras de `vlade-rag` disponíveis na fase 1:
 | `api` | FastAPI, Uvicorn, python-multipart |
 | `cli` | Typer |
 | `otel` | SDK OpenTelemetry e exportador OTLP por HTTP |
-| `server` | `native`, `api`, `cli`, `postgres`, `ollama`, `openai`, `otel` |
+| `cache` | redis-py (fase 2). Atende Valkey e Redis |
+| `mcp` | SDK oficial `mcp` e `jsonschema` (fase 2). Traz o servidor MCP |
+| `s3` | boto3 (fase 2). Traz o armazenamento de objetos pela API S3 |
+| `server` | `native`, `api`, `cli`, `postgres`, `ollama`, `openai`, `otel`, `cache`, `mcp`, `s3` |
 
-Extras previstos para as fases seguintes: `qdrant`, `gemini`, `local-models` (sentence-transformers), `s3`, `cache` (Valkey), `mcp`, `langgraph`, `eval` (RAGAS), `langfuse` e `all`.
+O Gemini usa o endpoint compatível com a API da OpenAI e não precisa de extra. Extras previstos para as fases seguintes: `qdrant`, `local-models` (sentence-transformers), `langgraph`, `eval` (RAGAS), `langfuse` e `all`.
 
 Os parsers de texto, Markdown e HTML não precisam de extra. Eles usam só a biblioteca padrão.
 
@@ -344,6 +347,25 @@ Ports acrescentados na fase 1. O código em `vlade_rag/core/ports/__init__.py` t
 | `VectorIndex.count` | A etapa `validate_indexes` confere o número de vetores |
 | `Retriever.retrieve(ctx, kb, query, top_k)` | O retriever recebe a base para ler a configuração |
 
+Ports acrescentados na fase 2 (grupo de cotas e auditoria):
+
+| Port ou método | Motivo |
+|---|---|
+| `KnowledgeRepository.get_usage` | Documentos do tenant e bytes das versões em `indexing` e `published`. A cota usa esses números |
+| `KnowledgeRepository.find_document` | `SubmitIngestion` precisa saber se o arquivo atualiza um documento existente antes de contar a cota |
+| `AuditLog.list_events` | Leitura dos eventos do tenant, do mais novo para o mais antigo, com filtro por ação e por resultado |
+| `TenantDirectory.get_quotas` e `set_quotas` | Leitura e troca das cotas em `tenants.settings.quotas`. A troca grava `tenant.quota_update` |
+| `TenantDirectory.list_api_keys` e `revoke_api_key` | Lista as chaves sem o segredo e revoga uma chave. A revogação grava `api_key.revoke` |
+
+Ports acrescentados na fase 2 (grupo do Valkey):
+
+| Port ou método | Motivo |
+|---|---|
+| `RateLimiter.take` | Token bucket por chave e por tenant. Devolve `RateDecision` com `allowed`, `retry_after_seconds` e `remaining` |
+| `RateLimiter.count_day` | Contador de requisições do dia UTC, para a cota `requests_per_day` |
+
+Os adapters Valkey (`ValkeyCache` e `ValkeyRateLimiter`) ficam em `vlade_rag.knowledge.valkey` e usam o `redis-py` (extra `cache`). Os adapters em memória ficam em `vlade_rag.knowledge.memory`.
+
 Regras dos ports:
 
 1. Os adapters de `ObjectStorage` e de `Cache` acrescentam o prefixo `{tenant_id}/` a toda chave. O caso de uso não monta esse prefixo.
@@ -368,8 +390,10 @@ Os casos de uso ficam em `vlade_rag.core.application`. Cada caso de uso é uma c
 | `AnswerQuery` | `reader` | `Query`, parâmetros de geração | `Answer` ou fluxo de `AnswerDelta` |
 | `ReindexKnowledgeBase` | `admin` | base, modo, modelo novo, `confirm` | prévia ou `IngestionJob` |
 | `RunEvaluation` | `admin` | base, dataset, métricas | `IngestionJob` do tipo `evaluation` |
+| `GetUsage` | `reader` | nenhuma | cotas e uso do tenant |
+| `ListAuditEvents` | `admin` | ação, resultado, limite | lista de `AuditEvent` |
 
-Toda operação de escrita grava um `AuditEvent` na mesma transação da escrita.
+Toda operação de escrita grava um `AuditEvent`. As operações do `TenantDirectory` (cotas e chaves) gravam o evento na mesma transação da escrita. Os casos de uso gravam o evento logo depois da escrita, em outra transação. Ver a limitação L2 no [`ROADMAP.md`](ROADMAP.md).
 
 ## 7. Modelo de dados (PostgreSQL)
 
@@ -716,14 +740,26 @@ A configuração do processo vem de variáveis de ambiente com o prefixo `VLADE_
 VLADE_DATABASE__URL=postgresql://vlade_app:***@postgres:5432/vlade
 VLADE_DATABASE__OWNER_URL=postgresql://vlade_owner:***@postgres:5432/vlade   # só para db upgrade
 VLADE_STORAGE__BACKEND=postgres                  # postgres ou memory
-VLADE_OBJECT_STORAGE__BACKEND=filesystem         # filesystem ou memory (S3 na fase 2)
+VLADE_OBJECT_STORAGE__BACKEND=filesystem         # filesystem, s3 ou memory
 VLADE_OBJECT_STORAGE__PATH=/data/objects
+VLADE_OBJECT_STORAGE__S3__BUCKET=vlade           # backend s3: AWS ou qualquer serviço compatível (ADR-0006)
+VLADE_OBJECT_STORAGE__S3__ENDPOINT_URL=          # vazio na AWS; a URL do serviço compatível nos outros casos
+VLADE_OBJECT_STORAGE__S3__REGION=us-east-1
+VLADE_OBJECT_STORAGE__S3__ACCESS_KEY_ID=***      # vazio: cadeia padrão do boto3 (variáveis, arquivo, papel)
+VLADE_OBJECT_STORAGE__S3__SECRET_ACCESS_KEY=***
+VLADE_OBJECT_STORAGE__S3__PATH_STYLE=true
+VLADE_OBJECT_STORAGE__S3__CREATE_BUCKET=false    # true cria o bucket ao iniciar (serviço local)
 VLADE_SECURITY__API_KEY_PEPPER=***
+VLADE_CACHE__URL=redis://valkey:6379/0           # Valkey ou Redis. Sem URL, o cache e o limite ficam no processo
+VLADE_LIMITS__RATE_PER_KEY_PER_MINUTE=600        # 0 desliga o limite
+VLADE_LIMITS__RATE_PER_TENANT_PER_MINUTE=3000    # 0 desliga o limite
 VLADE_PROVIDERS__OLLAMA__BASE_URL=http://ollama:11434
 VLADE_PROVIDERS__OLLAMA__THINK=false
 VLADE_PROVIDERS__OPENAI__API_KEY=***
 VLADE_PROVIDERS__OPENROUTER__API_KEY=***
 VLADE_PROVIDERS__OPENCODE__API_KEY=***                 # OpenCode Zen, https://opencode.ai/zen/v1
+VLADE_PROVIDERS__GEMINI__API_KEY=***                   # Gemini, pelo endpoint compatível com a API da OpenAI
+VLADE_PROVIDERS__GEMINI__EMBEDDING_DIMENSIONS=false    # true envia "dimensions" nos embeddings (não confirmado pelo Google)
 VLADE_PROVIDERS__COMPATIBLE__GROQ__BASE_URL=https://api.groq.com/openai/v1   # qualquer API compatível
 VLADE_PROVIDERS__COMPATIBLE__GROQ__API_KEY=***
 VLADE_DEFAULT_KB_CONFIG={"embeddings": {"provider": "openrouter", ...}}      # padrão das bases novas
@@ -911,6 +947,10 @@ O prompt `answer_with_citations` tem estas regras:
 
 `kb_epoch` é um contador da base. A etapa `publish`, a exclusão e a reindexação aumentam o contador. Assim o cache antigo deixa de ser lido sem uma varredura de chaves.
 
+O hash da chave `search` cobre o texto, o idioma, os filtros, o `top_k`, o uso do reranker e a configuração de recuperação da base. Uma entrada guarda o `chunk_id`, a pontuação e o nome do retriever de cada resultado. Se um chunk da entrada não existe mais, o `Search` ignora a entrada e busca de novo.
+
+O adapter acrescenta o prefixo `{tenant_id}/` a toda chave. Se o servidor Valkey falha, o `Search` trata a leitura como ausência da entrada, a escrita é descartada e o log recebe um aviso. A requisição continua.
+
 ## 12. Orquestração
 
 ### 12.1. Pipeline linear e LangGraph
@@ -958,7 +998,7 @@ Limite: no modo `full`, a troca é atômica por documento, não pela base inteir
 
 ### 14.1. API REST
 
-Prefixo `/v1`. O cabeçalho `Authorization: Bearer <chave>` autentica. Erros usam `application/problem+json` (RFC 9457).
+Prefixo `/v1`. O cabeçalho `Authorization: Bearer <chave>` autentica. Erros usam `application/problem+json` (RFC 9457). Uma resposta 429 traz o cabeçalho `Retry-After`, em segundos.
 
 | Método | Caminho | Caso de uso |
 |---|---|---|
@@ -974,6 +1014,8 @@ Prefixo `/v1`. O cabeçalho `Authorization: Bearer <chave>` autentica. Erros usa
 | `POST` | `/v1/knowledge-bases/{kb}/sources/{id}/sync` | Sincronização (fase 5) |
 | `POST` | `/v1/evaluations` | `RunEvaluation` |
 | `GET` | `/v1/jobs/{id}` | `GetIngestionStatus` |
+| `GET` | `/v1/usage` | `GetUsage` |
+| `GET` | `/v1/audit-events` | `ListAuditEvents`. Parâmetros `action`, `outcome` e `limit` (1 a 1000) |
 | `GET` | `/health/live` | Processo vivo |
 | `GET` | `/health/ready` | Banco, cache e armazenamento acessíveis |
 | `GET` | `/metrics` | Métricas Prometheus |
@@ -982,14 +1024,29 @@ Eventos SSE do modo `query`: `delta` (texto parcial), `citations` (lista final),
 
 ### 14.2. MCP
 
-O [`MCP_SPEC.md`](MCP_SPEC.md) define o servidor MCP.
+O [`MCP_SPEC.md`](MCP_SPEC.md) define o servidor MCP. A implementação fica em `vlade_rag.mcp` e chama só os casos de uso:
+
+| Módulo | Função |
+|---|---|
+| `mcp/tools` | As ferramentas de leitura: schemas do contrato, papel mínimo, grupo de limite e o handler de cada uma |
+| `mcp/resources` e `mcp/prompts` | Os resources `vlade://` e os dois prompts |
+| `mcp/auth` | Chave de API: `ApiKeyMiddleware` no transporte HTTP (401 sem chave válida) |
+| `mcp/policies` | Limites por grupo, mapeamento de erros e auditoria |
+| `mcp/server` | O `Server` do SDK com os handlers e os transportes `stdio` e Streamable HTTP |
+
+O servidor HTTP não guarda sessão (*stateless*): cada requisição traz a própria chave e o tenant vem dela. O servidor usa o `Server` de baixo nível do SDK, e não o `MCPServer`. Assim ele controla, em cada chamada, a autenticação, a lista de ferramentas por papel, os limites e a auditoria. O serviço `mcp` do Compose (perfis `staging` e `prod`) roda `vlade-rag mcp serve --transport http`.
 
 ### 14.3. CLI
 
 ```text
 vlade-rag db upgrade
 vlade-rag tenant create <slug>
+vlade-rag tenant quota <slug> [--documents N] [--bytes N] [--requests-per-day N] [--clear]
 vlade-rag key create --tenant <slug> --roles reader,writer
+vlade-rag key list --tenant <slug>
+vlade-rag key revoke <prefixo> --tenant <slug>
+vlade-rag usage [--json]
+vlade-rag audit list [--action A] [--outcome R] [--limit N] [--json]
 vlade-rag kb create <slug> --config kb.yaml
 vlade-rag ingest <kb> <caminho>... [--wait]
 vlade-rag search <kb> "<consulta>"
@@ -998,7 +1055,7 @@ vlade-rag reindex <kb> --mode embeddings|full [--confirm]
 vlade-rag eval run <kb> --dataset <arquivo>
 vlade-rag worker
 vlade-rag api serve
-vlade-rag mcp serve --transport stdio|http
+vlade-rag mcp serve --transport stdio|http [--host 127.0.0.1] [--port 8765]
 ```
 
 A CLI fala com o banco diretamente pelos casos de uso. A CLI lê a chave de `VLADE_API_KEY`. Os comandos `db`, `tenant` e `key` exigem a credencial de dono do banco.
@@ -1009,8 +1066,8 @@ A CLI fala com o banco diretamente pelos casos de uso. A CLI lê a chave de `VLA
 |---|---|
 | Chaves de API | Formato `vrag_<prefixo>_<segredo>`. O segredo tem 32 bytes aleatórios. O banco guarda o prefixo e `HMAC-SHA256(segredo, pepper)`. A comparação usa tempo constante |
 | Papéis | `reader`, `writer`, `admin`. Verificação no caso de uso, não só na interface |
-| Limite de requisições | Token bucket no Valkey por chave e por tenant. Sem cache configurado, o limite é por processo |
-| Cotas | `tenants.settings.quotas`: documentos, bytes, requisições por dia |
+| Limite de requisições | Token bucket no Valkey por chave e por tenant, em requisições por minuto (padrão de 600 por chave e 3000 por tenant). A capacidade do balde é o limite por minuto. Uma chamada acima do limite recebe `rate_limited` (HTTP 429) com o cabeçalho `Retry-After`. Sem `VLADE_CACHE__URL`, o limite é por processo. Se o Valkey falha, a requisição passa e o log recebe um aviso. A API aplica o limite depois de autenticar a chave, e o servidor MCP fará o mesmo |
+| Cotas | `tenants.settings.quotas`: `documents`, `bytes` e `requests_per_day`. Sem valor, a cota é ilimitada. Acima de `requests_per_day`, a chamada recebe `quota_exceeded` com HTTP 429. O dia segue o horário UTC. `SubmitIngestion` recusa o arquivo com `quota_exceeded` (HTTP 413) e grava o evento `document.ingest` com resultado `denied`. Um arquivo que atualiza um documento existente não conta como documento novo. Um arquivo igual à versão atual não conta bytes |
 | Upload | Tamanho máximo padrão de 50 MB. Lista de tipos MIME permitidos. Verificação do tipo pelo conteúdo, não só pela extensão |
 | URI de origem | Download por URL desativado por padrão. Quando ativo, aceita só domínios de uma lista permitida e bloqueia endereços privados e de link-local |
 | Segredos | Só por variável de ambiente ou gerenciador de segredos. O processador de logs remove campos com nomes de segredo |
@@ -1057,7 +1114,7 @@ Logs JSON em `stdout`, com `structlog`. Campos obrigatórios: `timestamp`, `leve
 | `mcp` | stdio local | sim | sim | MIT |
 | `postgres` | sim | sim | sim | PostgreSQL License |
 | `valkey` | sim | sim | sim | BSD-3-Clause |
-| `minio` | não (sistema de arquivos) | sim | sim | AGPL-3.0 (ADR-0006) |
+| Serviço S3 compatível | não (sistema de arquivos) | sim | sim | RustFS ou SeaweedFS, Apache-2.0 (ADR-0017). O Compose ainda não traz o serviço |
 | `kestra` | não | sim | sim | Apache-2.0 |
 | `langfuse` | não (Cloud ou desligado) | sim | sim | MIT |
 | `alloy` | não | sim | sim | Apache-2.0 |
@@ -1074,6 +1131,7 @@ Os serviços com licença AGPL rodam como processos separados e sem modificaçã
 | Contrato | `tests/contract/` | Cada adapter contra a suíte do port | Serviço do adapter em container (Testcontainers) |
 | Integração | `tests/integration/` | Pipelines completos com PostgreSQL real | PostgreSQL, Valkey |
 | Ponta a ponta | `tests/e2e/` | API, MCP e CLI | Perfil `dev` |
+| MCP Inspector | `scripts/mcp_inspector.sh` | O servidor MCP, chamado pelo Inspector em modo CLI (job `MCP server (Inspector)` da CI) | PostgreSQL, Node |
 | Isolamento | `tests/integration/test_tenant_isolation.py` | Leitura entre tenants por cada interface | PostgreSQL |
 | Avaliação | `evals/` | Métricas de recuperação com dataset fixo | PostgreSQL, embeddings locais |
 

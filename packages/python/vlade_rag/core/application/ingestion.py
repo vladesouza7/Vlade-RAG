@@ -118,6 +118,37 @@ class SubmitIngestion:
     def __init__(self, deps: Dependencies) -> None:
         self.deps = deps
 
+    async def _enforce_quotas(
+        self, ctx: TenantContext, *, new_document: bool, added_bytes: int, filename: str
+    ) -> None:
+        """Raise ``QuotaExceeded`` (and audit it) if the file passes a quota of the tenant."""
+        if self.deps.tenants is None:
+            return
+        quotas = await self.deps.tenants.get_quotas(ctx.tenant_id)
+        if quotas.documents is None and quotas.bytes is None:
+            return
+        usage = await self.deps.repository.get_usage(ctx)
+        try:
+            quotas.check_submit(usage, new_document=new_document, added_bytes=added_bytes)
+        except QuotaExceeded as exc:
+            await self.deps.audit_log.record(
+                ctx,
+                _audit(
+                    ctx,
+                    "document.ingest",
+                    "denied",
+                    resource_type="document",
+                    details={
+                        "reason": "quota_exceeded",
+                        "filename": filename,
+                        "documents": usage.documents,
+                        "bytes": usage.bytes,
+                        "added_bytes": added_bytes,
+                    },
+                ),
+            )
+            raise exc
+
     async def execute(
         self,
         ctx: TenantContext,
@@ -141,6 +172,23 @@ class SubmitIngestion:
         if self.deps.parser_for(mime_type) is None:
             raise InvalidArgument(f"No parser is configured for '{mime_type}'.")
 
+        content_hash = hashlib.sha256(raw.data).hexdigest()
+        existing = (
+            await repo.find_document(ctx, knowledge_base_id=kb.id, external_id=external_id)
+            if external_id is not None
+            else None
+        )
+        unchanged = False
+        if existing is not None:
+            existing_version = await repo.get_current_version(ctx, existing.id)
+            unchanged = (
+                existing_version is not None and existing_version.content_hash == content_hash
+            )
+        if not unchanged:
+            await self._enforce_quotas(
+                ctx, new_document=existing is None, added_bytes=len(raw.data), filename=raw.filename
+            )
+
         document = await repo.upsert_document(
             ctx,
             knowledge_base_id=kb.id,
@@ -151,7 +199,6 @@ class SubmitIngestion:
             source_uri=raw.source_uri,
             metadata=raw.metadata,
         )
-        content_hash = hashlib.sha256(raw.data).hexdigest()
         current = await repo.get_current_version(ctx, document.id)
         if current is not None and current.content_hash == content_hash:
             job = await self.deps.job_queue.enqueue(

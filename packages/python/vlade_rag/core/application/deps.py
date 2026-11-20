@@ -22,8 +22,10 @@ from vlade_rag.core.ports import (
     LLMProvider,
     ObjectStorage,
     PromptRegistry,
+    RateLimiter,
     Reranker,
     Span,
+    TenantDirectory,
     TextNormalizer,
     Tracer,
     VectorIndex,
@@ -52,6 +54,8 @@ class Limits:
     max_upload_bytes: int = 50 * 1024 * 1024
     max_query_chars: int = 4000
     max_top_k: int = 50
+    rate_per_key_per_minute: int = 0  # 0: no limit
+    rate_per_tenant_per_minute: int = 0
     job_max_attempts: int = 3
     store_query_text: bool = False
 
@@ -75,6 +79,8 @@ class Dependencies:
     llms: Callable[[GenerationConfig], LLMProvider]
     rerankers: Callable[[RerankConfig], Reranker] | None = None
     cache: Cache | None = None
+    rate_limiter: RateLimiter | None = None  # without it no request limit applies
+    tenants: TenantDirectory | None = None  # needed for quotas; without it no quota applies
     tracer: Tracer = field(default_factory=NoopTracer)
     limits: Limits = field(default_factory=Limits)
     default_kb_config: Mapping[str, Any] = field(default_factory=dict)

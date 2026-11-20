@@ -12,6 +12,7 @@ dev = [
     "anyio>=4.16.0",
     "httpx2>=2.16.2",
     "hypothesis>=6.170.16",
+    "moto[s3]>=5.2.5",
     "mypy>=2.4.1",
     "pytest>=9.2.0",
     "pytest-cov>=7.1.0",
@@ -46,7 +47,8 @@ select = [
 ignore = ["N818"]
 
 [tool.ruff.lint.per-file-ignores]
-"tests/**" = ["S101"]
+# S105/S106: tests use fake credentials ("testing") with moto and with fake clients.
+"tests/**" = ["S101", "S105", "S106"]
 # Reviewed: dynamic SQL parts are constants, ints or filter_sql() output; values are bound ($n).
 "packages/python/vlade_rag/knowledge/postgres/*" = ["S608"]
 # Typer declares options as argument defaults.
@@ -68,7 +70,16 @@ module = "vlade_rag.core.*"
 strict = true
 
 [[tool.mypy.overrides]]
-module = ["vlade_rag_core", "asyncpg", "pgvector.*", "docling.*", "yaml"]
+module = [
+    "vlade_rag_core",
+    "asyncpg",
+    "pgvector.*",
+    "docling.*",
+    "yaml",
+    "jsonschema.*",
+    "boto3.*",
+    "botocore.*",
+]
 ignore_missing_imports = true
 
 # ---------------------------------------------------------------- pytest

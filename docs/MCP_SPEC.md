@@ -151,13 +151,13 @@ Saída:
           "document_id": { "type": "string", "format": "uuid" },
           "document_title": { "type": "string" },
           "text": { "type": "string" },
-          "page": { "type": ["integer", "null"] },
-          "section": { "type": ["string", "null"] },
+          "page": { "anyOf": [{ "type": "integer" }, { "type": "null" }] },
+          "section": { "anyOf": [{ "type": "string" }, { "type": "null" }] },
           "resource_uri": { "type": "string", "description": "URI do resource do documento." }
         }
       }
     },
-    "trace_id": { "type": ["string", "null"] }
+    "trace_id": { "anyOf": [{ "type": "string" }, { "type": "null" }] }
   }
 }
 ```
@@ -204,7 +204,7 @@ Saída:
           "document_id": { "type": "string", "format": "uuid" },
           "chunk_id": { "type": "string", "format": "uuid" },
           "document_title": { "type": "string" },
-          "page": { "type": ["integer", "null"] },
+          "page": { "anyOf": [{ "type": "integer" }, { "type": "null" }] },
           "resource_uri": { "type": "string" }
         }
       }
@@ -218,7 +218,7 @@ Saída:
         "output_tokens": { "type": "integer" }
       }
     },
-    "trace_id": { "type": ["string", "null"] }
+    "trace_id": { "anyOf": [{ "type": "string" }, { "type": "null" }] }
   }
 }
 ```
@@ -247,7 +247,35 @@ Entrada:
 }
 ```
 
-Saída: objeto `document` com `id`, `title`, `source_type`, `source_uri`, `mime_type`, `version`, `metadata`, `created_at`, `updated_at`, e, se pedido, `text` e `truncated`.
+Saída:
+
+```json
+{
+  "type": "object",
+  "required": ["document"],
+  "properties": {
+    "document": {
+      "type": "object",
+      "required": ["id", "title", "source_type", "mime_type", "metadata"],
+      "properties": {
+        "id": { "type": "string", "format": "uuid" },
+        "title": { "type": "string" },
+        "source_type": { "type": "string" },
+        "source_uri": { "anyOf": [{ "type": "string" }, { "type": "null" }] },
+        "mime_type": { "type": "string" },
+        "version": { "anyOf": [{ "type": "integer" }, { "type": "null" }] },
+        "metadata": { "type": "object", "additionalProperties": true },
+        "created_at": { "anyOf": [{ "type": "string", "format": "date-time" }, { "type": "null" }] },
+        "updated_at": { "anyOf": [{ "type": "string", "format": "date-time" }, { "type": "null" }] },
+        "text": { "type": "string" },
+        "truncated": { "type": "boolean" }
+      }
+    }
+  }
+}
+```
+
+`text` e `truncated` aparecem só se `include_text` é `true`.
 
 ### 5.6. `vlade_get_ingestion_status`
 
@@ -266,7 +294,43 @@ Entrada:
 }
 ```
 
-Saída: objeto `job` com `id`, `kind`, `status`, `steps` (nome, estado, tentativa, erro), `result`, `error`, `created_at`, `started_at`, `finished_at`.
+Saída:
+
+```json
+{
+  "type": "object",
+  "required": ["job"],
+  "properties": {
+    "job": {
+      "type": "object",
+      "required": ["id", "kind", "status", "steps"],
+      "properties": {
+        "id": { "type": "string", "format": "uuid" },
+        "kind": { "type": "string" },
+        "status": { "type": "string" },
+        "steps": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["name", "status", "attempt"],
+            "properties": {
+              "name": { "type": "string" },
+              "status": { "type": "string" },
+              "attempt": { "type": "integer" },
+              "error": { "anyOf": [{ "type": "object", "additionalProperties": true }, { "type": "null" }] }
+            }
+          }
+        },
+        "result": { "anyOf": [{ "type": "object", "additionalProperties": true }, { "type": "null" }] },
+        "error": { "anyOf": [{ "type": "object", "additionalProperties": true }, { "type": "null" }] },
+        "created_at": { "anyOf": [{ "type": "string", "format": "date-time" }, { "type": "null" }] },
+        "started_at": { "anyOf": [{ "type": "string", "format": "date-time" }, { "type": "null" }] },
+        "finished_at": { "anyOf": [{ "type": "string", "format": "date-time" }, { "type": "null" }] }
+      }
+    }
+  }
+}
+```
 
 ### 5.7. `vlade_ingest_document`
 
@@ -446,7 +510,7 @@ Valores padrão por chave. A configuração do tenant muda os valores.
 
 Erros de protocolo, como JSON inválido ou ferramenta desconhecida, usam os códigos JSON-RPC do MCP.
 
-Erros de execução usam `isError: true` e este conteúdo estruturado:
+Erros de execução usam `isError: true`. O bloco de texto do resultado traz este JSON. O resultado de erro não traz `structuredContent`. O erro não é uma saída da ferramenta, e um cliente confere o `structuredContent` com o `outputSchema`. O MCP Inspector faz essa conferência:
 
 ```json
 {
@@ -510,9 +574,19 @@ Configure o servidor conforme a documentação do cliente. Use os mesmos valores
 
 Instale a skill `skills/vlade-rag/` no cliente. A skill ensina o agente a escolher entre `vlade_search` e `vlade_query`, a ler as citações e a tratar `grounded: false`. A skill segue o padrão aberto Agent Skills.
 
+A skill é uma pasta com o arquivo `SKILL.md`. Para instalar, copie a pasta `skills/vlade-rag/` para a pasta de skills do cliente:
+
+| Cliente | Pasta de destino |
+|---|---|
+| Claude Code, só para você | `~/.claude/skills/vlade-rag/` |
+| Claude Code, para um projeto | `.claude/skills/vlade-rag/` na raiz do projeto |
+| Hermes Agent e outros clientes | Conforme a documentação do cliente |
+
+A skill não tem credenciais nem endereços de servidor. O cliente guarda a chave de API e o endereço na configuração do servidor MCP (seção 11.1). A skill e o servidor MCP são independentes: instale os dois.
+
 ## 12. Testes
 
-1. A CI roda o servidor com o MCP Inspector em modo CLI e chama cada ferramenta.
+1. A CI roda o servidor com o MCP Inspector em modo CLI e chama cada ferramenta. O job `MCP server (Inspector)` executa `scripts/mcp_inspector.sh`. O script prepara um tenant e uma base e sobe o servidor por Streamable HTTP. Depois ele usa uma versão fixa do Inspector para conferir as ferramentas, os resources, os prompts, os erros, a chave inválida e a auditoria. O modo `--strict` do Inspector confere a portabilidade dos schemas. Para repetir o teste na sua máquina, defina `VLADE_DATABASE__OWNER_URL` e `VLADE_DATABASE__URL` e rode o script. O Inspector só roda no teste e não é dependência do pacote.
 2. Um teste de contrato compara o `inputSchema` e o `outputSchema` de cada ferramenta com este documento.
 3. O teste de isolamento chama cada ferramenta com a chave de um tenant e um recurso de outro tenant. O teste passa só se a resposta é `not_found`.
 4. Antes de cada release, um teste manual usa pelo menos dois clientes diferentes, por exemplo Claude Code e Hermes Agent.

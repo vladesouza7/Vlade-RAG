@@ -91,6 +91,7 @@ class KnowledgeBase:
     config: KnowledgeBaseConfig
     active_embedding_space_id: UUID
     epoch: int = 0
+    updated_at: datetime | None = None
 
     @property
     def language(self) -> str:
@@ -223,6 +224,7 @@ class AuditEvent:
     resource_id: str | None = None
     details: Metadata = field(default_factory=dict)
     trace_id: str | None = None
+    created_at: datetime | None = None  # set by the audit log when it stores the event
 
 
 @dataclass(frozen=True, slots=True)

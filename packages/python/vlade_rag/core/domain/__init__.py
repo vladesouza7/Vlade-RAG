@@ -13,6 +13,7 @@ from vlade_rag.core.domain.errors import (
     ProviderUnavailable,
     QuotaExceeded,
     RateLimited,
+    RequestQuotaExceeded,
     Unauthenticated,
     UnsupportedFilter,
     VladeError,
@@ -54,6 +55,7 @@ from vlade_rag.core.domain.query import (
     matches,
     parse_filter,
 )
+from vlade_rag.core.domain.quotas import TenantQuotas, TenantUsage
 from vlade_rag.core.domain.tenancy import Role, TenantContext
 
 __all__ = [
@@ -91,6 +93,7 @@ __all__ = [
     "QuotaExceeded",
     "RateLimited",
     "RawDocument",
+    "RequestQuotaExceeded",
     "Role",
     "ScoredChunk",
     "Section",
@@ -98,6 +101,8 @@ __all__ = [
     "SpaceStatus",
     "Tenant",
     "TenantContext",
+    "TenantQuotas",
+    "TenantUsage",
     "TokenUsage",
     "Unauthenticated",
     "UnsupportedFilter",

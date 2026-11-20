@@ -48,7 +48,13 @@ otel = [
 ]
 ollama = ["httpx2>=2.16.2"]
 openai = ["httpx2>=2.16.2"]
-server = ["vlade-rag[native,api,cli,postgres,ollama,openai,otel]"]
+cache = ["redis>=8.1.0"]  # Valkey or Redis (ADR-0007)
+mcp = [
+    "mcp>=2.3.0",  # official MCP SDK (ADR-0013)
+    "jsonschema>=4.20.0",  # validation of tool arguments against the input schema
+]
+s3 = ["boto3>=1.44.7"]  # S3 API: AWS and compatible services (ADR-0006)
+server = ["vlade-rag[native,api,cli,postgres,ollama,openai,otel,cache,mcp,s3]"]
 
 [project.scripts]
 vlade-rag = "vlade_rag.cli:main"

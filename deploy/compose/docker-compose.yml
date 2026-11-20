@@ -9,11 +9,24 @@ x-app-env: &app-env
   VLADE_LOG_LEVEL: ${VLADE_LOG_LEVEL:-INFO}
   VLADE_DATABASE__URL: postgresql://vlade_app:${VLADE_APP_DB_PASSWORD:?Defina VLADE_APP_DB_PASSWORD no arquivo .env}@postgres:5432/vlade
   VLADE_SECURITY__API_KEY_PEPPER: ${VLADE_API_KEY_PEPPER:?Defina VLADE_API_KEY_PEPPER no arquivo .env}
+  # Cache and request limits in Valkey (ADR-0007). Set it empty to keep them in the process.
+  VLADE_CACHE__URL: ${VLADE_CACHE__URL-redis://valkey:6379/0}
   VLADE_PROVIDERS__OLLAMA__BASE_URL: ${OLLAMA_BASE_URL:-http://host.docker.internal:11434}
   VLADE_PROVIDERS__OLLAMA__THINK: ${OLLAMA_THINK:-false}
   VLADE_PROVIDERS__OPENAI__API_KEY: ${OPENAI_API_KEY:-}
   VLADE_PROVIDERS__OPENROUTER__API_KEY: ${OPENROUTER_API_KEY:-}
   VLADE_PROVIDERS__OPENCODE__API_KEY: ${OPENCODE_API_KEY:-}
+  VLADE_PROVIDERS__GEMINI__API_KEY: ${GEMINI_API_KEY:-}
+  VLADE_PROVIDERS__GEMINI__EMBEDDING_DIMENSIONS: ${GEMINI_EMBEDDING_DIMENSIONS:-false}
+  # Object storage: "filesystem" (a volume) or "s3" (AWS or any S3-compatible service, ADR-0006).
+  VLADE_OBJECT_STORAGE__BACKEND: ${VLADE_OBJECT_STORAGE__BACKEND:-filesystem}
+  VLADE_OBJECT_STORAGE__S3__BUCKET: ${S3_BUCKET:-}
+  VLADE_OBJECT_STORAGE__S3__ENDPOINT_URL: ${S3_ENDPOINT_URL:-}
+  VLADE_OBJECT_STORAGE__S3__REGION: ${S3_REGION:-us-east-1}
+  VLADE_OBJECT_STORAGE__S3__ACCESS_KEY_ID: ${S3_ACCESS_KEY_ID:-}
+  VLADE_OBJECT_STORAGE__S3__SECRET_ACCESS_KEY: ${S3_SECRET_ACCESS_KEY:-}
+  VLADE_OBJECT_STORAGE__S3__PATH_STYLE: ${S3_PATH_STYLE:-true}
+  VLADE_OBJECT_STORAGE__S3__CREATE_BUCKET: ${S3_CREATE_BUCKET:-false}
   # Server default for new knowledge bases (JSON). See .env.example.
   VLADE_DEFAULT_KB_CONFIG: ${VLADE_DEFAULT_KB_CONFIG:-{}}
 
@@ -72,6 +85,26 @@ services:
       migrate:
         condition: service_completed_successfully
     mem_limit: 1g
+    restart: unless-stopped
+
+  mcp:
+    # MCP server over Streamable HTTP at /mcp. Every request needs "Authorization: Bearer <key>".
+    # In dev, run it on demand over stdio: vlade-rag mcp serve --transport stdio (MCP_SPEC 11.1).
+    profiles: [staging, prod]
+    image: vlade-rag:dev
+    command: ["vlade-rag", "mcp", "serve", "--transport", "http", "--host", "0.0.0.0", "--port", "8765"]
+    healthcheck:
+      disable: true
+    environment:
+      <<: *app-env
+    ports:
+      - "127.0.0.1:${VLADE_MCP_HOST_PORT:-8765}:8765"
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+      valkey:
+        condition: service_healthy
+    mem_limit: 512m
     restart: unless-stopped
 
   postgres:

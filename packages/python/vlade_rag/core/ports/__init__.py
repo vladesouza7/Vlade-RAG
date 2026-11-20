@@ -43,6 +43,8 @@ from vlade_rag.core.domain import (
     SourceItem,
     Tenant,
     TenantContext,
+    TenantQuotas,
+    TenantUsage,
 )
 
 AttrValue = str | int | float | bool
@@ -108,6 +110,10 @@ class KnowledgeRepository(Protocol):
     async def get_knowledge_base_by_id(self, ctx: TenantContext, kb_id: UUID) -> KnowledgeBase: ...
     async def list_knowledge_bases(self, ctx: TenantContext) -> list[KnowledgeBase]: ...
     async def count_documents(self, ctx: TenantContext, kb_id: UUID) -> int: ...
+    async def get_usage(self, ctx: TenantContext) -> TenantUsage:
+        """Documents of the tenant and bytes of its versions in ``indexing`` or ``published``."""
+        ...
+
     async def get_embedding_space(self, ctx: TenantContext, space_id: UUID) -> EmbeddingSpace: ...
 
     # documents and versions
@@ -124,6 +130,12 @@ class KnowledgeRepository(Protocol):
         metadata: Metadata,
     ) -> Document: ...
     async def get_document(self, ctx: TenantContext, document_id: UUID) -> Document: ...
+    async def find_document(
+        self, ctx: TenantContext, *, knowledge_base_id: UUID, external_id: str
+    ) -> Document | None:
+        """The document of the base with this external id, or ``None``."""
+        ...
+
     async def create_version(
         self,
         ctx: TenantContext,
@@ -291,6 +303,34 @@ class Cache(Protocol):
     async def delete_prefix(self, ctx: TenantContext, prefix: str) -> int: ...
 
 
+@dataclass(frozen=True, slots=True)
+class RateDecision:
+    allowed: bool
+    retry_after_seconds: float  # 0 when allowed
+    remaining: float  # tokens left after this call
+
+
+@runtime_checkable
+class RateLimiter(Protocol):
+    """Token buckets and daily counters. Adapters prefix every key with the tenant id."""
+
+    async def take(
+        self,
+        tenant_id: UUID,
+        key: str,
+        *,
+        capacity: int,
+        refill_per_second: float,
+        cost: int = 1,
+    ) -> RateDecision:
+        """Take ``cost`` tokens from the bucket ``key``. A new bucket starts full."""
+        ...
+
+    async def count_day(self, tenant_id: UUID, key: str, *, increment: bool) -> int:
+        """Requests counted under ``key`` on the current UTC day. ``increment`` adds one first."""
+        ...
+
+
 # ---------------------------------------------------------------- jobs, audit, tenants
 
 
@@ -328,6 +368,16 @@ class JobQueue(Protocol):
 class AuditLog(Protocol):
     async def record(self, ctx: TenantContext, event: AuditEvent) -> None: ...
     async def record_query(self, ctx: TenantContext, entry: QueryLogEntry) -> None: ...
+    async def list_events(
+        self,
+        ctx: TenantContext,
+        *,
+        action: str | None = None,
+        outcome: str | None = None,
+        limit: int = 100,
+    ) -> list[AuditEvent]:
+        """Events of the tenant of ``ctx``, newest first. ``created_at`` is always set."""
+        ...
 
 
 @dataclass(frozen=True, slots=True)
@@ -338,13 +388,37 @@ class IssuedApiKey:
     roles: frozenset[Role]
 
 
+@dataclass(frozen=True, slots=True)
+class ApiKeyInfo:
+    """A key as listed to an administrator. It never contains the secret."""
+
+    key_prefix: str
+    principal_id: UUID
+    principal_name: str
+    roles: frozenset[Role]
+    revoked: bool
+
+
 @runtime_checkable
 class TenantDirectory(Protocol):
     async def create_tenant(self, slug: str, name: str) -> Tenant: ...
     async def get_tenant(self, slug: str) -> Tenant: ...
+    async def get_quotas(self, tenant_id: UUID) -> TenantQuotas: ...
+    async def set_quotas(self, tenant_id: UUID, quotas: TenantQuotas) -> None:
+        """Replace the quotas of the tenant and record ``tenant.quota_update``."""
+        ...
+
     async def issue_api_key(
         self, tenant_id: UUID, *, principal_name: str, roles: frozenset[Role]
-    ) -> IssuedApiKey: ...
+    ) -> IssuedApiKey:
+        """Create the key and record ``api_key.issue``."""
+        ...
+
+    async def list_api_keys(self, tenant_id: UUID) -> list[ApiKeyInfo]: ...
+    async def revoke_api_key(self, tenant_id: UUID, key_prefix: str) -> None:
+        """Revoke the key and record ``api_key.revoke``. Raise ``NotFound`` for another tenant."""
+        ...
+
     async def authenticate(self, api_key: str, *, interface: str) -> TenantContext:
         """Raise ``Unauthenticated`` for unknown, revoked or expired keys."""
         ...
@@ -393,6 +467,7 @@ class Tracer(Protocol):
 
 
 __all__ = [
+    "ApiKeyInfo",
     "AttrValue",
     "AuditLog",
     "Cache",
@@ -415,6 +490,8 @@ __all__ = [
     "PromptRegistry",
     "PromptTemplate",
     "QueryTransformer",
+    "RateDecision",
+    "RateLimiter",
     "Reranker",
     "Retriever",
     "Span",

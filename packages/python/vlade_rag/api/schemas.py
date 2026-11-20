@@ -8,9 +8,10 @@ from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from vlade_rag.core.application import KnowledgeBaseSummary
+from vlade_rag.core.application import KnowledgeBaseSummary, UsageView
 from vlade_rag.core.domain import (
     Answer,
+    AuditEvent,
     Citation,
     DeletionReport,
     Document,
@@ -277,3 +278,55 @@ class Problem(_Model):
     detail: str
     code: str
     retryable: bool = False
+
+
+class QuotasOut(_Model):
+    documents: int | None
+    bytes: int | None
+    requests_per_day: int | None
+
+
+class TenantUsageOut(_Model):
+    documents: int
+    bytes: int
+    requests_today: int
+    quotas: QuotasOut
+
+    @classmethod
+    def of(cls, view: UsageView) -> TenantUsageOut:
+        return cls(
+            documents=view.usage.documents,
+            bytes=view.usage.bytes,
+            requests_today=view.usage.requests_today,
+            quotas=QuotasOut(
+                documents=view.quotas.documents,
+                bytes=view.quotas.bytes,
+                requests_per_day=view.quotas.requests_per_day,
+            ),
+        )
+
+
+class AuditEventOut(_Model):
+    action: str
+    outcome: str
+    interface: str
+    principal_id: UUID | None
+    resource_type: str | None
+    resource_id: str | None
+    details: dict[str, Any]
+    trace_id: str | None
+    created_at: datetime | None
+
+    @classmethod
+    def of(cls, event: AuditEvent) -> AuditEventOut:
+        return cls(
+            action=event.action,
+            outcome=event.outcome,
+            interface=event.interface,
+            principal_id=event.principal_id,
+            resource_type=event.resource_type,
+            resource_id=event.resource_id,
+            details=dict(event.details),
+            trace_id=event.trace_id,
+            created_at=event.created_at,
+        )

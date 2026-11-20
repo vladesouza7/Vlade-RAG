@@ -47,6 +47,13 @@ class QuotaExceeded(VladeError):
     http_status = 413
 
 
+class RequestQuotaExceeded(QuotaExceeded):
+    """The tenant used every request of its daily quota."""
+
+    http_status = 429
+    retryable = True
+
+
 class RateLimited(VladeError):
     code = "rate_limited"
     http_status = 429

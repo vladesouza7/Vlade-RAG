@@ -26,6 +26,7 @@ from vlade_rag.core.domain.models import JsonValue
 from vlade_rag.core.ports import LexicalIndex
 
 EMBEDDING_CACHE_TTL = 7 * 24 * 3600
+SEARCH_CACHE_TTL = 10 * 60
 
 
 async def _load(
@@ -163,6 +164,10 @@ class Search:
         if use_rerank and self.deps.rerankers is None:
             raise InvalidArgument("Reranking is not configured on this server.")
         retrievers = self._retrievers(kb)
+        cache_key = self._cache_key(kb, query, top_k, use_rerank)
+        cached = await self._cache_get(ctx, cache_key)
+        if cached is not None:
+            return cached
         lists = await asyncio.gather(
             *(r.retrieve(ctx, kb, query, cfg.top_k_per_retriever) for r in retrievers)
         )
@@ -176,7 +181,54 @@ class Search:
             with self.deps.tracer.span("rerank", {"vlade.candidates": len(fused)}):
                 reranker = self.deps.rerankers(cfg.rerank)
                 fused = await reranker.rerank(query.text, fused, min(top_k, cfg.rerank.top_n))
-        return fused[:top_k]
+        results = fused[:top_k]
+        await self._cache_put(ctx, cache_key, results)
+        return results
+
+    # Result cache (ARCHITECTURE 11.6). The key holds the base epoch: publishing, deleting or
+    # reindexing bumps it, so an old entry is never read again and needs no sweep.
+
+    @staticmethod
+    def _cache_key(kb: KnowledgeBase, query: Query, top_k: int, use_rerank: bool) -> str:
+        spec = {
+            "text": query.text,
+            "language": query.language,
+            "filters": repr(query.filters),
+            "top_k": top_k,
+            "rerank": use_rerank,
+            "retrieval": kb.config.retrieval.model_dump(mode="json"),
+        }
+        digest = hashlib.sha256(
+            json.dumps(spec, sort_keys=True, ensure_ascii=False).encode("utf-8")
+        ).hexdigest()
+        return f"search:{kb.id}:{kb.epoch}:{digest}"
+
+    async def _cache_get(self, ctx: TenantContext, key: str) -> list[ScoredChunk] | None:
+        if self.deps.cache is None:
+            return None
+        raw = await self.deps.cache.get(ctx, key)
+        if raw is None:
+            return None
+        try:
+            entries = json.loads(raw)
+            ids = [UUID(e["id"]) for e in entries]
+            chunks = {c.id: c for c in await self.deps.repository.get_chunks(ctx, ids)}
+            if any(i not in chunks for i in ids):
+                return None
+            return [
+                ScoredChunk(chunks[UUID(e["id"])], float(e["score"]), rank, str(e["retriever"]))
+                for rank, e in enumerate(entries, start=1)
+            ]
+        except (ValueError, KeyError, TypeError):
+            return None
+
+    async def _cache_put(self, ctx: TenantContext, key: str, results: list[ScoredChunk]) -> None:
+        if self.deps.cache is None:
+            return
+        entries = [
+            {"id": str(r.chunk.id), "score": r.score, "retriever": r.retriever} for r in results
+        ]
+        await self.deps.cache.set(ctx, key, json.dumps(entries).encode(), SEARCH_CACHE_TTL)
 
     async def _log(
         self, ctx: TenantContext, kb: KnowledgeBase, text: str, count: int, started: float
