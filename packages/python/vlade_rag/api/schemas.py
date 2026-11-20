@@ -283,11 +283,13 @@ class Problem(_Model):
 class QuotasOut(_Model):
     documents: int | None
     bytes: int | None
+    requests_per_day: int | None
 
 
 class TenantUsageOut(_Model):
     documents: int
     bytes: int
+    requests_today: int
     quotas: QuotasOut
 
     @classmethod
@@ -295,7 +297,12 @@ class TenantUsageOut(_Model):
         return cls(
             documents=view.usage.documents,
             bytes=view.usage.bytes,
-            quotas=QuotasOut(documents=view.quotas.documents, bytes=view.quotas.bytes),
+            requests_today=view.usage.requests_today,
+            quotas=QuotasOut(
+                documents=view.quotas.documents,
+                bytes=view.quotas.bytes,
+                requests_per_day=view.quotas.requests_per_day,
+            ),
         )
 
 

@@ -24,11 +24,22 @@ logger = logging.getLogger(__name__)
 PROBLEM_JSON = "application/problem+json"
 
 
-def _problem(status: int, title: str, detail: str, code: str, retryable: bool) -> JSONResponse:
+def _problem(
+    status: int,
+    title: str,
+    detail: str,
+    code: str,
+    retryable: bool,
+    retry_after: int | None = None,
+) -> JSONResponse:
     body = Problem(title=title, status=status, detail=detail, code=code, retryable=retryable)
-    headers = {"WWW-Authenticate": "Bearer"} if status == 401 else None
+    headers: dict[str, str] = {}
+    if status == 401:
+        headers["WWW-Authenticate"] = "Bearer"
+    if retry_after is not None:
+        headers["Retry-After"] = str(retry_after)
     return JSONResponse(
-        body.model_dump(), status_code=status, media_type=PROBLEM_JSON, headers=headers
+        body.model_dump(), status_code=status, media_type=PROBLEM_JSON, headers=headers or None
     )
 
 
@@ -73,7 +84,15 @@ def create_app(settings: Settings | None = None, runtime: Runtime | None = None)
 
     @app.exception_handler(VladeError)
     async def vlade_error(request: Request, exc: VladeError) -> JSONResponse:
-        return _problem(exc.http_status, type(exc).__name__, exc.message, exc.code, exc.retryable)
+        wait = exc.details.get("retry_after_seconds")
+        return _problem(
+            exc.http_status,
+            type(exc).__name__,
+            exc.message,
+            exc.code,
+            exc.retryable,
+            retry_after=int(wait) if isinstance(wait, int | float) else None,
+        )
 
     @app.exception_handler(RequestValidationError)
     async def validation_error(request: Request, exc: RequestValidationError) -> JSONResponse:

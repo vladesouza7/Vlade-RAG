@@ -7,6 +7,7 @@ from typing import Annotated
 from fastapi import Depends, Header, Request
 
 from vlade_rag.bootstrap import Runtime
+from vlade_rag.core.application import EnforceRequestLimits
 from vlade_rag.core.domain import TenantContext, Unauthenticated
 
 
@@ -22,6 +23,7 @@ async def get_ctx(
     if not authorization or not authorization.lower().startswith("bearer "):
         raise Unauthenticated("Send the API key in the header 'Authorization: Bearer <key>'.")
     ctx = await runtime.tenants.authenticate(authorization[7:].strip(), interface="api")
+    await EnforceRequestLimits(runtime.deps).execute(ctx)
     trace_id = runtime.deps.tracer.current_trace_id()
     if trace_id is None:
         return ctx

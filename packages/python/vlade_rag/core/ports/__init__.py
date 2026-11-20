@@ -303,6 +303,34 @@ class Cache(Protocol):
     async def delete_prefix(self, ctx: TenantContext, prefix: str) -> int: ...
 
 
+@dataclass(frozen=True, slots=True)
+class RateDecision:
+    allowed: bool
+    retry_after_seconds: float  # 0 when allowed
+    remaining: float  # tokens left after this call
+
+
+@runtime_checkable
+class RateLimiter(Protocol):
+    """Token buckets and daily counters. Adapters prefix every key with the tenant id."""
+
+    async def take(
+        self,
+        tenant_id: UUID,
+        key: str,
+        *,
+        capacity: int,
+        refill_per_second: float,
+        cost: int = 1,
+    ) -> RateDecision:
+        """Take ``cost`` tokens from the bucket ``key``. A new bucket starts full."""
+        ...
+
+    async def count_day(self, tenant_id: UUID, key: str, *, increment: bool) -> int:
+        """Requests counted under ``key`` on the current UTC day. ``increment`` adds one first."""
+        ...
+
+
 # ---------------------------------------------------------------- jobs, audit, tenants
 
 
@@ -462,6 +490,8 @@ __all__ = [
     "PromptRegistry",
     "PromptTemplate",
     "QueryTransformer",
+    "RateDecision",
+    "RateLimiter",
     "Reranker",
     "Retriever",
     "Span",

@@ -23,6 +23,7 @@ from vlade_rag.core.application.knowledge_bases import (
     KnowledgeBaseSummary,
     ListKnowledgeBases,
 )
+from vlade_rag.core.application.request_limits import EnforceRequestLimits
 from vlade_rag.core.application.search import Search, SearchResult
 
 __all__ = [
@@ -34,6 +35,7 @@ __all__ = [
     "DeleteDocument",
     "Dependencies",
     "DocumentView",
+    "EnforceRequestLimits",
     "GetDocument",
     "GetIngestionStatus",
     "GetKnowledgeBase",

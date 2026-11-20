@@ -354,6 +354,15 @@ Ports acrescentados na fase 2 (grupo de cotas e auditoria):
 | `TenantDirectory.get_quotas` e `set_quotas` | Leitura e troca das cotas em `tenants.settings.quotas`. A troca grava `tenant.quota_update` |
 | `TenantDirectory.list_api_keys` e `revoke_api_key` | Lista as chaves sem o segredo e revoga uma chave. A revogação grava `api_key.revoke` |
 
+Ports acrescentados na fase 2 (grupo do Valkey):
+
+| Port ou método | Motivo |
+|---|---|
+| `RateLimiter.take` | Token bucket por chave e por tenant. Devolve `RateDecision` com `allowed`, `retry_after_seconds` e `remaining` |
+| `RateLimiter.count_day` | Contador de requisições do dia UTC, para a cota `requests_per_day` |
+
+Os adapters Valkey (`ValkeyCache` e `ValkeyRateLimiter`) ficam em `vlade_rag.knowledge.valkey` e usam o `redis-py` (extra `cache`). Os adapters em memória ficam em `vlade_rag.knowledge.memory`.
+
 Regras dos ports:
 
 1. Os adapters de `ObjectStorage` e de `Cache` acrescentam o prefixo `{tenant_id}/` a toda chave. O caso de uso não monta esse prefixo.
@@ -731,6 +740,9 @@ VLADE_STORAGE__BACKEND=postgres                  # postgres ou memory
 VLADE_OBJECT_STORAGE__BACKEND=filesystem         # filesystem ou memory (S3 na fase 2)
 VLADE_OBJECT_STORAGE__PATH=/data/objects
 VLADE_SECURITY__API_KEY_PEPPER=***
+VLADE_CACHE__URL=redis://valkey:6379/0           # Valkey ou Redis. Sem URL, o cache e o limite ficam no processo
+VLADE_LIMITS__RATE_PER_KEY_PER_MINUTE=600        # 0 desliga o limite
+VLADE_LIMITS__RATE_PER_TENANT_PER_MINUTE=3000    # 0 desliga o limite
 VLADE_PROVIDERS__OLLAMA__BASE_URL=http://ollama:11434
 VLADE_PROVIDERS__OLLAMA__THINK=false
 VLADE_PROVIDERS__OPENAI__API_KEY=***
@@ -923,6 +935,10 @@ O prompt `answer_with_citations` tem estas regras:
 
 `kb_epoch` é um contador da base. A etapa `publish`, a exclusão e a reindexação aumentam o contador. Assim o cache antigo deixa de ser lido sem uma varredura de chaves.
 
+O hash da chave `search` cobre o texto, o idioma, os filtros, o `top_k`, o uso do reranker e a configuração de recuperação da base. Uma entrada guarda o `chunk_id`, a pontuação e o nome do retriever de cada resultado. Se um chunk da entrada não existe mais, o `Search` ignora a entrada e busca de novo.
+
+O adapter acrescenta o prefixo `{tenant_id}/` a toda chave. Se o servidor Valkey falha, o `Search` trata a leitura como ausência da entrada, a escrita é descartada e o log recebe um aviso. A requisição continua.
+
 ## 12. Orquestração
 
 ### 12.1. Pipeline linear e LangGraph
@@ -970,7 +986,7 @@ Limite: no modo `full`, a troca é atômica por documento, não pela base inteir
 
 ### 14.1. API REST
 
-Prefixo `/v1`. O cabeçalho `Authorization: Bearer <chave>` autentica. Erros usam `application/problem+json` (RFC 9457).
+Prefixo `/v1`. O cabeçalho `Authorization: Bearer <chave>` autentica. Erros usam `application/problem+json` (RFC 9457). Uma resposta 429 traz o cabeçalho `Retry-After`, em segundos.
 
 | Método | Caminho | Caso de uso |
 |---|---|---|
@@ -1003,7 +1019,7 @@ O [`MCP_SPEC.md`](MCP_SPEC.md) define o servidor MCP.
 ```text
 vlade-rag db upgrade
 vlade-rag tenant create <slug>
-vlade-rag tenant quota <slug> [--documents N] [--bytes N] [--clear]
+vlade-rag tenant quota <slug> [--documents N] [--bytes N] [--requests-per-day N] [--clear]
 vlade-rag key create --tenant <slug> --roles reader,writer
 vlade-rag key list --tenant <slug>
 vlade-rag key revoke <prefixo> --tenant <slug>
@@ -1028,8 +1044,8 @@ A CLI fala com o banco diretamente pelos casos de uso. A CLI lê a chave de `VLA
 |---|---|
 | Chaves de API | Formato `vrag_<prefixo>_<segredo>`. O segredo tem 32 bytes aleatórios. O banco guarda o prefixo e `HMAC-SHA256(segredo, pepper)`. A comparação usa tempo constante |
 | Papéis | `reader`, `writer`, `admin`. Verificação no caso de uso, não só na interface |
-| Limite de requisições | Token bucket no Valkey por chave e por tenant. Sem cache configurado, o limite é por processo |
-| Cotas | `tenants.settings.quotas`: `documents`, `bytes` e, na tarefa 2.2, `requests_per_day`. Sem valor, a cota é ilimitada. `SubmitIngestion` recusa o arquivo com `quota_exceeded` (HTTP 413) e grava o evento `document.ingest` com resultado `denied`. Um arquivo que atualiza um documento existente não conta como documento novo. Um arquivo igual à versão atual não conta bytes |
+| Limite de requisições | Token bucket no Valkey por chave e por tenant, em requisições por minuto (padrão de 600 por chave e 3000 por tenant). A capacidade do balde é o limite por minuto. Uma chamada acima do limite recebe `rate_limited` (HTTP 429) com o cabeçalho `Retry-After`. Sem `VLADE_CACHE__URL`, o limite é por processo. Se o Valkey falha, a requisição passa e o log recebe um aviso. A API aplica o limite depois de autenticar a chave, e o servidor MCP fará o mesmo |
+| Cotas | `tenants.settings.quotas`: `documents`, `bytes` e `requests_per_day`. Sem valor, a cota é ilimitada. Acima de `requests_per_day`, a chamada recebe `quota_exceeded` com HTTP 429. O dia segue o horário UTC. `SubmitIngestion` recusa o arquivo com `quota_exceeded` (HTTP 413) e grava o evento `document.ingest` com resultado `denied`. Um arquivo que atualiza um documento existente não conta como documento novo. Um arquivo igual à versão atual não conta bytes |
 | Upload | Tamanho máximo padrão de 50 MB. Lista de tipos MIME permitidos. Verificação do tipo pelo conteúdo, não só pela extensão |
 | URI de origem | Download por URL desativado por padrão. Quando ativo, aceita só domínios de uma lista permitida e bloqueia endereços privados e de link-local |
 | Segredos | Só por variável de ambiente ou gerenciador de segredos. O processador de logs remove campos com nomes de segredo |

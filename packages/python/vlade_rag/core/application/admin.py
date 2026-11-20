@@ -2,9 +2,10 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 
 from vlade_rag.core.application.deps import Dependencies
+from vlade_rag.core.application.request_limits import DAILY_KEY
 from vlade_rag.core.domain import (
     AuditEvent,
     InvalidArgument,
@@ -36,7 +37,13 @@ class GetUsage:
             if self.deps.tenants is not None
             else TenantQuotas()
         )
-        return UsageView(quotas=quotas, usage=await self.deps.repository.get_usage(ctx))
+        usage = await self.deps.repository.get_usage(ctx)
+        if self.deps.rate_limiter is not None:
+            today = await self.deps.rate_limiter.count_day(
+                ctx.tenant_id, DAILY_KEY, increment=False
+            )
+            usage = replace(usage, requests_today=today)
+        return UsageView(quotas=quotas, usage=usage)
 
 
 class ListAuditEvents:

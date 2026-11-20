@@ -101,7 +101,21 @@ class WorkerSettings(BaseModel):
     lease_seconds: int = Field(default=600, ge=10)
 
 
+class CacheSettings(BaseModel):
+    """Valkey or Redis (ADR-0007). Without ``url``, cache and rate limit live in the process."""
+
+    url: SecretStr | None = None
+
+    @field_validator("url", mode="before")
+    @classmethod
+    def _empty_is_none(cls, value: object) -> object:
+        return None if value in ("", None) else value
+
+
 class LimitsSettings(BaseModel):
+    # Token bucket per API key and per tenant, in requests per minute. 0 turns the limit off.
+    rate_per_key_per_minute: int = Field(default=600, ge=0)
+    rate_per_tenant_per_minute: int = Field(default=3000, ge=0)
     max_upload_bytes: int = Field(default=50 * 1024 * 1024, ge=1)
     max_query_chars: int = Field(default=4000, ge=1)
     max_top_k: int = Field(default=50, ge=1, le=1000)
@@ -131,6 +145,7 @@ class Settings(BaseSettings):
     storage: StorageSettings = Field(default_factory=StorageSettings)
     object_storage: ObjectStorageSettings = Field(default_factory=ObjectStorageSettings)
     providers: ProvidersSettings = Field(default_factory=ProvidersSettings)
+    cache: CacheSettings = Field(default_factory=CacheSettings)
     security: SecuritySettings = Field(default_factory=SecuritySettings)
     worker: WorkerSettings = Field(default_factory=WorkerSettings)
     limits: LimitsSettings = Field(default_factory=LimitsSettings)

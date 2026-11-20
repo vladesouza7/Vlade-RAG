@@ -10,7 +10,7 @@ import math
 import time
 import unicodedata
 from collections import Counter
-from collections.abc import Mapping, Sequence
+from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass, field, replace
 from datetime import UTC, datetime, timedelta
 from uuid import UUID
@@ -48,7 +48,7 @@ from vlade_rag.core.domain import (
     uuid7,
 )
 from vlade_rag.core.domain.api_keys import generate_api_key, hash_secret, parse_api_key
-from vlade_rag.core.ports import ApiKeyInfo, ClaimedJob, IssuedApiKey
+from vlade_rag.core.ports import ApiKeyInfo, ClaimedJob, IssuedApiKey, RateDecision
 from vlade_rag.native import token_spans
 
 
@@ -549,6 +549,46 @@ class MemoryCache:
         return len(keys)
 
 
+class MemoryRateLimiter:
+    """Token buckets and daily counters in the process memory (one process only).
+
+    ``clock`` returns the time in seconds since the epoch. Tests replace it.
+    """
+
+    def __init__(self, clock: Callable[[], float] = time.time) -> None:
+        self.clock = clock
+        self._buckets: dict[tuple[UUID, str], tuple[float, float]] = {}  # tokens, timestamp
+        self._days: dict[tuple[UUID, str, str], int] = {}
+
+    async def take(
+        self,
+        tenant_id: UUID,
+        key: str,
+        *,
+        capacity: int,
+        refill_per_second: float,
+        cost: int = 1,
+    ) -> RateDecision:
+        now = self.clock()
+        tokens, stamp = self._buckets.get((tenant_id, key), (float(capacity), now))
+        tokens = min(float(capacity), tokens + max(now - stamp, 0.0) * refill_per_second)
+        allowed = tokens >= cost
+        if allowed:
+            tokens -= cost
+        self._buckets[(tenant_id, key)] = (tokens, now)
+        retry = 0.0 if allowed else (cost - tokens) / refill_per_second
+        return RateDecision(allowed=allowed, retry_after_seconds=retry, remaining=tokens)
+
+    async def count_day(self, tenant_id: UUID, key: str, *, increment: bool) -> int:
+        day = datetime.fromtimestamp(self.clock(), UTC).strftime("%Y%m%d")
+        slot = (tenant_id, key, day)
+        for old in [s for s in self._days if s[0] == tenant_id and s[1] == key and s[2] != day]:
+            del self._days[old]
+        if increment:
+            self._days[slot] = self._days.get(slot, 0) + 1
+        return self._days.get(slot, 0)
+
+
 # ---------------------------------------------------------------- jobs, audit, tenants
 
 
@@ -789,6 +829,7 @@ class MemoryAdapters:
     lexical_index: MemoryLexicalIndex
     object_storage: MemoryObjectStorage
     cache: MemoryCache
+    rate_limiter: MemoryRateLimiter
     job_queue: MemoryJobQueue
     audit_log: MemoryAuditLog
     tenants: MemoryTenantDirectory
@@ -803,6 +844,7 @@ def memory_adapters(store: MemoryStore | None = None) -> MemoryAdapters:
         lexical_index=MemoryLexicalIndex(store),
         object_storage=MemoryObjectStorage(store),
         cache=MemoryCache(store),
+        rate_limiter=MemoryRateLimiter(),
         job_queue=MemoryJobQueue(store),
         audit_log=MemoryAuditLog(store),
         tenants=MemoryTenantDirectory(store),
@@ -817,6 +859,7 @@ __all__ = [
     "MemoryKnowledgeRepository",
     "MemoryLexicalIndex",
     "MemoryObjectStorage",
+    "MemoryRateLimiter",
     "MemoryStore",
     "MemoryTenantDirectory",
     "MemoryVectorIndex",
