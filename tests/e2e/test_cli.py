@@ -98,7 +98,11 @@ def test_cli_quota_keys_and_audit(cli: Any, tmp_path: Path) -> None:
     cli("ingest", "docs", str(tmp_path / "a.md"), "--wait", key=admin)
     assert "Skipped" in cli("ingest", "docs", str(tmp_path / "b.md"), key=admin).output
     usage = json.loads(cli("usage", "--json", key=admin).stdout)
-    assert usage["documents"] == 1 and usage["quotas"] == {"documents": 1, "bytes": 5000}
+    assert usage["documents"] == 1 and usage["quotas"] == {
+        "documents": 1,
+        "bytes": 5000,
+        "requests_per_day": None,
+    }
 
     audit = json.loads(cli("audit", "list", "--json", key=admin).stdout)
     pairs = {(e["action"], e["outcome"]) for e in audit}
@@ -111,3 +115,14 @@ def test_cli_quota_keys_and_audit(cli: Any, tmp_path: Path) -> None:
     assert "revoked" in cli("key", "list", "--tenant", slug).stdout
     cli("tenant", "quota", slug, "--clear")
     assert "documents=unlimited bytes=unlimited" in cli("tenant", "quota", slug).stdout
+
+
+def test_cli_requests_per_day_quota(cli: Any) -> None:
+    slug = f"acme-{secrets.token_hex(3)}"
+    cli("tenant", "create", slug)
+    admin = _key(cli, slug, "admin")
+    out = cli("tenant", "quota", slug, "--requests-per-day", "1000").stdout
+    assert "requests_per_day=1000" in out and "documents=unlimited" in out
+    usage = json.loads(cli("usage", "--json", key=admin).stdout)
+    assert usage["quotas"]["requests_per_day"] == 1000 and usage["requests_today"] == 0
+    assert "requests today: 0 / 1000" in cli("usage", key=admin).stdout

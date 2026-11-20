@@ -32,8 +32,15 @@ jobs:
         options: >-
           --health-cmd "pg_isready -U vlade_owner" --health-interval 5s
           --health-timeout 3s --health-retries 20
+      valkey:
+        image: valkey/valkey:9.2-alpine
+        ports: ["6379:6379"]
+        options: >-
+          --health-cmd "valkey-cli ping" --health-interval 5s
+          --health-timeout 3s --health-retries 20
     env:
       VLADE_TEST_DATABASE_URL: postgresql://vlade_owner:ci-only-password@localhost:5432/postgres
+      VLADE_TEST_VALKEY_URL: redis://localhost:6379/0
     steps:
       - uses: actions/checkout@v7
       - uses: dtolnay/rust-toolchain@stable
@@ -46,6 +53,7 @@ jobs:
         run: >
           uv sync --locked --package vlade-rag
           --extra api --extra cli --extra postgres --extra ollama --extra openai --extra otel
+          --extra cache
           ${{ matrix.native && '--extra native' || '' }}
       - name: Install dev tools
         # Recent uv versions do not install the root dev group with --package.
@@ -92,7 +100,7 @@ jobs:
           uv venv /tmp/lic
           # The docling extra pulls PyTorch and NVIDIA CUDA libraries (proprietary). ADR-0001
           # item 4 keeps non-permissive dependencies in optional extras, so it is not checked here.
-          uv export --frozen --no-dev --package vlade-rag --extra server --extra api --extra cli --extra postgres --extra ollama --extra openai --extra otel --no-emit-workspace -o /tmp/req.txt
+          uv export --frozen --no-dev --package vlade-rag --extra server --extra api --extra cli --extra postgres --extra ollama --extra openai --extra otel --extra cache --no-emit-workspace -o /tmp/req.txt
           uv pip install --python /tmp/lic/bin/python -r /tmp/req.txt
           uvx pip-licenses==5.5.5 --python /tmp/lic/bin/python --from=mixed --format=json > /tmp/licenses.json
           python3 scripts/check_licenses.py /tmp/licenses.json

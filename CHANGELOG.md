@@ -30,6 +30,9 @@ Este arquivo registra as mudanças relevantes de cada versão. O formato segue o
 - `VLADE_DEFAULT_KB_CONFIG`: configuração padrão das bases novas, com mesclagem parcial.
 - Cotas por tenant de documentos e de bytes, com `GET /v1/usage`, `vlade-rag usage` e `vlade-rag tenant quota`. Um arquivo acima da cota recebe `quota_exceeded` (HTTP 413).
 - Lista e revogação de chaves de API: `vlade-rag key list` e `vlade-rag key revoke`.
+- Limite de requisições por chave e por tenant (token bucket) e cota de requisições por dia. Uma chamada acima do limite recebe `rate_limited` (HTTP 429) com `Retry-After`. Configuração: `VLADE_LIMITS__RATE_PER_KEY_PER_MINUTE`, `VLADE_LIMITS__RATE_PER_TENANT_PER_MINUTE` e `vlade-rag tenant quota --requests-per-day`.
+- Adapters Valkey (extra `cache`, `redis-py`): cache e limite de requisições compartilhados entre processos, ligados por `VLADE_CACHE__URL`. O Compose já usa o serviço `valkey`. `GET /health/ready` confere o cache.
+- Cache de resultados de busca por base e por `kb_epoch`, com validade de 10 minutos.
 - Leitura da auditoria: `GET /v1/audit-events` e `vlade-rag audit list`. Eventos novos: cota negada, cota alterada, chave emitida e chave revogada.
 
 ### Corrigido

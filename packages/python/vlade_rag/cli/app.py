@@ -159,6 +159,9 @@ def tenant_quota(
     slug: str,
     documents: int | None = typer.Option(None, min=0, help="Maximum number of documents."),
     size: int | None = typer.Option(None, "--bytes", min=0, help="Maximum stored bytes."),
+    requests_per_day: int | None = typer.Option(
+        None, "--requests-per-day", min=0, help="Maximum requests per UTC day."
+    ),
     clear: bool = typer.Option(False, help="Remove every limit."),
 ) -> None:
     """Show the quotas of a tenant. With options, change only the given limits."""
@@ -167,7 +170,7 @@ def tenant_quota(
     async def go(rt: Any) -> tuple[TenantQuotas, bool]:
         tenant = await rt.tenants.get_tenant(slug)
         current = await rt.tenants.get_quotas(tenant.id)
-        if not clear and documents is None and size is None:
+        if not clear and documents is None and size is None and requests_per_day is None:
             return current, False
         new = (
             TenantQuotas()
@@ -175,6 +178,9 @@ def tenant_quota(
             else TenantQuotas(
                 documents=current.documents if documents is None else documents,
                 bytes=current.bytes if size is None else size,
+                requests_per_day=(
+                    current.requests_per_day if requests_per_day is None else requests_per_day
+                ),
             )
         )
         await rt.tenants.set_quotas(tenant.id, new)
@@ -183,7 +189,8 @@ def tenant_quota(
     quotas, changed = _run(_with_runtime(go))
     typer.echo(
         f"{'Updated: ' if changed else ''}"
-        f"documents={_limit_text(quotas.documents)} bytes={_limit_text(quotas.bytes)}"
+        f"documents={_limit_text(quotas.documents)} bytes={_limit_text(quotas.bytes)} "
+        f"requests_per_day={_limit_text(quotas.requests_per_day)}"
     )
 
 
@@ -368,19 +375,23 @@ def usage(as_json: bool = typer.Option(False, "--json")) -> None:
         return await GetUsage(rt.deps).execute(await _ctx(rt))
 
     view = _run(_with_runtime(go))
+    q = view.quotas
     data = {
         "documents": view.usage.documents,
         "bytes": view.usage.bytes,
-        "quotas": {"documents": view.quotas.documents, "bytes": view.quotas.bytes},
+        "requests_today": view.usage.requests_today,
+        "quotas": {
+            "documents": q.documents,
+            "bytes": q.bytes,
+            "requests_per_day": q.requests_per_day,
+        },
     }
     if as_json:
         _print_json(data)
         return
-    q = view.quotas
-    typer.echo(
-        f"documents: {view.usage.documents} / {'unlimited' if q.documents is None else q.documents}"
-    )
-    typer.echo(f"bytes: {view.usage.bytes} / {'unlimited' if q.bytes is None else q.bytes}")
+    typer.echo(f"documents: {view.usage.documents} / {_limit_text(q.documents)}")
+    typer.echo(f"bytes: {view.usage.bytes} / {_limit_text(q.bytes)}")
+    typer.echo(f"requests today: {view.usage.requests_today} / {_limit_text(q.requests_per_day)}")
 
 
 @audit_app.command("list")

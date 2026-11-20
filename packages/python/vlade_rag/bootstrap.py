@@ -204,6 +204,7 @@ async def build_runtime(
             "job_queue": mem.job_queue,
             "audit_log": mem.audit_log,
             "cache": mem.cache,
+            "rate_limiter": mem.rate_limiter,
         }
         tenants: TenantDirectory = mem.tenants
         object_storage: Any = mem.object_storage
@@ -212,7 +213,7 @@ async def build_runtime(
             raise InvalidArgument("VLADE_DATABASE__URL is required for the postgres backend.")
         if settings.security.api_key_pepper is None:
             raise InvalidArgument("VLADE_SECURITY__API_KEY_PEPPER is required.")
-        from vlade_rag.knowledge.memory import MemoryCache, MemoryStore
+        from vlade_rag.knowledge.memory import MemoryCache, MemoryRateLimiter, MemoryStore
         from vlade_rag.knowledge.postgres import (
             PgVectorIndex,
             PostgresAuditLog,
@@ -236,7 +237,8 @@ async def build_runtime(
             "lexical_indexes": {"lexical": TsvectorLexicalIndex(db)},
             "job_queue": PostgresJobQueue(db),
             "audit_log": PostgresAuditLog(db),
-            "cache": MemoryCache(MemoryStore()),  # per process; Valkey arrives in phase 2
+            "cache": MemoryCache(MemoryStore()),  # per process unless VLADE_CACHE__URL is set
+            "rate_limiter": MemoryRateLimiter(),
         }
         tenants = PostgresTenantDirectory(db, settings.security.api_key_pepper.get_secret_value())
         object_storage = None
@@ -250,6 +252,19 @@ async def build_runtime(
             from vlade_rag.knowledge.memory import MemoryObjectStorage, MemoryStore
 
             object_storage = MemoryObjectStorage(MemoryStore())
+
+    if settings.cache.url is not None:
+        try:
+            from vlade_rag.knowledge.valkey import ValkeyCache, ValkeyRateLimiter, connect
+        except ImportError as exc:
+            raise InvalidArgument(
+                'VLADE_CACHE__URL needs the "cache" extra: pip install "vlade-rag[cache]"'
+            ) from exc
+        client = connect(settings.cache.url.get_secret_value())
+        closers.append(client.aclose)
+        checks["cache"] = client.ping
+        ports["cache"] = ValkeyCache(client)
+        ports["rate_limiter"] = ValkeyRateLimiter(client)
 
     limits = settings.limits
     deps = Dependencies(
@@ -265,6 +280,8 @@ async def build_runtime(
             max_upload_bytes=limits.max_upload_bytes,
             max_query_chars=limits.max_query_chars,
             max_top_k=limits.max_top_k,
+            rate_per_key_per_minute=limits.rate_per_key_per_minute,
+            rate_per_tenant_per_minute=limits.rate_per_tenant_per_minute,
             job_max_attempts=limits.job_max_attempts,
             store_query_text=limits.store_query_text,
         ),

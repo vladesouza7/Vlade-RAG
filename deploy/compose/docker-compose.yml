@@ -9,6 +9,8 @@ x-app-env: &app-env
   VLADE_LOG_LEVEL: ${VLADE_LOG_LEVEL:-INFO}
   VLADE_DATABASE__URL: postgresql://vlade_app:${VLADE_APP_DB_PASSWORD:?Defina VLADE_APP_DB_PASSWORD no arquivo .env}@postgres:5432/vlade
   VLADE_SECURITY__API_KEY_PEPPER: ${VLADE_API_KEY_PEPPER:?Defina VLADE_API_KEY_PEPPER no arquivo .env}
+  # Cache and request limits in Valkey (ADR-0007). Set it empty to keep them in the process.
+  VLADE_CACHE__URL: ${VLADE_CACHE__URL-redis://valkey:6379/0}
   VLADE_PROVIDERS__OLLAMA__BASE_URL: ${OLLAMA_BASE_URL:-http://host.docker.internal:11434}
   VLADE_PROVIDERS__OLLAMA__THINK: ${OLLAMA_THINK:-false}
   VLADE_PROVIDERS__OPENAI__API_KEY: ${OPENAI_API_KEY:-}

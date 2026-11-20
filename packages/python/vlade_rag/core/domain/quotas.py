@@ -18,6 +18,7 @@ class TenantUsage:
 
     documents: int = 0
     bytes: int = 0
+    requests_today: int = 0  # UTC day; filled by ``GetUsage`` from the rate limiter
 
 
 def _limit(value: Any, name: str) -> int | None:
@@ -34,10 +35,12 @@ class TenantQuotas:
 
     documents: int | None = None
     bytes: int | None = None
+    requests_per_day: int | None = None
 
     def __post_init__(self) -> None:
         _limit(self.documents, "documents")
         _limit(self.bytes, "bytes")
+        _limit(self.requests_per_day, "requests_per_day")
 
     @classmethod
     def from_settings(cls, settings: Mapping[str, Any]) -> TenantQuotas:
@@ -45,6 +48,7 @@ class TenantQuotas:
         return cls(
             documents=_limit(raw.get("documents"), "documents"),
             bytes=_limit(raw.get("bytes"), "bytes"),
+            requests_per_day=_limit(raw.get("requests_per_day"), "requests_per_day"),
         )
 
     def to_settings(self) -> dict[str, int]:
@@ -53,6 +57,8 @@ class TenantQuotas:
             out["documents"] = self.documents
         if self.bytes is not None:
             out["bytes"] = self.bytes
+        if self.requests_per_day is not None:
+            out["requests_per_day"] = self.requests_per_day
         return out
 
     def check_submit(self, usage: TenantUsage, *, new_document: bool, added_bytes: int) -> None:

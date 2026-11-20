@@ -23,3 +23,6 @@ O Vlade-RAG usa cache para embeddings de consulta, resultados de busca e limite 
 ## Consequências
 
 - Quem já usa Redis aponta `VLADE_CACHE__URL` para o Redis sem mudar código.
+- O adapter usa o extra `cache` (`redis-py`, licença MIT).
+- Se o servidor falha, a leitura do cache conta como ausência da entrada e a escrita é descartada. O limite de requisições deixa a requisição passar (*fail open*). Nos dois casos o log recebe um aviso. A disponibilidade da API vale mais que o cache e que o limite.
+- O limite fica sem efeito enquanto o servidor está fora. A cota diária também. Quem precisa de limite estrito deve monitorar o Valkey.

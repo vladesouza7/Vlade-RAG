@@ -48,7 +48,8 @@ otel = [
 ]
 ollama = ["httpx2>=2.16.2"]
 openai = ["httpx2>=2.16.2"]
-server = ["vlade-rag[native,api,cli,postgres,ollama,openai,otel]"]
+cache = ["redis>=8.1.0"]  # Valkey or Redis (ADR-0007)
+server = ["vlade-rag[native,api,cli,postgres,ollama,openai,otel,cache]"]
 
 [project.scripts]
 vlade-rag = "vlade_rag.cli:main"
