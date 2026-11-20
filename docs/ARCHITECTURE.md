@@ -1121,6 +1121,7 @@ Os serviços com licença AGPL rodam como processos separados e sem modificaçã
 | Contrato | `tests/contract/` | Cada adapter contra a suíte do port | Serviço do adapter em container (Testcontainers) |
 | Integração | `tests/integration/` | Pipelines completos com PostgreSQL real | PostgreSQL, Valkey |
 | Ponta a ponta | `tests/e2e/` | API, MCP e CLI | Perfil `dev` |
+| MCP Inspector | `scripts/mcp_inspector.sh` | O servidor MCP, chamado pelo Inspector em modo CLI (job `MCP server (Inspector)` da CI) | PostgreSQL, Node |
 | Isolamento | `tests/integration/test_tenant_isolation.py` | Leitura entre tenants por cada interface | PostgreSQL |
 | Avaliação | `evals/` | Métricas de recuperação com dataset fixo | PostgreSQL, embeddings locais |
 

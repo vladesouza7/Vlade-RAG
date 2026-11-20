@@ -15,7 +15,7 @@ import jsonschema
 from mcp.shared.exceptions import MCPError
 from mcp_types import Implementation
 
-from tests.e2e.conftest import McpWorld
+from tests.e2e.conftest import McpWorld, error_of
 from vlade_rag.core.application import ListAuditEvents
 from vlade_rag.mcp.policies import GROUP_LIMITS, Group
 from vlade_rag.mcp.tools import read_tools
@@ -197,13 +197,11 @@ async def test_tool_errors_are_structured(
 ) -> None:
     async with mcp_world.client(mcp_world.reader) as client:
         result = await client.call_tool(tool, args)
-    assert result.is_error
-    error = structured(result)["error"]
+    error = error_of(result)  # also checks isError and the absence of structuredContent
     assert error["code"] == code
     assert error["retryable"] is False
     assert error["message"]
     assert "trace_id" in error
-    assert json.loads(result.content[0].text) == structured(result)
 
 
 async def test_unknown_tool_is_a_protocol_error(mcp_world: McpWorld) -> None:
@@ -219,8 +217,7 @@ async def test_rate_limit_per_group(mcp_world: McpWorld, monkeypatch: pytest.Mon
         for _ in range(2):
             assert not (await client.call_tool("vlade_query", args)).is_error
         limited = await client.call_tool("vlade_query", args)
-        assert limited.is_error
-        error = structured(limited)["error"]
+        error = error_of(limited)
         assert error["code"] == "rate_limited" and error["retryable"] is True
         assert "Retry in" in error["message"]
         # Another group of the same key still works.

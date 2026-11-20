@@ -17,17 +17,12 @@ pytest.importorskip("mcp")
 
 from mcp.shared.exceptions import MCPError
 
-from tests.e2e.conftest import KB_CONFIG, McpWorld
+from tests.e2e.conftest import KB_CONFIG, McpWorld, error_of
 from vlade_rag.core.application import CreateKnowledgeBase
 
 pytestmark = pytest.mark.anyio
 
 NOWHERE_DOC = "00000000-0000-4000-8000-000000000000"
-
-
-def error_of(result: Any) -> dict[str, Any]:
-    assert result.is_error, result
-    return dict(result.structured_content)["error"]  # type: ignore[no-any-return]
 
 
 def tool_calls(world: McpWorld, kb: str, doc: str, job: str) -> list[tuple[str, dict[str, Any]]]:

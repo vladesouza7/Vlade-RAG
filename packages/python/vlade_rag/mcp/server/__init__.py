@@ -2,7 +2,7 @@
 
 Every call goes through the same steps: find the caller, check the role, validate the input,
 apply the rate limits, run the use case, record the audit event, build the result. An error of
-a tool is a result with ``isError: true`` and the structured error of MCP_SPEC section 9. An error
+a tool is a result with ``isError: true`` and the error of MCP_SPEC section 9 as JSON text. An error
 of a resource or of a prompt is a JSON-RPC error with the same structure in ``data``.
 """
 
@@ -162,9 +162,10 @@ def build_server(runtime: Runtime, fixed_ctx: TenantContext | None = None) -> Se
                     error_code=result["error"]["code"],
                     resource_id=arguments.get("knowledge_base"),
                 )
+            # No structuredContent: the error is not an output of the tool, and a client checks
+            # structuredContent against the outputSchema (the MCP Inspector does).
             return CallToolResult(
                 content=[TextContent(type="text", text=json.dumps(result, ensure_ascii=False))],
-                structured_content=result,
                 is_error=True,
             )
         await record_audit(
