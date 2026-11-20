@@ -8,27 +8,37 @@ chunk. The report records the whole configuration of the run (RF-72).
 from __future__ import annotations
 
 from collections.abc import Mapping, Sequence
+from dataclasses import replace
 from datetime import UTC, datetime
 from typing import Any
 
 from vlade_rag import __version__
 from vlade_rag.core.application import Dependencies, Search
 from vlade_rag.core.domain import InvalidArgument, KnowledgeBase, Query, Role, TenantContext
+from vlade_rag.core.domain.kb_config import RerankConfig
 from vlade_rag.core.ports import EvalItem, EvalReport
 from vlade_rag.evaluation import metrics as m
 
 FETCH_FACTOR = 5
+RERANK_TOP_N_LIMIT = 100  # the upper bound of ``RerankConfig.top_n``
 DEFAULT_CUTOFFS = (1, 3, 5, 10)
 
 
 class RetrievalEvaluator:
     name = "retrieval"
 
-    def __init__(self, deps: Dependencies, cutoffs: Sequence[int] = DEFAULT_CUTOFFS) -> None:
+    def __init__(
+        self,
+        deps: Dependencies,
+        cutoffs: Sequence[int] = DEFAULT_CUTOFFS,
+        rerank: RerankConfig | None = None,
+    ) -> None:
+        """``rerank`` replaces the reranker of the base for this run. The base is not changed."""
         if not cutoffs or any(c < 1 for c in cutoffs):
             raise InvalidArgument("The cutoffs must be whole numbers of 1 or more.")
         self.deps = deps
         self.cutoffs = tuple(sorted(set(cutoffs)))
+        self.rerank = rerank
 
     async def evaluate(
         self, ctx: TenantContext, kb: KnowledgeBase, items: Sequence[EvalItem], k: int
@@ -42,6 +52,7 @@ class RetrievalEvaluator:
             raise InvalidArgument("No question has a relevant document.")
         cutoffs = tuple(sorted({c for c in self.cutoffs if c <= k} | {k}))
         fetch = min(k * FETCH_FACTOR, self.deps.limits.max_top_k)
+        kb = self._with_rerank(kb, fetch)
         search = Search(self.deps)
 
         per_metric: dict[str, list[float]] = {}
@@ -83,6 +94,20 @@ class RetrievalEvaluator:
         )
 
     # ------------------------------------------------------------ helpers
+
+    def _with_rerank(self, kb: KnowledgeBase, fetch: int) -> KnowledgeBase:
+        """Apply the reranker of this run. The reranker returns ``top_n`` chunks, so ``top_n``
+        rises to the number of chunks fetched. A lower ``top_n`` would cut the ranking short and
+        lower Recall@K for a reason that is not the quality of the reranker."""
+        retrieval = kb.config.retrieval
+        rerank = self.rerank or retrieval.rerank
+        if not rerank.enabled:
+            return kb
+        rerank = rerank.model_copy(
+            update={"top_n": min(max(rerank.top_n, fetch), RERANK_TOP_N_LIMIT)}
+        )
+        retrieval = retrieval.model_copy(update={"rerank": rerank})
+        return replace(kb, config=kb.config.model_copy(update={"retrieval": retrieval}))
 
     @staticmethod
     def _relevant(item: EvalItem) -> bool:

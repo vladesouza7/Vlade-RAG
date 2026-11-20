@@ -14,11 +14,12 @@ from typing import Any
 from vlade_rag.core.application import Dependencies, Limits
 from vlade_rag.core.config import Settings, get_settings
 from vlade_rag.core.domain import InvalidArgument
-from vlade_rag.core.domain.kb_config import EmbeddingsConfig, GenerationConfig
+from vlade_rag.core.domain.kb_config import EmbeddingsConfig, GenerationConfig, RerankConfig
 from vlade_rag.core.ports import (
     DocumentParser,
     EmbeddingProvider,
     LLMProvider,
+    Reranker,
     TenantDirectory,
     Tracer,
 )
@@ -31,6 +32,10 @@ from vlade_rag.ingestion.parsers.basic import basic_parsers
 from vlade_rag.retrieval.fusion import RRFFusion
 
 Closer = Callable[[], Awaitable[None]]
+
+# Built-in OpenAI-compatible providers that have no ``/rerank`` endpoint (ADR-0018). OpenRouter
+# and the providers a user adds under ``VLADE_PROVIDERS__COMPATIBLE__*`` do get a reranker.
+NO_RERANK_API = frozenset({"openai", "opencode", "gemini"})
 
 
 class ProviderClients:
@@ -127,11 +132,22 @@ def builtin_plugins(
             "Offline extractive answers (tests and demos)",
         ),
     ]
+
+    def api_reranker(provider: str) -> Callable[..., Reranker]:
+        def factory(cfg: RerankConfig, clients: ProviderClients) -> Reranker:
+            from vlade_rag.reranking.api import ApiReranker
+
+            return ApiReranker(clients.get(provider), provider, cfg.model)
+
+        return factory
+
     for name in compatible:
         specs.append(
             PluginSpec("embeddings", name, openai_embeddings(name), f"{name} (OpenAI-compatible)")
         )
         specs.append(PluginSpec("llm", name, openai_llm(name), f"{name} (OpenAI-compatible)"))
+        if name not in NO_RERANK_API:
+            specs.append(PluginSpec("reranker", name, api_reranker(name), f"{name} (POST /rerank)"))
     return specs
 
 
@@ -300,6 +316,7 @@ async def build_runtime(
         prompts=BuiltinPromptRegistry(),
         embeddings=_resolver(registry, "embeddings", clients),
         llms=_resolver(registry, "llm", clients),
+        rerankers=_resolver(registry, "reranker", clients),
         limits=Limits(
             max_upload_bytes=limits.max_upload_bytes,
             max_query_chars=limits.max_query_chars,

@@ -118,16 +118,30 @@ def eval_run(
     ),
     output: Path | None = typer.Option(None, help="Write the full report (JSON) to this file."),
     as_json: bool = typer.Option(False, "--json", help="Print the full report as JSON."),
+    rerank_model: str | None = typer.Option(
+        None,
+        help="Rerank with this model for this run only. The knowledge base is not changed.",
+    ),
+    rerank_provider: str = typer.Option(
+        "openrouter", help="The provider of --rerank-model (a plugin of kind 'reranker')."
+    ),
 ) -> None:
     """Score the retrieval of a knowledge base with a dataset (no LLM). Needs the admin role."""
+    from vlade_rag.core.domain.kb_config import RerankConfig
     from vlade_rag.evaluation.datasets import load_dataset
     from vlade_rag.evaluation.retrieval import RetrievalEvaluator
+
+    rerank = (
+        RerankConfig(enabled=True, provider=rerank_provider, model=rerank_model)
+        if rerank_model
+        else None
+    )
 
     async def go(rt: Any) -> Any:
         items = load_dataset(dataset)
         ctx = await _ctx(rt)
         kb = await rt.deps.repository.get_knowledge_base(ctx, knowledge_base)
-        return await RetrievalEvaluator(rt.deps).evaluate(ctx, kb, items, k)
+        return await RetrievalEvaluator(rt.deps, rerank=rerank).evaluate(ctx, kb, items, k)
 
     report = _run(_with_runtime(go))
     payload = {

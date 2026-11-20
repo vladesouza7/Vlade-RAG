@@ -1,6 +1,6 @@
 # ADR-0008: Modelos padrão de embeddings e de reranking
 
-- Status: Aceito
+- Status: Aceito. Item 2 complementado pelo ADR-0018
 - Data: 2026-11-19
 - Decisão no VLADE-RAG.md: D4, D5
 

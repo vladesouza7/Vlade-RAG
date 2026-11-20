@@ -792,8 +792,8 @@ retrieval:
     k: 60
   rerank:
     enabled: false
-    provider: sentence-transformers
-    model: BAAI/bge-reranker-v2-m3
+    provider: sentence-transformers   # openrouter (ADR-0018) ou um provedor compatível. O adapter local ainda não existe
+    model: BAAI/bge-reranker-v2-m3    # com openrouter: por exemplo cohere/rerank-v3.5
     candidates: 50
     top_n: 8
   query_transform: none          # none, rewrite, multi_query, hyde
