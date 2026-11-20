@@ -11,7 +11,7 @@ Cada arquivo registra uma decisão. Um ADR aceito não muda. Para mudar uma deci
 | [0005](0005-busca-lexica.md) | Busca léxica: `tsvector` padrão, `pg_search` opcional | Aceito | D1 |
 | [0006](0006-armazenamento-de-objetos.md) | Armazenamento de objetos pela API S3 | Aceito. Item 3 substituído pelo ADR-0017 | D2 |
 | [0007](0007-cache-valkey.md) | Valkey como cache padrão | Aceito | D3 |
-| [0008](0008-modelos-padrao.md) | Modelos padrão de embeddings e de reranking | Aceito | D4, D5 |
+| [0008](0008-modelos-padrao.md) | Modelos padrão de embeddings e de reranking | Aceito. Item 2 complementado pelo ADR-0018 | D4, D5 |
 | [0009](0009-idiomas-do-projeto.md) | Idiomas do código e da documentação | Aceito | — |
 | [0010](0010-extracao-docling.md) | Docling para extração de documentos | Aceito | D6 |
 | [0011](0011-orquestracao-kestra-langgraph.md) | Kestra para operação, LangGraph para consulta, fila no PostgreSQL | Aceito | — |
@@ -21,6 +21,7 @@ Cada arquivo registra uma decisão. Um ADR aceito não muda. Para mudar uma deci
 | [0015](0015-observabilidade.md) | Observabilidade com OpenTelemetry, Langfuse e LGTM | Aceito | — |
 | [0016](0016-asyncpg-e-migracoes-sql.md) | asyncpg e migrações em SQL (substitui o item 4 do ADR-0004) | Aceito | — |
 | [0017](0017-minio-deixa-de-ser-o-servico-s3-de-exemplo.md) | O MinIO deixa de ser o serviço S3 de exemplo (substitui o item 3 do ADR-0006) | Aceito | — |
+| [0018](0018-reranker-por-api-primeiro.md) | Reranker por API primeiro, reranker local como extra opcional (complementa o item 2 do ADR-0008) | Aceito | — |
 
 ## Modelo
 

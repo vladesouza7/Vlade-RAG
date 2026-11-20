@@ -2,6 +2,9 @@
 
 from __future__ import annotations
 
+from dataclasses import replace
+from typing import Any
+
 import pytest
 
 from tests.conftest import World
@@ -12,8 +15,9 @@ from vlade_rag.core.domain import (
     KnowledgeBaseConfig,
     PermissionDenied,
     RawDocument,
+    ScoredChunk,
 )
-from vlade_rag.core.domain.kb_config import ChunkingConfig, EmbeddingsConfig
+from vlade_rag.core.domain.kb_config import ChunkingConfig, EmbeddingsConfig, RerankConfig
 from vlade_rag.core.ports import EvalItem
 from vlade_rag.evaluation.retrieval import RetrievalEvaluator
 
@@ -122,3 +126,42 @@ async def test_invalid_input_is_refused(kb: tuple[World, KnowledgeBase]) -> None
         await evaluator.evaluate(world.admin, base, [EvalItem(question="q")], 5)
     with pytest.raises(InvalidArgument):
         RetrievalEvaluator(world.deps, cutoffs=[0])
+
+
+class ReverseReranker:
+    """Puts the worst candidate first and records the ``top_n`` it receives."""
+
+    name = "reverse"
+
+    def __init__(self) -> None:
+        self.top_n: list[int] = []
+
+    async def rerank(self, query: str, candidates: Any, top_n: int) -> list[ScoredChunk]:
+        self.top_n.append(top_n)
+        flipped = list(reversed(candidates))[:top_n]
+        return [ScoredChunk(c.chunk, c.score, rank, "rerank") for rank, c in enumerate(flipped, 1)]
+
+
+async def test_a_run_can_rerank_without_changing_the_base(
+    kb: tuple[World, KnowledgeBase],
+) -> None:
+    world, base = kb
+    fake = ReverseReranker()
+    deps = replace(world.deps, rerankers=lambda cfg: fake)
+    questions = [item("prazo de entrega padrão cinco dias úteis", "prazos.md")]
+
+    plain = await RetrievalEvaluator(deps).evaluate(world.admin, base, questions, 10)
+    ranked = await RetrievalEvaluator(
+        deps, rerank=RerankConfig(enabled=True, provider="x", model="m")
+    ).evaluate(world.admin, base, questions, 10)
+
+    assert plain.metrics["mrr"] == 1.0 and fake.top_n[0:1] == [50]
+    # The reranker reversed the ranking: the document is last of the three, not first.
+    assert ranked.metrics["mrr"] < 1.0
+    assert ranked.details[0]["first_relevant_rank"] > 1
+    # top_n rose to the number of chunks fetched, so the ranking is not cut at 8.
+    assert fake.top_n == [50]
+    rerank = ranked.config["knowledge_base_config"]["retrieval"]["rerank"]  # type: ignore[index]
+    assert rerank["enabled"] is True and rerank["model"] == "m" and rerank["top_n"] == 50
+    assert base.config.retrieval.rerank.enabled is False and base.config.retrieval.rerank.top_n == 8
+    assert plain.config["knowledge_base_config"]["retrieval"]["rerank"]["enabled"] is False  # type: ignore[index]

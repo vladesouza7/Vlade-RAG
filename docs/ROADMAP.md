@@ -19,7 +19,7 @@
 | 0 | Fundação | `0.0.x` | Tarefas 0.1 a 0.10 concluídas em 2026-11-19. A CI passou no GitHub em 2026-11-19, inclusive licenças, linter de documentação e `GET /health/live` no perfil `dev`. Falta medir o consumo de memória do perfil `dev` (RNF-11). A fase está integrada na branch `homolog` |
 | 1 | Núcleo mínimo | `0.1.0` | Em andamento. Tarefas 1.1 a 1.21 implementadas em 2026-11-19. A CI passou no GitHub em 2026-11-19 (PR #1) e a fase está integrada na branch `homolog`. O teste de aceite rodou em 2026-11-19 com o OpenRouter: 100 documentos ingeridos, 19 de 20 perguntas respondidas com a citação certa, 121 testes aprovados e cobertura de 88,40%. Falta a revisão humana das 20 respostas e o teste do Docling (tarefa 1.9). A limitação L1 está registrada na seção da fase |
 | 2 | Interfaces e armazenamento | `0.2.0` | Em andamento. Tarefas 2.1, 2.2, 2.3, 2.5, 2.6, 2.7, 2.8, 2.9 e 2.10 implementadas. Elas cobrem cotas, chaves, auditoria, limite de requisições, cache no Valkey, Gemini, servidor MCP de leitura, teste com o Inspector e Agent Skill. A tarefa 2.4 está parcial: o adapter S3 está pronto e falta o serviço S3 de exemplo. O critério de aceite ainda não rodou. Ele pede dois clientes MCP reais com a skill instalada |
-| 3 | Qualidade | `0.3.0` | Em andamento. Tarefa 3.6 implementada em 2026-11-20. A linha de base da fase 1 está em `evals/reports/` (Recall@10 de 1,00 e MRR de 0,786) |
+| 3 | Qualidade | `0.3.0` | Em andamento. Tarefa 3.6 implementada em 2026-11-20. A linha de base da fase 1 está em `evals/reports/` (Recall@10 de 1,00 e MRR de 0,786). A tarefa 3.1 está parcial: o reranker por API está pronto e medido, e falta o adapter local. Com o reranker, o Recall@1 sobe de 0,70 para 0,95 e a pergunta 20 passa para a posição 1 |
 | 4 | Operação | `0.4.0` | Não iniciada |
 | 5 | Extensões | `1.0.0` | Não iniciada |
 
@@ -142,7 +142,7 @@ F0 Fundação
 
 | # | Tarefa | Referência |
 |---|---|---|
-| 3.1 | Reranker com sentence-transformers e `bge-reranker-v2-m3` | ADR-0008 |
+| 3.1 | Reranker com sentence-transformers e `bge-reranker-v2-m3` | ADR-0008, ADR-0018 · Parcial em 2026-11-20: o `ApiReranker` (endpoint `/rerank` do OpenRouter) está pronto, com testes de unidade e a medida de cinco modelos. Falta o adapter local `sentence-transformers` (extra `local-models`). Ver as limitações L10 e L11 |
 | 3.2 | Transformadores de consulta: reescrita, multi-query, HyDE | ARCHITECTURE §5 |
 | 3.3 | Retriever fuzzy (`pg_trgm`) | RF-21 |
 | 3.4 | Adapter BM25 com `pg_search` e imagem `vlade-postgres-bm25` | ADR-0005 |
@@ -160,11 +160,15 @@ F0 Fundação
 
 **Linha de base (2026-11-20):** busca densa e léxica com RRF, sem reranker, no dataset `legal-ptbr`. Recall@1 de 0,70, Recall@10 de 1,00, MRR de 0,786 e NDCG@10 de 0,838. A pergunta 20 traz o documento certo na posição 9. O detalhe está em `evals/reports/README.md`.
 
+**Reranker por API (2026-11-20):** os cinco modelos do ADR-0018 dão o mesmo resultado no `legal-ptbr`: Recall@1 de 0,95, Recall@10 de 1,00, MRR de 0,975 e NDCG@10 de 0,982. A pergunta 20 passou da posição 9 para a posição 1. A pergunta 5 passou da posição 1 para a 2, porque os modelos preferem o artigo 41 (`lgpd-026`), que também responde à pergunta. O ADR-0018 traz o custo e a latência de cada modelo.
+
 **Limitações conhecidas:**
 
 | ID | Limitação | Efeito | Tratamento |
 |---|---|---|---|
 | L9 | A avaliação roda só pela CLI (`vlade-rag eval run`), de forma síncrona e no nível do documento. O caso de uso `RunEvaluation` (job, `POST /v1/evaluations`) não existe | Não dá para agendar a avaliação nem chamar pela API | Tarefas 3.9 (gate na CI) e 4.1 (flow `evaluate_nightly`) |
+| L10 | O dataset `legal-ptbr` tem 20 perguntas e um documento relevante por pergunta. O gabarito da pergunta 5 lista só o `lgpd-003`, e o `lgpd-026` também responde | Os cinco modelos de reranking dão métricas iguais. O dataset não escolhe o modelo padrão | Ampliar o dataset, com mais perguntas e mais de um documento relevante quando for o caso, antes de escolher o modelo padrão. O gabarito atual não muda, para manter a comparação com a linha de base |
+| L11 | O reranker por API envia o texto dos candidatos a um terceiro. Ninguém verificou as licenças e os termos dos cinco modelos testados. O adapter local ainda não existe. A requisição leva de 0,9 s a 1,5 s e o RNF-02 pede p95 de 1 s | Quem não pode enviar o texto para fora não tem reranker. O RNF-02 pode falhar com o reranker por API | Terminar a tarefa 3.1 com o adapter local. Verificar as licenças dos modelos (ADR-0008, item 4). A tarefa 3.10 mede o RNF-02 |
 
 ### Fase 4 — Operação
 
