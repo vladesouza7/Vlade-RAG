@@ -3763,6 +3763,7 @@ docling = [
     { name = "docling" },
 ]
 mcp = [
+    { name = "jsonschema" },
     { name = "mcp" },
 ]
 native = [
@@ -3787,6 +3788,7 @@ server = [
     { name = "asyncpg" },
     { name = "fastapi" },
     { name = "httpx2" },
+    { name = "jsonschema" },
     { name = "mcp" },
     { name = "opentelemetry-api" },
     { name = "opentelemetry-exporter-otlp-proto-http" },
@@ -3806,6 +3808,7 @@ requires-dist = [
     { name = "fastapi", marker = "extra == 'api'", specifier = ">=0.165.0" },
     { name = "httpx2", marker = "extra == 'ollama'", specifier = ">=2.16.2" },
     { name = "httpx2", marker = "extra == 'openai'", specifier = ">=2.16.2" },
+    { name = "jsonschema", marker = "extra == 'mcp'", specifier = ">=4.20.0" },
     { name = "mcp", marker = "extra == 'mcp'", specifier = ">=2.3.0" },
     { name = "opentelemetry-api", marker = "extra == 'otel'", specifier = ">=1.45.2" },
     { name = "opentelemetry-exporter-otlp-proto-http", marker = "extra == 'otel'", specifier = ">=1.45.2" },
