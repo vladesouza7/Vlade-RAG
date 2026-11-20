@@ -433,6 +433,9 @@ class EvalItem:
     expected_answer: str | None = None
     relevant_chunk_ids: tuple[UUID, ...] = ()
     relevant_document_ids: tuple[UUID, ...] = ()
+    # Titles of the relevant documents (the file names of a dataset). A document is relevant if
+    # its id or its title is listed.
+    relevant_document_titles: tuple[str, ...] = ()
 
 
 @dataclass(frozen=True, slots=True)
