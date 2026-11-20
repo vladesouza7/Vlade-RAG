@@ -76,6 +76,26 @@ services:
     mem_limit: 1g
     restart: unless-stopped
 
+  mcp:
+    # MCP server over Streamable HTTP at /mcp. Every request needs "Authorization: Bearer <key>".
+    # In dev, run it on demand over stdio: vlade-rag mcp serve --transport stdio (MCP_SPEC 11.1).
+    profiles: [staging, prod]
+    image: vlade-rag:dev
+    command: ["vlade-rag", "mcp", "serve", "--transport", "http", "--host", "0.0.0.0", "--port", "8765"]
+    healthcheck:
+      disable: true
+    environment:
+      <<: *app-env
+    ports:
+      - "127.0.0.1:${VLADE_MCP_HOST_PORT:-8765}:8765"
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+      valkey:
+        condition: service_healthy
+    mem_limit: 512m
+    restart: unless-stopped
+
   postgres:
     profiles: [dev, staging, prod]
     build:

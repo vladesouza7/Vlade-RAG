@@ -91,6 +91,7 @@ class KnowledgeBase:
     config: KnowledgeBaseConfig
     active_embedding_space_id: UUID
     epoch: int = 0
+    updated_at: datetime | None = None
 
     @property
     def language(self) -> str:

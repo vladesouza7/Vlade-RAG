@@ -7,7 +7,7 @@ import logging
 import re
 import sys
 from datetime import UTC, datetime
-from typing import Any
+from typing import Any, TextIO
 
 _SECRET_KEYS = re.compile(r"(?i)(api[_-]?key|authorization|password|secret|token|pepper)")
 _STANDARD = set(logging.LogRecord("", 0, "", 0, "", (), None).__dict__) | {"message"}
@@ -45,8 +45,11 @@ class JsonFormatter(logging.Formatter):
         return json.dumps(payload, ensure_ascii=False, default=str)
 
 
-def configure_logging(level: str = "INFO", *, json_output: bool = True) -> None:
-    handler = logging.StreamHandler(sys.stdout)
+def configure_logging(
+    level: str = "INFO", *, json_output: bool = True, stream: TextIO | None = None
+) -> None:
+    """Configure the root logger. The MCP stdio server passes ``sys.stderr``: stdout is the wire."""
+    handler = logging.StreamHandler(stream or sys.stdout)
     if json_output:
         handler.setFormatter(JsonFormatter())
     root = logging.getLogger()

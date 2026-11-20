@@ -25,7 +25,9 @@ tenant_app = typer.Typer(help="Tenant administration.", no_args_is_help=True)
 key_app = typer.Typer(help="API key administration.", no_args_is_help=True)
 kb_app = typer.Typer(help="Knowledge bases.", no_args_is_help=True)
 audit_app = typer.Typer(help="Audit log of the tenant.", no_args_is_help=True)
+mcp_app = typer.Typer(help="MCP server.", no_args_is_help=True)
 app.add_typer(audit_app, name="audit")
+app.add_typer(mcp_app, name="mcp")
 app.add_typer(api_app, name="api")
 app.add_typer(db_app, name="db")
 app.add_typer(tenant_app, name="tenant")
@@ -103,6 +105,37 @@ def api_serve(
         port=port or settings.api.port,
         log_level=settings.log_level.lower(),
     )
+
+
+@mcp_app.command("serve")
+def mcp_serve(
+    transport: str = typer.Option("stdio", help="stdio or http."),
+    host: str = typer.Option("127.0.0.1", help="Bind address of the http transport."),
+    port: int = typer.Option(8765, help="Port of the http transport."),
+) -> None:
+    """Run the MCP server. stdio reads VLADE_API_KEY; http reads the key of each request."""
+    if transport not in ("stdio", "http"):
+        typer.echo("The transport must be 'stdio' or 'http'.", err=True)
+        raise typer.Exit(2)
+    try:
+        from vlade_rag.mcp.server import serve_http, serve_stdio
+    except ImportError as exc:
+        typer.echo('The MCP server needs the "mcp" extra: pip install "vlade-rag[mcp]"', err=True)
+        raise typer.Exit(1) from exc
+    from vlade_rag.observability.logging import configure_logging
+
+    settings = get_settings()
+    if transport == "http":
+        configure_logging(settings.log_level, json_output=settings.environment != "dev")
+        _run(serve_http(settings, host, port))
+        return
+    # stdout carries the protocol: logs go to stderr.
+    configure_logging(settings.log_level, json_output=True, stream=sys.stderr)
+
+    async def go(rt: Any) -> int:
+        return await serve_stdio(rt, os.environ.get("VLADE_API_KEY"))
+
+    raise typer.Exit(_run(_with_runtime(go)))
 
 
 @app.command()

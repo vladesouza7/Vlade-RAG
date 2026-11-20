@@ -32,7 +32,7 @@ COPY packages/python/pyproject.toml packages/python/pyproject.toml
 COPY packages/rust/vlade_rag_core/pyproject.toml packages/rust/vlade_rag_core/pyproject.toml
 RUN uv export --frozen --no-dev --package vlade-rag \
       --extra api --extra cli --extra postgres --extra ollama --extra openai --extra otel \
-      --extra cache --no-emit-workspace -o /tmp/requirements.txt \
+      --extra cache --extra mcp --no-emit-workspace -o /tmp/requirements.txt \
  && uv pip install --system --no-cache -r /tmp/requirements.txt
 
 # Workspace packages.

@@ -33,6 +33,7 @@ Este arquivo registra as mudanças relevantes de cada versão. O formato segue o
 - Limite de requisições por chave e por tenant (token bucket) e cota de requisições por dia. Uma chamada acima do limite recebe `rate_limited` (HTTP 429) com `Retry-After`. Configuração: `VLADE_LIMITS__RATE_PER_KEY_PER_MINUTE`, `VLADE_LIMITS__RATE_PER_TENANT_PER_MINUTE` e `vlade-rag tenant quota --requests-per-day`.
 - Adapters Valkey (extra `cache`, `redis-py`): cache e limite de requisições compartilhados entre processos, ligados por `VLADE_CACHE__URL`. O Compose já usa o serviço `valkey`. `GET /health/ready` confere o cache.
 - Cache de resultados de busca por base e por `kb_epoch`, com validade de 10 minutos.
+- Servidor MCP (extra `mcp`, SDK oficial): ferramentas `vlade_list_knowledge_bases`, `vlade_search`, `vlade_query`, `vlade_get_document` e `vlade_get_ingestion_status`, resources `vlade://kb/{slug}` e `vlade://kb/{slug}/documents/{id}` e os prompts `vlade_answer_with_citations` e `vlade_summarize_document`. Transportes `stdio` e Streamable HTTP (`vlade-rag mcp serve`). A chave de API define o tenant e o papel. Cada chamada tem limite por grupo e grava um evento de auditoria com `interface = mcp`. O serviço `mcp` do Compose roda nos perfis `staging` e `prod`.
 - Leitura da auditoria: `GET /v1/audit-events` e `vlade-rag audit list`. Eventos novos: cota negada, cota alterada, chave emitida e chave revogada.
 
 ### Corrigido

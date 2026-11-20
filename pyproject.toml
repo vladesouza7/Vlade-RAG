@@ -68,7 +68,7 @@ module = "vlade_rag.core.*"
 strict = true
 
 [[tool.mypy.overrides]]
-module = ["vlade_rag_core", "asyncpg", "pgvector.*", "docling.*", "yaml"]
+module = ["vlade_rag_core", "asyncpg", "pgvector.*", "docling.*", "yaml", "jsonschema.*"]
 ignore_missing_imports = true
 
 # ---------------------------------------------------------------- pytest
