@@ -126,3 +126,59 @@ def test_cli_requests_per_day_quota(cli: Any) -> None:
     usage = json.loads(cli("usage", "--json", key=admin).stdout)
     assert usage["quotas"]["requests_per_day"] == 1000 and usage["requests_today"] == 0
     assert "requests today: 0 / 1000" in cli("usage", key=admin).stdout
+
+
+def test_cli_eval_run(cli: Any, tmp_path: Path) -> None:
+    slug = f"acme-{secrets.token_hex(3)}"
+    cli("tenant", "create", slug)
+    admin, reader = _key(cli, slug, "admin"), _key(cli, slug, "reader")
+    config = tmp_path / "kb.json"
+    config.write_text(
+        json.dumps(
+            {
+                "embeddings": {"provider": "hashing", "model": "h", "dimension": 64},
+                "generation": {"provider": "extractive", "model": "extractive"},
+            }
+        )
+    )
+    cli("kb", "create", "docs", "--config", str(config), key=admin)
+    folder = tmp_path / "docs"
+    folder.mkdir()
+    (folder / "ferias.md").write_text(
+        "# Férias\n\nO funcionário tem trinta dias de férias por ano."
+    )
+    (folder / "refeicao.md").write_text("# Vale\n\nO vale-refeição é pago no quinto dia útil.")
+    cli("ingest", "docs", str(folder), "--wait", key=admin)
+
+    dataset = tmp_path / "q.jsonl"
+    dataset.write_text(
+        '{"question": "dias de férias por ano", "relevant_documents": ["ferias.md"]}\n'
+        '{"question": "vale-refeição quinto dia útil", "relevant_documents": ["refeicao.md"]}\n'
+    )
+    report_file = tmp_path / "report.json"
+    out = cli(
+        "eval",
+        "run",
+        "docs",
+        "--dataset",
+        str(dataset),
+        "--k",
+        "5",
+        "--output",
+        str(report_file),
+        key=admin,
+    ).stdout
+    assert "2 questions" in out and "recall@5" in out and "mrr" in out
+    saved = json.loads(report_file.read_text())
+    assert saved["metrics"]["mrr"] == 1.0 and saved["items"] == 2
+    assert saved["config"]["knowledge_base"]["slug"] == "docs"
+
+    printed = json.loads(
+        cli("eval", "run", "docs", "--dataset", str(dataset), "--json", key=admin).stdout
+    )
+    assert printed["metrics"]["recall@10"] == 1.0
+
+    bad = CliRunner().invoke(
+        app, ["eval", "run", "docs", "--dataset", str(dataset)], env={"VLADE_API_KEY": reader}
+    )
+    assert bad.exit_code == 2 and "forbidden" in bad.output

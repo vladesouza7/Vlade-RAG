@@ -165,7 +165,8 @@ jobs:
             VLADE-RAG.md CLAUDE.md README.md CONTRIBUTING.md CODE_OF_CONDUCT.md \
             SECURITY.md CHANGELOG.md docs/*.md docs/adr/*.md \
             packages/python/README.md packages/rust/*/README.md \
-            evals/datasets/README.md evals/datasets/*/README.md skills/*/SKILL.md
+            evals/datasets/README.md evals/datasets/*/README.md evals/reports/README.md \
+            skills/*/SKILL.md
 
   build:
     name: Build distributions

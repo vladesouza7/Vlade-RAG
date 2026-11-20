@@ -26,7 +26,9 @@ key_app = typer.Typer(help="API key administration.", no_args_is_help=True)
 kb_app = typer.Typer(help="Knowledge bases.", no_args_is_help=True)
 audit_app = typer.Typer(help="Audit log of the tenant.", no_args_is_help=True)
 mcp_app = typer.Typer(help="MCP server.", no_args_is_help=True)
+eval_app = typer.Typer(help="Quality evaluation.", no_args_is_help=True)
 app.add_typer(audit_app, name="audit")
+app.add_typer(eval_app, name="eval")
 app.add_typer(mcp_app, name="mcp")
 app.add_typer(api_app, name="api")
 app.add_typer(db_app, name="db")
@@ -105,6 +107,51 @@ def api_serve(
         port=port or settings.api.port,
         log_level=settings.log_level.lower(),
     )
+
+
+@eval_app.command("run")
+def eval_run(
+    knowledge_base: str,
+    dataset: Path = typer.Option(..., help="JSON Lines file: question and relevant_documents."),
+    k: int = typer.Option(
+        10, min=1, help="The largest cutoff of Recall@K, Precision@K and NDCG@K."
+    ),
+    output: Path | None = typer.Option(None, help="Write the full report (JSON) to this file."),
+    as_json: bool = typer.Option(False, "--json", help="Print the full report as JSON."),
+) -> None:
+    """Score the retrieval of a knowledge base with a dataset (no LLM). Needs the admin role."""
+    from vlade_rag.evaluation.datasets import load_dataset
+    from vlade_rag.evaluation.retrieval import RetrievalEvaluator
+
+    async def go(rt: Any) -> Any:
+        items = load_dataset(dataset)
+        ctx = await _ctx(rt)
+        kb = await rt.deps.repository.get_knowledge_base(ctx, knowledge_base)
+        return await RetrievalEvaluator(rt.deps).evaluate(ctx, kb, items, k)
+
+    report = _run(_with_runtime(go))
+    payload = {
+        "metrics": dict(report.metrics),
+        "config": dict(report.config),
+        "items": report.items,
+        "details": [dict(d) for d in report.details],
+    }
+    if output is not None:
+        output.write_text(json.dumps(payload, ensure_ascii=False, indent=2, default=str) + "\n")
+    if as_json:
+        _print_json(payload)
+        return
+    typer.echo(f"{report.items} questions, knowledge base '{knowledge_base}'")
+    for name, value in sorted(report.metrics.items()):
+        typer.echo(f"  {name:<14}{value:.4f}")
+    misses = [
+        d
+        for d in report.details
+        if d["first_relevant_rank"] in (None,) or d["first_relevant_rank"] > k
+    ]
+    typer.echo(f"Questions without a relevant document in the first {k}: {len(misses)}")
+    for d in misses:
+        typer.echo(f"  - {d['question']}")
 
 
 @mcp_app.command("serve")

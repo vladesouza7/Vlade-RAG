@@ -1052,7 +1052,7 @@ vlade-rag ingest <kb> <caminho>... [--wait]
 vlade-rag search <kb> "<consulta>"
 vlade-rag query <kb> "<pergunta>"
 vlade-rag reindex <kb> --mode embeddings|full [--confirm]
-vlade-rag eval run <kb> --dataset <arquivo>
+vlade-rag eval run <kb> --dataset <arquivo> [--k 10] [--output relatorio.json] [--json]
 vlade-rag worker
 vlade-rag api serve
 vlade-rag mcp serve --transport stdio|http [--host 127.0.0.1] [--port 8765]

@@ -19,7 +19,7 @@
 | 0 | Fundação | `0.0.x` | Tarefas 0.1 a 0.10 concluídas em 2026-11-19. A CI passou no GitHub em 2026-11-19, inclusive licenças, linter de documentação e `GET /health/live` no perfil `dev`. Falta medir o consumo de memória do perfil `dev` (RNF-11). A fase está integrada na branch `homolog` |
 | 1 | Núcleo mínimo | `0.1.0` | Em andamento. Tarefas 1.1 a 1.21 implementadas em 2026-11-19. A CI passou no GitHub em 2026-11-19 (PR #1) e a fase está integrada na branch `homolog`. O teste de aceite rodou em 2026-11-19 com o OpenRouter: 100 documentos ingeridos, 19 de 20 perguntas respondidas com a citação certa, 121 testes aprovados e cobertura de 88,40%. Falta a revisão humana das 20 respostas e o teste do Docling (tarefa 1.9). A limitação L1 está registrada na seção da fase |
 | 2 | Interfaces e armazenamento | `0.2.0` | Em andamento. Tarefas 2.1, 2.2, 2.3, 2.5, 2.6, 2.7, 2.8, 2.9 e 2.10 implementadas. Elas cobrem cotas, chaves, auditoria, limite de requisições, cache no Valkey, Gemini, servidor MCP de leitura, teste com o Inspector e Agent Skill. A tarefa 2.4 está parcial: o adapter S3 está pronto e falta o serviço S3 de exemplo. O critério de aceite ainda não rodou. Ele pede dois clientes MCP reais com a skill instalada |
-| 3 | Qualidade | `0.3.0` | Não iniciada |
+| 3 | Qualidade | `0.3.0` | Em andamento. Tarefa 3.6 implementada em 2026-11-20. A linha de base da fase 1 está em `evals/reports/` (Recall@10 de 1,00 e MRR de 0,786) |
 | 4 | Operação | `0.4.0` | Não iniciada |
 | 5 | Extensões | `1.0.0` | Não iniciada |
 
@@ -147,7 +147,7 @@ F0 Fundação
 | 3.3 | Retriever fuzzy (`pg_trgm`) | RF-21 |
 | 3.4 | Adapter BM25 com `pg_search` e imagem `vlade-postgres-bm25` | ADR-0005 |
 | 3.5 | Fluxo de consulta em LangGraph e teste de igualdade com o pipeline linear | ARCHITECTURE §12.1 |
-| 3.6 | Métricas de recuperação: Recall@K, Precision@K, MRR, NDCG | RF-70 |
+| 3.6 | Métricas de recuperação: Recall@K, Precision@K, MRR, NDCG | RF-70 · Implementada em 2026-11-20: `vlade_rag.evaluation`, `vlade-rag eval run` e o relatório de linha de base da fase 1 em `evals/reports/`. Ver a limitação L9 |
 | 3.7 | Avaliação com RAGAS | RF-71 |
 | 3.8 | Langfuse: traces, prompts versionados, experimentos | ADR-0015 |
 | 3.9 | Gate de qualidade na CI | RF-73 |
@@ -157,6 +157,14 @@ F0 Fundação
 
 - Um relatório compara a configuração da fase 1 com a melhor configuração da fase 3 no mesmo dataset. O relatório mostra Recall@10, NDCG@10 e faithfulness.
 - O benchmark mede RNF-01 a RNF-04. Se uma meta falha, um ADR registra a meta nova ou o plano de correção.
+
+**Linha de base (2026-11-20):** busca densa e léxica com RRF, sem reranker, no dataset `legal-ptbr`. Recall@1 de 0,70, Recall@10 de 1,00, MRR de 0,786 e NDCG@10 de 0,838. A pergunta 20 traz o documento certo na posição 9. O detalhe está em `evals/reports/README.md`.
+
+**Limitações conhecidas:**
+
+| ID | Limitação | Efeito | Tratamento |
+|---|---|---|---|
+| L9 | A avaliação roda só pela CLI (`vlade-rag eval run`), de forma síncrona e no nível do documento. O caso de uso `RunEvaluation` (job, `POST /v1/evaluations`) não existe | Não dá para agendar a avaliação nem chamar pela API | Tarefas 3.9 (gate na CI) e 4.1 (flow `evaluate_nightly`) |
 
 ### Fase 4 — Operação
 
