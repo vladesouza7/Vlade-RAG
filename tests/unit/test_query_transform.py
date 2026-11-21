@@ -175,6 +175,6 @@ async def test_the_runtime_registers_the_three_transformers(
         found = runtime.deps.query_transformers
         assert set(found) == {"rewrite", "multi_query", "hyde"}
         assert all(isinstance(t, QueryTransformer) for t in found.values())
-        assert set(runtime.deps.lexical_indexes) == {"lexical", "fuzzy"}
+        assert set(runtime.deps.lexical_indexes) == {"lexical", "fuzzy", "bm25"}
     finally:
         await runtime.aclose()

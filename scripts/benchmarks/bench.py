@@ -66,6 +66,7 @@ STAGES = (
     "retrieval.dense",
     "retrieval.lexical",
     "retrieval.fuzzy",
+    "retrieval.bm25",
     "fusion",
     "rerank",
     "context_assembly",

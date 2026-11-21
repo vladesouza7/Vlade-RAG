@@ -405,7 +405,7 @@ Toda operação de escrita grava um `AuditEvent`. As operações do `TenantDirec
 CREATE EXTENSION IF NOT EXISTS vector;
 CREATE EXTENSION IF NOT EXISTS pg_trgm;
 CREATE EXTENSION IF NOT EXISTS unaccent;
--- pg_search: só quando o adapter BM25 está ativo (ADR-0005)
+-- pg_search: só na imagem vlade-postgres-bm25. A primeira busca bm25 cria a extensão (ADR-0005, ADR-0022)
 
 CREATE TEXT SEARCH CONFIGURATION vlade_pt (COPY = portuguese);
 ALTER TEXT SEARCH CONFIGURATION vlade_pt
@@ -536,6 +536,19 @@ CREATE INDEX chunks_metadata_idx  ON chunks USING gin (metadata jsonb_path_ops);
 -- Índice trigram (migração 0002): a função vlade_ensure_trigram_index() cria o índice na primeira
 -- busca fuzzy do processo. Nenhuma base paga o índice antes disso (ADR-0019).
 -- CREATE INDEX chunks_trgm_idx ON chunks USING gin (text gin_trgm_ops);
+-- Índice BM25 (migração 0003, ADR-0022): a função vlade_ensure_bm25_index() cria a extensão
+-- pg_search e o índice na primeira busca bm25 do processo. Um campo por idioma: text_pt e text_en
+-- usam o stemmer e as stop words do idioma, text_simple só separa as palavras e tira os acentos.
+-- CREATE INDEX chunks_bm25_idx ON chunks USING bm25 (
+--   id,
+--   (text::pdb.unicode_words('alias=text_pt', 'stemmer=portuguese', 'ascii_folding=true',
+--                            'stopwords_language=portuguese')),
+--   (text::pdb.unicode_words('alias=text_en', 'stemmer=english', 'ascii_folding=true',
+--                            'stopwords_language=english')),
+--   (text::pdb.unicode_words('alias=text_simple', 'ascii_folding=true')),
+--   tenant_id, knowledge_base_id, is_published);
+-- O pg_search não usa o índice quando uma política de RLS vale para a consulta. Por isso a busca
+-- roda na função vlade_bm25_search(), do papel vlade_definer, que lê o tenant de app.tenant_id.
 
 CREATE TABLE chunk_embeddings (
   chunk_id           uuid NOT NULL REFERENCES chunks(id) ON DELETE CASCADE,
@@ -687,7 +700,7 @@ As migrações são arquivos SQL numerados em `packages/python/vlade_rag/knowled
 | Imagem | Extensões | Licenças |
 |---|---|---|
 | `vlade-postgres` (padrão) | `vector`, `pg_trgm`, `unaccent` | PostgreSQL License |
-| `vlade-postgres-bm25` (opcional) | as anteriores e `pg_search` | `pg_search` usa AGPL-3.0 (ADR-0005) |
+| `vlade-postgres-bm25` (opcional, `Dockerfile.bm25`) | as anteriores e `pg_search` 0.27.0, carregado por `shared_preload_libraries` | `pg_search` usa AGPL-3.0 (ADR-0005, ADR-0022) |
 
 ## 8. Motor Rust
 
@@ -788,7 +801,7 @@ embeddings:
   dimension: 1024
   batch_size: 32
 retrieval:
-  retrievers: [dense, lexical]   # dense, lexical, fuzzy, bm25 (bm25 ainda não existe)
+  retrievers: [dense, lexical]   # dense, lexical, fuzzy, bm25 (bm25: imagem vlade-postgres-bm25)
   top_k_per_retriever: 50
   fusion:
     strategy: rrf
@@ -892,7 +905,7 @@ AnswerQuery.execute(ctx, query)
  2. QueryTransformer.transform                            span: query_transform
  3. em paralelo, para cada consulta e cada retriever:     span: retrieval.<nome>
       DenseRetriever: EmbeddingProvider.embed_query → VectorIndex.search
-      LexicalRetriever: LexicalIndex.search (índices "lexical" e "fuzzy")
+      LexicalRetriever: LexicalIndex.search (índices "lexical", "fuzzy" e "bm25")
  4. FusionStrategy.fuse (RRF)                             span: fusion
  5. Reranker.rerank, se ativo                             span: rerank
  6. montar o contexto                                     span: context_assembly
@@ -1125,7 +1138,7 @@ Logs JSON em `stdout`, com `structlog`. Campos obrigatórios: `timestamp`, `leve
 | `mcp` | stdio local | sim | sim | MIT |
 | `postgres` | sim | sim | sim | PostgreSQL License |
 | `valkey` | sim | sim | sim | BSD-3-Clause |
-| Serviço S3 compatível | não (sistema de arquivos) | sim | sim | RustFS ou SeaweedFS, Apache-2.0 (ADR-0017). O Compose ainda não traz o serviço |
+| `rustfs` (S3) | não (sistema de arquivos). O perfil `s3` liga o serviço | sim | sim | Apache-2.0 (ADR-0021) |
 | `kestra` | não | sim | sim | Apache-2.0 |
 | `langfuse` | não (Cloud ou desligado) | sim | sim | MIT |
 | `alloy` | não | sim | sim | Apache-2.0 |

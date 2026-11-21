@@ -148,7 +148,7 @@ O Vlade-RAG separa cinco responsabilidades de domínio e três responsabilidades
 │ DOMÍNIO           Entidades, objetos de valor, ports         │
 ├──────────────────────────────────────────────────────────────┤
 │ ADAPTERS          Postgres, Qdrant, Ollama, OpenAI, Gemini,  │
-│                   OpenRouter, BGE, MinIO, Redis, Langfuse    │
+│                   OpenRouter, BGE, RustFS, Redis, Langfuse   │
 ├──────────────────────────────────────────────────────────────┤
 │ MOTOR RUST        vlade_rag_core (PyO3): funções de CPU      │
 └──────────────────────────────────────────────────────────────┘
@@ -234,7 +234,7 @@ Cada port é uma classe abstrata Python (`typing.Protocol` ou `abc.ABC`) em `vla
 | `QueryTransformer` | Reescreve ou expande a consulta | Nenhum, reescrita por LLM, multi-query, HyDE |
 | `LLMProvider` | Gera texto | Ollama, OpenAI, Gemini, OpenRouter |
 | `PromptRegistry` | Fornece templates de prompt versionados | Arquivos locais, Langfuse |
-| `ObjectStorage` | Guarda os arquivos originais | API S3 (MinIO ou compatível), sistema de arquivos |
+| `ObjectStorage` | Guarda os arquivos originais | API S3 (RustFS ou compatível), sistema de arquivos |
 | `Cache` | Guarda resultados reutilizáveis | Redis, memória, nenhum |
 | `Evaluator` | Mede a qualidade | Métricas de recuperação, RAGAS |
 | `Tracer` | Registra spans e eventos de IA | OpenTelemetry, Langfuse |
@@ -549,7 +549,7 @@ Alertas:
 | Coletor | Grafana Alloy | 4 |
 | Métricas, logs, traces, dashboards | Prometheus, Loki, Tempo, Grafana | 4 |
 | Cache | Valkey, protocolo compatível com Redis. Veja a decisão D3 | 2 |
-| Armazenamento de objetos | API S3: MinIO ou compatível. Veja a decisão D2 | 2 |
+| Armazenamento de objetos | API S3: RustFS ou compatível. Veja a decisão D2 | 2 |
 | Banco vetorial alternativo | Qdrant | 5 |
 | Containers | Docker e Docker Compose | 0 |
 
@@ -581,7 +581,7 @@ O ambiente de desenvolvimento é um notebook com 8 GB de RAM. Não rode a stack 
 | Perfil | Serviços | Uso |
 |---|---|---|
 | `dev` | API, PostgreSQL com pgvector, Redis. Ollama externo ou provedor remoto. Langfuse Cloud ou desativado | Desenvolvimento no notebook |
-| `staging` | `dev` mais Kestra, MinIO, Langfuse, coletor OpenTelemetry | Testes de integração no HomeLab |
+| `staging` | `dev` mais Kestra, RustFS, Langfuse, coletor OpenTelemetry | Testes de integração no HomeLab |
 | `prod` | Todos os serviços, inclusive Prometheus, Loki, Tempo, Grafana, Alloy e workers Kestra dimensionados | Produção |
 
 Observação: o Kestra roda na JVM. O Langfuse auto-hospedado precisa de ClickHouse, Redis, PostgreSQL e armazenamento S3. Os dois juntos consomem a maior parte de 8 GB de RAM. Por isso os dois ficam fora do perfil `dev`.
@@ -783,7 +783,7 @@ Todas as decisões abaixo têm o status `Aceito` desde 2026-11-19. O índice com
 | ID | Decisão | ADR |
 |---|---|---|
 | D1 | `tsvector` é o padrão do `LexicalIndex`. O `pg_search` (BM25, AGPL-3.0) é só um adapter opcional, com imagem PostgreSQL própria | ADR-0005 |
-| D2 | O port `ObjectStorage` usa a API S3. O perfil `dev` usa o sistema de arquivos. MinIO nos perfis `staging` e `prod`. Antes da fase 2, verifique a distribuição atual do MinIO. Se a imagem não estiver disponível, use SeaweedFS, Garage ou RustFS | ADR-0006 |
+| D2 | O port `ObjectStorage` usa a API S3. O perfil `dev` usa o sistema de arquivos. MinIO nos perfis `staging` e `prod`. Antes da fase 2, verifique a distribuição atual do MinIO. Se a imagem não estiver disponível, use SeaweedFS, Garage ou RustFS. Escolha de 2026-11-21: RustFS | ADR-0006, ADR-0017, ADR-0021 |
 | D3 | Valkey (BSD-3-Clause) é o cache padrão. O cliente `redis-py` funciona com Valkey e com Redis | ADR-0007 |
 | D4 | `bge-m3` é o modelo de embeddings padrão (multilíngue, 1024 dimensões) | ADR-0008 |
 | D5 | `bge-reranker-v2-m3` é o reranker padrão (multilíngue) | ADR-0008 |

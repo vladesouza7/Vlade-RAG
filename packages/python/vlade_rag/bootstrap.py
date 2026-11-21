@@ -264,7 +264,11 @@ async def build_runtime(
         ports = {
             "repository": mem.repository,
             "vector_index": mem.vector_index,
-            "lexical_indexes": {"lexical": mem.lexical_index, "fuzzy": mem.fuzzy_index},
+            "lexical_indexes": {
+                "lexical": mem.lexical_index,
+                "fuzzy": mem.fuzzy_index,
+                "bm25": mem.lexical_index,  # the memory index already scores with BM25
+            },
             "job_queue": mem.job_queue,
             "audit_log": mem.audit_log,
             "cache": mem.cache,
@@ -279,6 +283,7 @@ async def build_runtime(
             raise InvalidArgument("VLADE_SECURITY__API_KEY_PEPPER is required.")
         from vlade_rag.knowledge.memory import MemoryCache, MemoryRateLimiter, MemoryStore
         from vlade_rag.knowledge.postgres import (
+            PgSearchLexicalIndex,
             PgVectorIndex,
             PostgresAuditLog,
             PostgresDatabase,
@@ -302,6 +307,7 @@ async def build_runtime(
             "lexical_indexes": {
                 "lexical": TsvectorLexicalIndex(db),
                 "fuzzy": TrigramLexicalIndex(db),
+                "bm25": PgSearchLexicalIndex(db),  # needs the image vlade-postgres-bm25
             },
             "job_queue": PostgresJobQueue(db),
             "audit_log": PostgresAuditLog(db),

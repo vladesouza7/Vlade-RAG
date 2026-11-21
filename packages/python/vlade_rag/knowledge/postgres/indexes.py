@@ -1,4 +1,4 @@
-"""pgvector VectorIndex, tsvector and trigram LexicalIndex (ADR-0005, ADR-0019)."""
+"""pgvector VectorIndex; tsvector, trigram and BM25 LexicalIndex (ADR-0005, ADR-0019, ADR-0022)."""
 
 from __future__ import annotations
 
@@ -17,7 +17,7 @@ from vlade_rag.core.domain import (
     TenantContext,
 )
 from vlade_rag.knowledge.postgres.db import PostgresDatabase
-from vlade_rag.knowledge.postgres.filters import SqlParams, filter_sql
+from vlade_rag.knowledge.postgres.filters import SqlParams, filter_json, filter_sql
 from vlade_rag.knowledge.postgres.repository import text_search_config
 
 _OPERATOR = {Distance.COSINE: "<=>", Distance.L2: "<->", Distance.DOT: "<#>"}
@@ -230,5 +230,65 @@ class TrigramLexicalIndex:
                 ctx.tenant_id,
                 FUZZY_THRESHOLD,
                 *params.values,
+            )
+        return [ChunkHit(r["chunk_id"], float(r["score"])) for r in rows]
+
+
+BM25_FIELDS = {"pt": "text_pt", "en": "text_en"}  # any other language: text_simple
+
+
+def bm25_field(language: str) -> str:
+    """The field of the BM25 index for the language of a base (see ``text_search_config``)."""
+    return BM25_FIELDS.get(language.split("-")[0].lower(), "text_simple")
+
+
+class PgSearchLexicalIndex:
+    """BM25 with ``pg_search`` (ParadeDB, AGPL-3.0), in the image ``vlade-postgres-bm25``.
+
+    The query words combine with OR, like the ``tsvector`` index. ``pg_search`` scores every chunk
+    with BM25 and returns only the best ``top_k``, so the cost does not grow with the number of
+    matching chunks (ADR-0020, L16). The search runs in the SQL function ``vlade_bm25_search``,
+    because ``pg_search`` does not use its index under a row-level security policy (ADR-0022).
+    The index (``chunks_bm25_idx``) is created the first time this adapter runs.
+    """
+
+    name = "pg_search"
+
+    def __init__(self, db: PostgresDatabase) -> None:
+        self.db = db
+        self._index_ready = False
+
+    async def search(
+        self,
+        ctx: TenantContext,
+        knowledge_base_id: UUID,
+        text: str,
+        top_k: int,
+        filters: MetadataFilter | None,
+        language: str,
+    ) -> list[ChunkHit]:
+        if not text.strip():
+            return []
+        async with self.db.tenant(ctx) as conn:
+            if not self._index_ready:
+                try:
+                    await conn.execute("SELECT vlade_ensure_bm25_index()")
+                except asyncpg.UndefinedFunctionError:
+                    raise InvalidArgument(
+                        "The bm25 retriever needs migration 0003. Run 'vlade-rag db upgrade'."
+                    ) from None
+                except asyncpg.FeatureNotSupportedError:
+                    raise InvalidArgument(
+                        "The bm25 retriever needs the pg_search extension. Use the image "
+                        "vlade-postgres-bm25 (deploy/postgres/Dockerfile.bm25)."
+                    ) from None
+                self._index_ready = True
+            rows = await conn.fetch(
+                "SELECT chunk_id, score FROM vlade_bm25_search($1, $2, $3, $4, $5)",
+                knowledge_base_id,
+                text,
+                bm25_field(language),
+                int(top_k),
+                filter_json(filters),
             )
         return [ChunkHit(r["chunk_id"], float(r["score"])) for r in rows]

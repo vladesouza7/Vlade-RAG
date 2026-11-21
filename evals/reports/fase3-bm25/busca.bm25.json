@@ -1,0 +1,51 @@
+{
+  "benchmark": "search",
+  "knowledge_base": "bench-hash",
+  "retrievers": [
+    "bm25"
+  ],
+  "rerank": null,
+  "query_transform": "none",
+  "top_k": 8,
+  "candidates": null,
+  "concurrency": 1,
+  "requests": 100,
+  "failures": 0,
+  "failure_types": [],
+  "throughput_per_second": 20.78,
+  "latency": {
+    "n": 100,
+    "p50_ms": 47.2,
+    "p95_ms": 59.5,
+    "p99_ms": 77.1,
+    "mean_ms": 48.0,
+    "max_ms": 192.9
+  },
+  "stages": {
+    "retrieval.bm25": {
+      "n": 100,
+      "p50_ms": 39.7,
+      "p95_ms": 51.0,
+      "p99_ms": 71.9,
+      "mean_ms": 41.3,
+      "max_ms": 182.7,
+      "requests": 100
+    },
+    "fusion": {
+      "n": 100,
+      "p50_ms": 0.1,
+      "p95_ms": 0.2,
+      "p99_ms": 0.4,
+      "mean_ms": 0.1,
+      "max_ms": 0.6,
+      "requests": 100
+    }
+  },
+  "caches": "off",
+  "environment": {
+    "python": "3.12.3",
+    "platform": "Linux-6.18.58.1-microsoft-standard-WSL2-x86_64-with-glibc2.39",
+    "cpus": 4,
+    "memory": "7.7 GB"
+  }
+}

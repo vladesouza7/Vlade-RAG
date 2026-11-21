@@ -40,3 +40,24 @@ def filter_sql(flt: MetadataFilter | None, params: SqlParams, column: str = "c.m
         case Or(items):
             return "(" + " OR ".join(filter_sql(i, params, column) for i in items) + ")"
     raise UnsupportedFilter(f"Unsupported filter {flt!r}")  # pragma: no cover
+
+
+def filter_json(flt: MetadataFilter | None) -> dict[str, Any] | None:
+    """The filter as JSON for the SQL function ``vlade_metadata_matches`` (migration 0003).
+
+    The function has the same semantics as ``filter_sql``.
+    """
+    match flt:
+        case None:
+            return None
+        case Eq(key, value):
+            return {"op": "eq", "key": key, "value": value}
+        case In(key, values):
+            return {"op": "in", "key": key, "values": list(values)}
+        case Exists(key):
+            return {"op": "exists", "key": key}
+        case And(items):
+            return {"op": "and", "items": [filter_json(i) for i in items]}
+        case Or(items):
+            return {"op": "or", "items": [filter_json(i) for i in items]}
+    raise UnsupportedFilter(f"Unsupported filter {flt!r}")  # pragma: no cover
