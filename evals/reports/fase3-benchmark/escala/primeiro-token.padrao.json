@@ -1,0 +1,71 @@
+{
+  "benchmark": "ttft",
+  "what": "time to the first answer token, with an LLM that answers at once",
+  "knowledge_base": "bench-hash",
+  "rerank": null,
+  "query_transform": "none",
+  "requests": 30,
+  "no_token": 0,
+  "ttft": {
+    "n": 30,
+    "p50_ms": 4388.3,
+    "p95_ms": 7559.3,
+    "p99_ms": 7778.0,
+    "mean_ms": 4319.0,
+    "max_ms": 7778.0
+  },
+  "stages": {
+    "embed_query": {
+      "n": 30,
+      "p50_ms": 0.2,
+      "p95_ms": 0.3,
+      "p99_ms": 0.4,
+      "mean_ms": 0.2,
+      "max_ms": 0.4,
+      "requests": 30
+    },
+    "retrieval.dense": {
+      "n": 30,
+      "p50_ms": 1457.8,
+      "p95_ms": 2948.1,
+      "p99_ms": 3147.9,
+      "mean_ms": 1561.5,
+      "max_ms": 3147.9,
+      "requests": 30
+    },
+    "retrieval.lexical": {
+      "n": 30,
+      "p50_ms": 4343.0,
+      "p95_ms": 7517.5,
+      "p99_ms": 7722.8,
+      "mean_ms": 4281.5,
+      "max_ms": 7722.8,
+      "requests": 30
+    },
+    "fusion": {
+      "n": 30,
+      "p50_ms": 0.2,
+      "p95_ms": 0.3,
+      "p99_ms": 0.4,
+      "mean_ms": 0.2,
+      "max_ms": 0.4,
+      "requests": 30
+    },
+    "context_assembly": {
+      "n": 30,
+      "p50_ms": 0.0,
+      "p95_ms": 0.0,
+      "p99_ms": 0.0,
+      "mean_ms": 0.0,
+      "max_ms": 0.0,
+      "requests": 30
+    }
+  },
+  "caches": "off",
+  "environment": {
+    "python": "3.12.3",
+    "platform": "Linux-6.18.58.1-microsoft-standard-WSL2-x86_64-with-glibc2.39",
+    "cpus": 4,
+    "memory": "7.7 GB"
+  }
+}

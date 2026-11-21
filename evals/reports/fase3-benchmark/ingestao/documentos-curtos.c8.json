@@ -1,0 +1,26 @@
+{
+  "benchmark": "ingest",
+  "knowledge_base": "bench-hash",
+  "embeddings": "hashing, 1024 dimensions",
+  "documents": 300,
+  "jobs_run": 300,
+  "characters": 402120,
+  "pages": 134.0,
+  "page_definition": "3000 characters",
+  "chunks": 370,
+  "worker": "one worker process, 8 job(s) at a time",
+  "concurrency": 8,
+  "seconds_total": 20.78,
+  "seconds_in_embeddings": 0.47,
+  "seconds_without_embeddings": 20.32,
+  "pages_per_second_total": 6.4,
+  "pages_per_second_without_embeddings": 6.6,
+  "documents_per_second_total": 14.4,
+  "chunks_per_second_total": 17.8,
+  "environment": {
+    "python": "3.12.3",
+    "platform": "Linux-6.18.58.1-microsoft-standard-WSL2-x86_64-with-glibc2.39",
+    "cpus": 4,
+    "memory": "7.7 GB"
+  }
+}
