@@ -65,3 +65,15 @@ Limites da medida:
 - O `ARCHITECTURE.md` descreve `provider: openrouter` como valor aceito de `retrieval.rerank.provider`.
 - O ADR-0008 mantém o `bge-reranker-v2-m3` como padrão do adapter local.
 - A fase 3 acrescenta um dataset maior antes de escolher o modelo padrão de reranking.
+
+## Atualização de 2026-11-21: três rerankers no `legal-ptbr-v2`
+
+No dataset `evals/datasets/legal-ptbr-v2` (109 perguntas), os rerankers de API se separam, o que o `legal-ptbr` não mostrava:
+
+| Reranker | MRR | Recall@1 | Recall@10 | MRR coloquiais |
+|---|---|---|---|---|
+| `cohere/rerank-4-fast` | 0,940 | 0,85 | 1,00 | 0,881 |
+| `mongodb/rerank-2.5` | 0,959 | 0,87 | 1,00 | 0,914 |
+| `qwen/qwen3-reranker-8b` | 0,965 | 0,88 | 1,00 | 0,938 |
+
+A diferença entre o melhor e o pior é de 0,025 de MRR, e o melhor muda de um grupo de perguntas para outro. Cada grupo tem de 10 a 20 perguntas. A escolha do modelo padrão continua aberta. Nas medidas do ADR, o `qwen/qwen3-reranker-8b` custou US$ 0,0042 por requisição de 50 documentos, contra US$ 0,00087 do `mongodb/rerank-2.5`. O `cohere/rerank-v3.5` e o `nvidia/nemotron-3.5-rerank-8b:free` não entraram nesta medida. O modelo gratuito não completa a avaliação, porque o OpenRouter limita os modelos gratuitos a 20 requisições por minuto.
