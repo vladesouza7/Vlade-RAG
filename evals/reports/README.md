@@ -39,6 +39,47 @@ vlade-rag eval run <base> --dataset evals/datasets/legal-ptbr/questions.jsonl --
 
 A opção `--rerank-provider` escolhe o provedor (padrão `openrouter`). A chave do provedor vem de `VLADE_PROVIDERS__OPENROUTER__API_KEY`.
 
+## Transformadores de consulta e fuzzy (tarefas 3.2 e 3.3)
+
+A pasta [`fase3-consulta-fuzzy/`](fase3-consulta-fuzzy/) guarda 30 relatórios: 3 datasets e 10 configurações. O nome do arquivo é `<dataset>.<configuração>.json`.
+
+| Dataset | Arquivo de perguntas |
+|---|---|
+| `original` | `questions.jsonl` |
+| `typos` | `questions-typos.jsonl` (duas letras trocadas em duas palavras longas) |
+| `paraphrase` | `questions-paraphrase.jsonl` (palavras do dia a dia, escritas à mão) |
+
+| Configuração | O que muda |
+|---|---|
+| `base` | Denso e léxico, sem reranker |
+| `fuzzy` | `--retrievers dense,lexical,fuzzy` |
+| `rewrite`, `multi`, `hyde` | `--query-transform rewrite`, `multi_query` e `hyde` |
+| `rerank` | `--rerank-model mongodb/rerank-2.5` |
+| `rerank-fuzzy`, `rerank-rewrite`, `rerank-multi`, `rerank-hyde` | O reranker com cada técnica |
+
+MRR de cada configuração:
+
+| Configuração | `original` | `typos` | `paraphrase` |
+|---|---|---|---|
+| `base` | 0,786 | 0,729 | 0,498 |
+| `fuzzy` | 0,841 | 0,754 | 0,485 |
+| `rewrite` | 0,756 | 0,756 | 0,596 |
+| `multi` | 0,744 | 0,769 | 0,622 |
+| `hyde` | 0,854 | 0,775 | 0,681 |
+| `rerank` e as quatro combinações com reranker | 0,975 | 0,975 | 0,950 |
+
+- Com o reranker, as quatro técnicas não mudam o resultado.
+- Sem o reranker, o HyDE é a melhor transformação nos três datasets.
+- Recall@10, NDCG@10 e as outras métricas estão nos relatórios. O ADR-0019 traz a tabela com o Recall@10.
+- A geração dos relatórios usou o `tencent/hy4-flash` para as transformações e o `mongodb/rerank-2.5` para o reranker, os dois pelo OpenRouter.
+
+Para repetir uma configuração:
+
+```bash
+vlade-rag eval run <base> --dataset evals/datasets/legal-ptbr/questions-paraphrase.jsonl --k 10 \
+  --query-transform hyde --output evals/reports/<nome>.json
+```
+
 ## Linha de base da fase 1
 
 | Métrica | Valor |
