@@ -73,3 +73,14 @@ Limites da medida:
 - A criação do índice trigram bloqueia escritas na tabela `chunks` enquanto ela roda. Em uma tabela grande, rode a primeira busca fuzzy fora do horário de pico.
 - O limiar de 0,5 do fuzzy é fixo no código.
 - A fase 3 segue com o reranker como a melhoria de recuperação comprovada. As duas técnicas ficam disponíveis por configuração, para quem não pode usar um reranker.
+
+## Atualização de 2026-11-21: medida no `legal-ptbr-v2`
+
+O dataset `evals/datasets/legal-ptbr-v2` (150 documentos, 109 perguntas) tira o reranker do teto. Os resultados completos estão no README dele.
+
+- Sem reranker, o HyDE sobe o MRR de 0,740 para 0,788 e ajuda as perguntas coloquiais (de 0,653 para 0,746). O fuzzy sobe o MRR para 0,783 e ajuda as perguntas formais (de 0,781 para 0,850).
+- A reescrita sobe o MRR para 0,764. O multi-query piora a busca (0,691).
+- O HyDE, a reescrita e o multi-query baixam o Recall@10 de 0,98 para 0,96.
+- Com o reranker, as quatro técnicas não mudam as métricas. A posição do primeiro documento relevante é a mesma nas 109 perguntas.
+
+A decisão 9 continua: os valores padrão não mudam. Para quem não pode usar um reranker, o HyDE e o fuzzy valem como opção, cada um para um tipo de pergunta. O multi-query não tem evidência a favor. Ninguém mediu a latência nem o custo dessas técnicas (limitação L13 do roadmap).

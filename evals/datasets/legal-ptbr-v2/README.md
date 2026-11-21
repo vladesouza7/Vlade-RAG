@@ -80,26 +80,48 @@ Cinco discordâncias ficaram como estavam. O documento que os rerankers preferem
 | A operadora que me vende a internet pode guardar quais sites eu acesso? | `mci-008`, `mci-009` | Tratam dos provedores de aplicações, não do provedor de conexão |
 | O que significa eliminação de dados segundo a LGPD? | `lgpd-008` | Diz que os dados são eliminados, mas não define o termo |
 
-## Primeiras medidas
+## Medidas
 
-Embeddings `openai/text-embedding-3-small`, busca densa e léxica com RRF, reranker `mongodb/rerank-2.5` com 50 candidatos. Os relatórios estão em [`evals/reports/fase3-dataset-v2/`](../../reports/fase3-dataset-v2/).
+Embeddings `openai/text-embedding-3-small`, busca densa e léxica com RRF. Os rerankers usam 50 candidatos. As transformações de consulta usam o `tencent/hy4-flash`, o modelo de geração da base. Os 15 relatórios estão em [`evals/reports/fase3-dataset-v2/`](../../reports/fase3-dataset-v2/).
 
-| Configuração | Perguntas | MRR | Recall@1 | Recall@10 | MRR formais | MRR coloquiais |
-|---|---|---|---|---|---|---|
-| Linha de base | originais | 0,740 | 0,56 | 0,98 | 0,781 | 0,653 |
-| com fuzzy | originais | 0,783 | 0,61 | 0,98 | 0,850 | 0,642 |
-| com reranker | originais | 0,959 | 0,87 | 1,00 | 0,980 | 0,914 |
-| com reranker e fuzzy | originais | 0,959 | 0,87 | 1,00 | 0,980 | 0,914 |
-| Linha de base | erros de digitação | 0,679 | 0,50 | 0,91 | 0,745 | 0,538 |
-| com reranker | erros de digitação | 0,953 | 0,87 | 0,99 | 0,980 | 0,895 |
+Perguntas de `questions.jsonl`:
 
-- **O reranker não satura.** No `legal-ptbr` os cinco rerankers chegavam a MRR 0,975 e Recall@1 de 0,95. Aqui o reranker fica em MRR 0,959 e Recall@1 de 0,87, e sobra espaço para uma técnica melhorar.
-- **A folga está nas perguntas coloquiais.** Com o reranker, as perguntas formais têm MRR 0,980 e as coloquiais têm 0,914.
-- **O Marco Civil é o grupo mais difícil sem reranker.** O grupo `mci` tem MRR 0,609 e Recall@10 de 0,89, contra Recall@10 de 1,00 em `cdc`, `lgpd` e `lai`.
-- **O fuzzy ajuda as perguntas formais e não ajuda as coloquiais.** Sem reranker, o MRR das formais sobe de 0,781 para 0,850, e o das coloquiais cai de 0,653 para 0,642. Nas perguntas `multi`, o Recall@10 cai de 0,97 para 0,87.
-- **Com o reranker, o fuzzy não muda as métricas.** A posição do primeiro documento relevante é a mesma nas 109 perguntas. A ordem dos 10 primeiros documentos muda em 47 delas.
+| Configuração | MRR | Recall@1 | Recall@10 | MRR formais | MRR coloquiais |
+|---|---|---|---|---|---|
+| Linha de base | 0,740 | 0,56 | 0,98 | 0,781 | 0,653 |
+| com fuzzy | 0,783 | 0,61 | 0,98 | 0,850 | 0,642 |
+| com HyDE | 0,788 | 0,61 | 0,96 | 0,808 | 0,746 |
+| com reescrita | 0,764 | 0,61 | 0,96 | 0,798 | 0,691 |
+| com multi-query | 0,691 | 0,50 | 0,96 | 0,717 | 0,636 |
+| reranker `cohere/rerank-4-fast` | 0,940 | 0,85 | 1,00 | 0,968 | 0,881 |
+| reranker `mongodb/rerank-2.5` | 0,959 | 0,87 | 1,00 | 0,980 | 0,914 |
+| reranker `qwen/qwen3-reranker-8b` | 0,965 | 0,88 | 1,00 | 0,977 | 0,938 |
+| `mongodb` com fuzzy, HyDE, reescrita ou multi-query | 0,959 | 0,87 | 1,00 | 0,980 | 0,914 |
 
-Estas medidas estão incompletas. A chave do OpenRouter atingiu o limite de gasto antes de rodarem a reescrita, o multi-query, o HyDE e os rerankers `cohere/rerank-4-fast` e `qwen/qwen3-reranker-8b`. O modelo gratuito `nvidia/nemotron-3.5-rerank-8b:free` não completa a avaliação: o OpenRouter limita os modelos gratuitos a 20 requisições por minuto, e a avaliação faz uma requisição por pergunta.
+Perguntas de `questions-typos.jsonl` (erros de digitação):
+
+| Configuração | MRR | Recall@1 | Recall@10 | MRR formais | MRR coloquiais |
+|---|---|---|---|---|---|
+| Linha de base | 0,679 | 0,50 | 0,91 | 0,745 | 0,538 |
+| com fuzzy | 0,724 | 0,57 | 0,92 | 0,808 | 0,547 |
+| reranker `mongodb/rerank-2.5` | 0,953 | 0,87 | 0,99 | 0,980 | 0,895 |
+
+O que as medidas mostram:
+
+- **O reranker não satura.** No `legal-ptbr` os cinco rerankers chegavam a MRR 0,975 e Recall@1 de 0,95. Aqui o melhor fica em MRR 0,965 e Recall@1 de 0,88, e sobra espaço para uma técnica melhorar.
+- **A folga está nas perguntas coloquiais.** Com o reranker, as formais têm MRR de 0,968 a 0,980 e as coloquiais têm de 0,881 a 0,938.
+- **Sem reranker, o HyDE e o fuzzy ajudam, cada um em um tipo de pergunta.** O HyDE sobe as perguntas coloquiais (MRR de 0,653 para 0,746) e o fuzzy sobe as formais (de 0,781 para 0,850). O fuzzy não ajuda as coloquiais (0,642).
+- **A reescrita e o HyDE trocam recall por precisão no topo.** O MRR sobe, e o Recall@10 cai de 0,98 para 0,96.
+- **O multi-query piora a busca.** O MRR cai de 0,740 para 0,691. A queda é maior no CDC (de 0,78 para 0,61) e no Marco Civil (de 0,61 para 0,48).
+- **Com o reranker, as quatro técnicas não mudam as métricas.** A posição do primeiro documento relevante é a mesma nas 109 perguntas, com cada técnica. A ordem dos 10 primeiros muda em 27 a 47 perguntas.
+- **Os três rerankers ficam próximos.** O MRR vai de 0,940 a 0,965, uma diferença de 0,025. O melhor reranker muda de um grupo para outro, e cada grupo tem de 10 a 20 perguntas. Esta medida não escolhe o modelo padrão.
+- **Erros de digitação custam pouco com o reranker.** O MRR vai de 0,959 para 0,953.
+
+Detalhes das execuções:
+
+- Uma pergunta da execução com reescrita (sem reranker) não foi reescrita. O modelo gastou os 4000 tokens de saída raciocinando e terminou sem texto (`finish_reason=length`). A busca usou a consulta original. As outras execuções não tiveram aviso de transformação.
+- O modelo gratuito `nvidia/nemotron-3.5-rerank-8b:free` não completa a avaliação. O OpenRouter limita os modelos gratuitos a 20 requisições por minuto, e a avaliação faz uma requisição por pergunta.
+- A latência e o custo de cada técnica não foram medidos. Cada busca com HyDE, reescrita ou multi-query faz pelo menos uma chamada ao LLM.
 
 ## Limitações
 
