@@ -66,6 +66,9 @@ services:
         condition: service_completed_successfully
       valkey:
         condition: service_healthy
+      rustfs:
+        condition: service_healthy
+        required: false  # only with the s3, staging or prod profile
     mem_limit: 768m
     restart: unless-stopped
 
@@ -84,6 +87,9 @@ services:
     depends_on:
       migrate:
         condition: service_completed_successfully
+      rustfs:
+        condition: service_healthy
+        required: false
     mem_limit: 1g
     restart: unless-stopped
 
@@ -109,9 +115,12 @@ services:
 
   postgres:
     profiles: [dev, staging, prod]
+    # BM25 retriever (pg_search, AGPL-3.0, ADR-0022): set POSTGRES_DOCKERFILE=Dockerfile.bm25 and
+    # POSTGRES_IMAGE=vlade-postgres-bm25:17 in .env. An existing volume keeps its data.
     build:
       context: ../postgres
-    image: vlade-postgres:17
+      dockerfile: ${POSTGRES_DOCKERFILE:-Dockerfile}
+    image: ${POSTGRES_IMAGE:-vlade-postgres:17}
     environment:
       POSTGRES_DB: vlade
       POSTGRES_USER: vlade_owner
@@ -143,6 +152,29 @@ services:
     mem_limit: 320m
     restart: unless-stopped
 
+  rustfs:
+    # S3-compatible object storage, Apache-2.0 (ADR-0017). Locally: docker compose --profile dev --profile s3 up.
+    # The services use it only with VLADE_OBJECT_STORAGE__BACKEND=s3 and S3_ENDPOINT_URL=http://rustfs:9000.
+    # The entrypoint refuses to start with an empty S3_ACCESS_KEY_ID or S3_SECRET_ACCESS_KEY.
+    profiles: [s3, staging, prod]
+    image: rustfs/rustfs:1.0.6
+    environment:
+      RUSTFS_ACCESS_KEY: ${S3_ACCESS_KEY_ID:-}
+      RUSTFS_SECRET_KEY: ${S3_SECRET_ACCESS_KEY:-}
+      RUSTFS_CONSOLE_ENABLE: ${RUSTFS_CONSOLE_ENABLE:-false}
+    volumes:
+      - s3data:/data
+    ports:
+      - "127.0.0.1:${S3_HOST_PORT:-9000}:9000"
+      - "127.0.0.1:${S3_CONSOLE_HOST_PORT:-9001}:9001"
+    healthcheck:
+      test: ["CMD", "curl", "--fail", "--silent", "http://127.0.0.1:9000/health"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    mem_limit: 512m
+    restart: unless-stopped
+
   ollama:
     profiles: [ollama]
     image: ollama/ollama:0.40.16
@@ -155,4 +187,5 @@ services:
 volumes:
   pgdata:
   objects:
+  s3data:
   ollama:

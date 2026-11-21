@@ -1,8 +1,9 @@
 """Contract of the ``ObjectStorage`` port: memory, filesystem and S3 run the same tests.
 
 The S3 run uses ``moto`` (an in-process S3), so it needs no service. To run the same tests against a
-real S3-compatible service, set ``VLADE_TEST_S3_ENDPOINT``, ``VLADE_TEST_S3_BUCKET``,
-``VLADE_TEST_S3_ACCESS_KEY`` and ``VLADE_TEST_S3_SECRET_KEY`` (the bucket must exist).
+real S3-compatible service (the CI uses RustFS, ADR-0017), set ``VLADE_TEST_S3_ENDPOINT``,
+``VLADE_TEST_S3_BUCKET``, ``VLADE_TEST_S3_ACCESS_KEY`` and ``VLADE_TEST_S3_SECRET_KEY``. The run
+creates the bucket if it does not exist.
 Every test uses new tenant ids, so it never reads the objects of another test.
 """
 
@@ -64,7 +65,7 @@ async def storage(
     else:
         if not all(os.environ.get(v) for v in LIVE_ENV):
             pytest.skip(f"{', '.join(LIVE_ENV)} are not set")
-        yield S3ObjectStorage.from_settings(
+        live = S3ObjectStorage.from_settings(
             S3Settings(
                 bucket=os.environ["VLADE_TEST_S3_BUCKET"],
                 endpoint_url=os.environ["VLADE_TEST_S3_ENDPOINT"],
@@ -72,6 +73,8 @@ async def storage(
                 secret_access_key=os.environ.get("VLADE_TEST_S3_SECRET_KEY"),  # type: ignore[arg-type]
             )
         )
+        await live.ensure_bucket()
+        yield live
 
 
 async def test_round_trip_and_overwrite(storage: ObjectStorage) -> None:

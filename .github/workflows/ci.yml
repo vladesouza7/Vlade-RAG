@@ -38,9 +38,23 @@ jobs:
         options: >-
           --health-cmd "valkey-cli ping" --health-interval 5s
           --health-timeout 3s --health-retries 20
+      rustfs:
+        # The S3 service of the Compose file (ADR-0017). The ObjectStorage contract runs against it.
+        image: rustfs/rustfs:1.0.6
+        env:
+          RUSTFS_ACCESS_KEY: ci-only-access
+          RUSTFS_SECRET_KEY: ci-only-secret-key
+        ports: ["9000:9000"]
+        options: >-
+          --health-cmd "curl --fail --silent http://127.0.0.1:9000/health" --health-interval 5s
+          --health-timeout 3s --health-retries 20
     env:
       VLADE_TEST_DATABASE_URL: postgresql://vlade_owner:ci-only-password@localhost:5432/postgres
       VLADE_TEST_VALKEY_URL: redis://localhost:6379/0
+      VLADE_TEST_S3_ENDPOINT: http://localhost:9000
+      VLADE_TEST_S3_BUCKET: vlade-ci
+      VLADE_TEST_S3_ACCESS_KEY: ci-only-access
+      VLADE_TEST_S3_SECRET_KEY: ci-only-secret-key
     steps:
       - uses: actions/checkout@v7
       - uses: dtolnay/rust-toolchain@stable
@@ -71,6 +85,36 @@ jobs:
         run: uv run --no-sync mypy
       - name: Pytest
         run: uv run --no-sync pytest --cov --cov-report=term --cov-fail-under=85
+
+  bm25:
+    name: BM25 retriever (pg_search)
+    runs-on: ubuntu-latest
+    env:
+      VLADE_TEST_BM25_DATABASE_URL: postgresql://vlade_owner:ci-only-password@localhost:5432/postgres
+    steps:
+      - uses: actions/checkout@v7
+      - name: Build vlade-postgres-bm25
+        run: docker build -f deploy/postgres/Dockerfile.bm25 -t vlade-postgres-bm25:ci deploy/postgres
+      - name: Start PostgreSQL
+        run: |
+          docker run -d --name pg -p 5432:5432 -e POSTGRES_USER=vlade_owner             -e POSTGRES_PASSWORD=ci-only-password -e POSTGRES_DB=postgres vlade-postgres-bm25:ci
+          # The init server listens only on the socket, so a TCP check waits for the real server.
+          for i in $(seq 1 60); do
+            docker exec pg pg_isready -h 127.0.0.1 -U vlade_owner && exit 0
+            sleep 2
+          done
+          docker logs pg
+          exit 1
+      - uses: astral-sh/setup-uv@v10.3.3
+        with:
+          python-version: "3.12"
+          enable-cache: true
+      - name: Install
+        run: uv sync --locked --package vlade-rag --extra postgres
+      - name: Install dev tools
+        run: uv sync --locked --inexact --only-group dev
+      - name: Pytest
+        run: uv run --no-sync pytest tests/integration/test_bm25.py -q
 
   rust:
     name: Rust
@@ -197,7 +241,10 @@ jobs:
     steps:
       - uses: actions/checkout@v7
       - name: Validate
-        run: docker compose --profile dev config --quiet
+        run: |
+          docker compose --profile dev config --quiet
+          docker compose --profile dev --profile s3 config --quiet
+          docker compose --profile staging config --quiet
       - name: Start
         run: docker compose --profile dev up --detach --build --wait --wait-timeout 300
       - name: Smoke test

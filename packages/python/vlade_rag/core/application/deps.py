@@ -67,7 +67,8 @@ class Dependencies:
 
     repository: KnowledgeRepository
     vector_index: VectorIndex
-    lexical_indexes: Mapping[str, LexicalIndex]  # retriever name -> index ("lexical", "fuzzy")
+    # retriever name -> index ("lexical", "fuzzy", "bm25")
+    lexical_indexes: Mapping[str, LexicalIndex]
     object_storage: ObjectStorage
     job_queue: JobQueue
     audit_log: AuditLog

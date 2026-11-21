@@ -2,6 +2,8 @@
 
 ``world`` runs every scenario twice: with in-memory adapters and with PostgreSQL. The PostgreSQL
 run needs ``VLADE_TEST_DATABASE_URL`` (a superuser URL); without it, the run is skipped.
+``bm25_world`` does the same with ``VLADE_TEST_BM25_DATABASE_URL``, a superuser URL of a server
+with ``pg_search`` (image ``vlade-postgres-bm25``).
 """
 
 from __future__ import annotations
@@ -29,6 +31,7 @@ from vlade_rag.knowledge.memory import MemoryStore, memory_adapters
 from vlade_rag.retrieval.fusion import RRFFusion
 
 TEST_DB_ENV = "VLADE_TEST_DATABASE_URL"
+TEST_BM25_DB_ENV = "VLADE_TEST_BM25_DATABASE_URL"
 NOT_FOUND_PT = "Não encontrei essa informação nas fontes disponíveis."
 
 
@@ -105,7 +108,11 @@ async def _memory_world() -> World:
     deps = _common(
         repository=adapters.repository,
         vector_index=adapters.vector_index,
-        lexical_indexes={"lexical": adapters.lexical_index, "fuzzy": adapters.fuzzy_index},
+        lexical_indexes={
+            "lexical": adapters.lexical_index,
+            "fuzzy": adapters.fuzzy_index,
+            "bm25": adapters.lexical_index,
+        },
         object_storage=adapters.object_storage,
         job_queue=adapters.job_queue,
         audit_log=adapters.audit_log,
@@ -138,9 +145,19 @@ def _with_database(
 @pytest.fixture(scope="session")
 def postgres_urls() -> Any:
     """Create a throwaway database, run the migrations, yield (owner_url, app_url)."""
-    url = os.environ.get(TEST_DB_ENV)
+    yield from _throwaway_database(TEST_DB_ENV)
+
+
+@pytest.fixture(scope="session")
+def bm25_postgres_urls() -> Any:
+    """Like ``postgres_urls``, on the server with ``pg_search``."""
+    yield from _throwaway_database(TEST_BM25_DB_ENV)
+
+
+def _throwaway_database(env: str) -> Any:
+    url = os.environ.get(env)
     if not url:
-        pytest.skip(f"{TEST_DB_ENV} is not set")
+        pytest.skip(f"{env} is not set")
     import asyncio
 
     import asyncpg
@@ -183,6 +200,7 @@ async def _postgres_world(app_url: str) -> World:
         TrigramLexicalIndex,
         TsvectorLexicalIndex,
     )
+    from vlade_rag.knowledge.postgres.indexes import PgSearchLexicalIndex
 
     db = await PostgresDatabase.connect(app_url, min_size=1, max_size=4)
     objects = MemoryStore()
@@ -191,7 +209,11 @@ async def _postgres_world(app_url: str) -> World:
     deps = _common(
         repository=PostgresKnowledgeRepository(db),
         vector_index=PgVectorIndex(db),
-        lexical_indexes={"lexical": TsvectorLexicalIndex(db), "fuzzy": TrigramLexicalIndex(db)},
+        lexical_indexes={
+            "lexical": TsvectorLexicalIndex(db),
+            "fuzzy": TrigramLexicalIndex(db),
+            "bm25": PgSearchLexicalIndex(db),
+        },
         object_storage=MemoryObjectStorage(objects),
         job_queue=queue,
         audit_log=PostgresAuditLog(db),
@@ -210,6 +232,22 @@ async def world(request: pytest.FixtureRequest) -> AsyncIterator[World]:
         yield await _memory_world()
         return
     _, app_url = request.getfixturevalue("postgres_urls")
+    w = await _postgres_world(app_url)
+    try:
+        yield w
+    finally:
+        await w.extra["db"].close()
+
+
+@pytest.fixture(
+    params=["memory", pytest.param("postgres-bm25", marks=pytest.mark.integration)],
+)
+async def bm25_world(request: pytest.FixtureRequest) -> AsyncIterator[World]:
+    """Memory and PostgreSQL with ``pg_search``. The bm25 retriever works in both."""
+    if request.param == "memory":
+        yield await _memory_world()
+        return
+    _, app_url = request.getfixturevalue("bm25_postgres_urls")
     w = await _postgres_world(app_url)
     try:
         yield w
