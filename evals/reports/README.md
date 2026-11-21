@@ -80,6 +80,21 @@ vlade-rag eval run <base> --dataset evals/datasets/legal-ptbr/questions-paraphra
   --query-transform hyde --output evals/reports/<nome>.json
 ```
 
+## Dataset `legal-ptbr-v2`
+
+A pasta [`fase3-dataset-v2/`](fase3-dataset-v2/) guarda 6 relatórios do dataset [`legal-ptbr-v2`](../datasets/legal-ptbr-v2/README.md) (109 perguntas). O nome do arquivo é `<perguntas>.<configuração>.json`: `orig` usa `questions.jsonl` e `typos` usa `questions-typos.jsonl`.
+
+| Arquivo | Configuração |
+|---|---|
+| `orig.base.json`, `typos.base.json` | Denso e léxico, sem reranker |
+| `orig.fuzzy.json` | `--retrievers dense,lexical,fuzzy` |
+| `orig.mongodb.json`, `typos.mongodb.json` | `--rerank-model mongodb/rerank-2.5` |
+| `orig.mongodb-fuzzy.json` | O reranker com `--retrievers dense,lexical,fuzzy` |
+
+Os relatórios de outras configurações não estão aqui. Elas falharam porque a chave do OpenRouter atingiu o limite de gasto, e um relatório de uma execução que falhou não existe. A lista está no README do dataset.
+
+O resumo por grupo e por estilo sai do script `scripts/datasets/summarize_by_group.py`.
+
 ## Linha de base da fase 1
 
 | Métrica | Valor |

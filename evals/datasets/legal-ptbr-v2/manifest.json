@@ -1,0 +1,1022 @@
+{
+  "source": {
+    "lgpd": "https://www2.camara.leg.br/legin/fed/lei/2018/lei-13709-14-agosto-2018-787077-publicacaooriginal-156212-pl.html",
+    "cdc": "https://www2.camara.leg.br/legin/fed/lei/1990/lei-8078-11-setembro-1990-365086-publicacaooriginal-1-pl.html",
+    "mci": "https://www2.camara.leg.br/legin/fed/lei/2014/lei-12965-23-abril-2014-778630-publicacaooriginal-143980-pl.html",
+    "lai": "https://www2.camara.leg.br/legin/fed/lei/2011/lei-12527-18-novembro-2011-611802-publicacaooriginal-134287-pl.html"
+  },
+  "documents": {
+    "lgpd-001.md": {
+      "law": "lgpd",
+      "articles": [
+        1,
+        2
+      ]
+    },
+    "lgpd-002.md": {
+      "law": "lgpd",
+      "articles": [
+        3,
+        4
+      ]
+    },
+    "lgpd-003.md": {
+      "law": "lgpd",
+      "articles": [
+        5,
+        6
+      ]
+    },
+    "lgpd-004.md": {
+      "law": "lgpd",
+      "articles": [
+        7,
+        8
+      ]
+    },
+    "lgpd-005.md": {
+      "law": "lgpd",
+      "articles": [
+        9,
+        10
+      ]
+    },
+    "lgpd-006.md": {
+      "law": "lgpd",
+      "articles": [
+        11,
+        12
+      ]
+    },
+    "lgpd-007.md": {
+      "law": "lgpd",
+      "articles": [
+        13,
+        14
+      ]
+    },
+    "lgpd-008.md": {
+      "law": "lgpd",
+      "articles": [
+        15,
+        16
+      ]
+    },
+    "lgpd-009.md": {
+      "law": "lgpd",
+      "articles": [
+        17,
+        18
+      ]
+    },
+    "lgpd-010.md": {
+      "law": "lgpd",
+      "articles": [
+        19,
+        20
+      ]
+    },
+    "lgpd-011.md": {
+      "law": "lgpd",
+      "articles": [
+        21,
+        22
+      ]
+    },
+    "lgpd-012.md": {
+      "law": "lgpd",
+      "articles": [
+        23,
+        24
+      ]
+    },
+    "lgpd-013.md": {
+      "law": "lgpd",
+      "articles": [
+        25,
+        26
+      ]
+    },
+    "lgpd-014.md": {
+      "law": "lgpd",
+      "articles": [
+        27,
+        28
+      ]
+    },
+    "lgpd-015.md": {
+      "law": "lgpd",
+      "articles": [
+        29,
+        30
+      ]
+    },
+    "lgpd-016.md": {
+      "law": "lgpd",
+      "articles": [
+        31
+      ]
+    },
+    "lgpd-017.md": {
+      "law": "lgpd",
+      "articles": [
+        32
+      ]
+    },
+    "lgpd-018.md": {
+      "law": "lgpd",
+      "articles": [
+        33
+      ]
+    },
+    "lgpd-019.md": {
+      "law": "lgpd",
+      "articles": [
+        34
+      ]
+    },
+    "lgpd-020.md": {
+      "law": "lgpd",
+      "articles": [
+        35
+      ]
+    },
+    "lgpd-021.md": {
+      "law": "lgpd",
+      "articles": [
+        36
+      ]
+    },
+    "lgpd-022.md": {
+      "law": "lgpd",
+      "articles": [
+        37
+      ]
+    },
+    "lgpd-023.md": {
+      "law": "lgpd",
+      "articles": [
+        38
+      ]
+    },
+    "lgpd-024.md": {
+      "law": "lgpd",
+      "articles": [
+        39
+      ]
+    },
+    "lgpd-025.md": {
+      "law": "lgpd",
+      "articles": [
+        40
+      ]
+    },
+    "lgpd-026.md": {
+      "law": "lgpd",
+      "articles": [
+        41
+      ]
+    },
+    "lgpd-027.md": {
+      "law": "lgpd",
+      "articles": [
+        42
+      ]
+    },
+    "lgpd-028.md": {
+      "law": "lgpd",
+      "articles": [
+        43
+      ]
+    },
+    "lgpd-029.md": {
+      "law": "lgpd",
+      "articles": [
+        44
+      ]
+    },
+    "lgpd-030.md": {
+      "law": "lgpd",
+      "articles": [
+        45
+      ]
+    },
+    "lgpd-031.md": {
+      "law": "lgpd",
+      "articles": [
+        46
+      ]
+    },
+    "lgpd-032.md": {
+      "law": "lgpd",
+      "articles": [
+        47
+      ]
+    },
+    "lgpd-033.md": {
+      "law": "lgpd",
+      "articles": [
+        48
+      ]
+    },
+    "lgpd-034.md": {
+      "law": "lgpd",
+      "articles": [
+        49
+      ]
+    },
+    "lgpd-035.md": {
+      "law": "lgpd",
+      "articles": [
+        50
+      ]
+    },
+    "lgpd-036.md": {
+      "law": "lgpd",
+      "articles": [
+        51
+      ]
+    },
+    "lgpd-037.md": {
+      "law": "lgpd",
+      "articles": [
+        52
+      ]
+    },
+    "lgpd-038.md": {
+      "law": "lgpd",
+      "articles": [
+        53
+      ]
+    },
+    "lgpd-039.md": {
+      "law": "lgpd",
+      "articles": [
+        54
+      ]
+    },
+    "lgpd-040.md": {
+      "law": "lgpd",
+      "articles": [
+        55
+      ]
+    },
+    "lgpd-041.md": {
+      "law": "lgpd",
+      "articles": [
+        56
+      ]
+    },
+    "lgpd-042.md": {
+      "law": "lgpd",
+      "articles": [
+        57
+      ]
+    },
+    "lgpd-043.md": {
+      "law": "lgpd",
+      "articles": [
+        58
+      ]
+    },
+    "lgpd-044.md": {
+      "law": "lgpd",
+      "articles": [
+        59
+      ]
+    },
+    "lgpd-045.md": {
+      "law": "lgpd",
+      "articles": [
+        60
+      ]
+    },
+    "lgpd-046.md": {
+      "law": "lgpd",
+      "articles": [
+        61
+      ]
+    },
+    "lgpd-047.md": {
+      "law": "lgpd",
+      "articles": [
+        62
+      ]
+    },
+    "lgpd-048.md": {
+      "law": "lgpd",
+      "articles": [
+        63
+      ]
+    },
+    "lgpd-049.md": {
+      "law": "lgpd",
+      "articles": [
+        64
+      ]
+    },
+    "lgpd-050.md": {
+      "law": "lgpd",
+      "articles": [
+        65
+      ]
+    },
+    "cdc-001.md": {
+      "law": "cdc",
+      "articles": [
+        1,
+        2,
+        3
+      ]
+    },
+    "cdc-002.md": {
+      "law": "cdc",
+      "articles": [
+        4,
+        5,
+        6
+      ]
+    },
+    "cdc-003.md": {
+      "law": "cdc",
+      "articles": [
+        7,
+        8,
+        9
+      ]
+    },
+    "cdc-004.md": {
+      "law": "cdc",
+      "articles": [
+        10,
+        11,
+        12
+      ]
+    },
+    "cdc-005.md": {
+      "law": "cdc",
+      "articles": [
+        13,
+        14,
+        15
+      ]
+    },
+    "cdc-006.md": {
+      "law": "cdc",
+      "articles": [
+        16,
+        17,
+        18
+      ]
+    },
+    "cdc-007.md": {
+      "law": "cdc",
+      "articles": [
+        19,
+        20,
+        21
+      ]
+    },
+    "cdc-008.md": {
+      "law": "cdc",
+      "articles": [
+        22,
+        23,
+        24
+      ]
+    },
+    "cdc-009.md": {
+      "law": "cdc",
+      "articles": [
+        25,
+        26,
+        27
+      ]
+    },
+    "cdc-010.md": {
+      "law": "cdc",
+      "articles": [
+        28,
+        29,
+        30
+      ]
+    },
+    "cdc-011.md": {
+      "law": "cdc",
+      "articles": [
+        31,
+        32,
+        33
+      ]
+    },
+    "cdc-012.md": {
+      "law": "cdc",
+      "articles": [
+        34,
+        35,
+        36
+      ]
+    },
+    "cdc-013.md": {
+      "law": "cdc",
+      "articles": [
+        37,
+        38,
+        39
+      ]
+    },
+    "cdc-014.md": {
+      "law": "cdc",
+      "articles": [
+        40,
+        41,
+        42
+      ]
+    },
+    "cdc-015.md": {
+      "law": "cdc",
+      "articles": [
+        43,
+        44,
+        45
+      ]
+    },
+    "cdc-016.md": {
+      "law": "cdc",
+      "articles": [
+        46,
+        47,
+        48
+      ]
+    },
+    "cdc-017.md": {
+      "law": "cdc",
+      "articles": [
+        49,
+        50,
+        51
+      ]
+    },
+    "cdc-018.md": {
+      "law": "cdc",
+      "articles": [
+        52,
+        53,
+        54
+      ]
+    },
+    "cdc-019.md": {
+      "law": "cdc",
+      "articles": [
+        55,
+        56,
+        57
+      ]
+    },
+    "cdc-020.md": {
+      "law": "cdc",
+      "articles": [
+        58,
+        59
+      ]
+    },
+    "cdc-021.md": {
+      "law": "cdc",
+      "articles": [
+        60,
+        61
+      ]
+    },
+    "cdc-022.md": {
+      "law": "cdc",
+      "articles": [
+        62,
+        63
+      ]
+    },
+    "cdc-023.md": {
+      "law": "cdc",
+      "articles": [
+        64,
+        65
+      ]
+    },
+    "cdc-024.md": {
+      "law": "cdc",
+      "articles": [
+        66,
+        67
+      ]
+    },
+    "cdc-025.md": {
+      "law": "cdc",
+      "articles": [
+        68,
+        69
+      ]
+    },
+    "cdc-026.md": {
+      "law": "cdc",
+      "articles": [
+        70,
+        71
+      ]
+    },
+    "cdc-027.md": {
+      "law": "cdc",
+      "articles": [
+        72,
+        73
+      ]
+    },
+    "cdc-028.md": {
+      "law": "cdc",
+      "articles": [
+        74,
+        75
+      ]
+    },
+    "cdc-029.md": {
+      "law": "cdc",
+      "articles": [
+        76,
+        77
+      ]
+    },
+    "cdc-030.md": {
+      "law": "cdc",
+      "articles": [
+        78,
+        79
+      ]
+    },
+    "cdc-031.md": {
+      "law": "cdc",
+      "articles": [
+        80,
+        81
+      ]
+    },
+    "cdc-032.md": {
+      "law": "cdc",
+      "articles": [
+        82,
+        83
+      ]
+    },
+    "cdc-033.md": {
+      "law": "cdc",
+      "articles": [
+        84,
+        85
+      ]
+    },
+    "cdc-034.md": {
+      "law": "cdc",
+      "articles": [
+        86,
+        87
+      ]
+    },
+    "cdc-035.md": {
+      "law": "cdc",
+      "articles": [
+        88,
+        89
+      ]
+    },
+    "cdc-036.md": {
+      "law": "cdc",
+      "articles": [
+        90,
+        91
+      ]
+    },
+    "cdc-037.md": {
+      "law": "cdc",
+      "articles": [
+        92,
+        93
+      ]
+    },
+    "cdc-038.md": {
+      "law": "cdc",
+      "articles": [
+        94,
+        95
+      ]
+    },
+    "cdc-039.md": {
+      "law": "cdc",
+      "articles": [
+        96,
+        97
+      ]
+    },
+    "cdc-040.md": {
+      "law": "cdc",
+      "articles": [
+        98,
+        99
+      ]
+    },
+    "cdc-041.md": {
+      "law": "cdc",
+      "articles": [
+        100,
+        101
+      ]
+    },
+    "cdc-042.md": {
+      "law": "cdc",
+      "articles": [
+        102,
+        103
+      ]
+    },
+    "cdc-043.md": {
+      "law": "cdc",
+      "articles": [
+        104,
+        105
+      ]
+    },
+    "cdc-044.md": {
+      "law": "cdc",
+      "articles": [
+        106,
+        107
+      ]
+    },
+    "cdc-045.md": {
+      "law": "cdc",
+      "articles": [
+        108,
+        109
+      ]
+    },
+    "cdc-046.md": {
+      "law": "cdc",
+      "articles": [
+        110,
+        111
+      ]
+    },
+    "cdc-047.md": {
+      "law": "cdc",
+      "articles": [
+        112,
+        113
+      ]
+    },
+    "cdc-048.md": {
+      "law": "cdc",
+      "articles": [
+        114,
+        115
+      ]
+    },
+    "cdc-049.md": {
+      "law": "cdc",
+      "articles": [
+        116,
+        117
+      ]
+    },
+    "cdc-050.md": {
+      "law": "cdc",
+      "articles": [
+        118,
+        119
+      ]
+    },
+    "mci-001.md": {
+      "law": "mci",
+      "articles": [
+        1,
+        2
+      ]
+    },
+    "mci-002.md": {
+      "law": "mci",
+      "articles": [
+        3,
+        4
+      ]
+    },
+    "mci-003.md": {
+      "law": "mci",
+      "articles": [
+        5,
+        6
+      ]
+    },
+    "mci-004.md": {
+      "law": "mci",
+      "articles": [
+        7,
+        8
+      ]
+    },
+    "mci-005.md": {
+      "law": "mci",
+      "articles": [
+        9,
+        10
+      ]
+    },
+    "mci-006.md": {
+      "law": "mci",
+      "articles": [
+        11,
+        12
+      ]
+    },
+    "mci-007.md": {
+      "law": "mci",
+      "articles": [
+        13,
+        14
+      ]
+    },
+    "mci-008.md": {
+      "law": "mci",
+      "articles": [
+        15
+      ]
+    },
+    "mci-009.md": {
+      "law": "mci",
+      "articles": [
+        16
+      ]
+    },
+    "mci-010.md": {
+      "law": "mci",
+      "articles": [
+        17
+      ]
+    },
+    "mci-011.md": {
+      "law": "mci",
+      "articles": [
+        18
+      ]
+    },
+    "mci-012.md": {
+      "law": "mci",
+      "articles": [
+        19
+      ]
+    },
+    "mci-013.md": {
+      "law": "mci",
+      "articles": [
+        20
+      ]
+    },
+    "mci-014.md": {
+      "law": "mci",
+      "articles": [
+        21
+      ]
+    },
+    "mci-015.md": {
+      "law": "mci",
+      "articles": [
+        22
+      ]
+    },
+    "mci-016.md": {
+      "law": "mci",
+      "articles": [
+        23
+      ]
+    },
+    "mci-017.md": {
+      "law": "mci",
+      "articles": [
+        24
+      ]
+    },
+    "mci-018.md": {
+      "law": "mci",
+      "articles": [
+        25
+      ]
+    },
+    "mci-019.md": {
+      "law": "mci",
+      "articles": [
+        26
+      ]
+    },
+    "mci-020.md": {
+      "law": "mci",
+      "articles": [
+        27
+      ]
+    },
+    "mci-021.md": {
+      "law": "mci",
+      "articles": [
+        28
+      ]
+    },
+    "mci-022.md": {
+      "law": "mci",
+      "articles": [
+        29
+      ]
+    },
+    "mci-023.md": {
+      "law": "mci",
+      "articles": [
+        30
+      ]
+    },
+    "mci-024.md": {
+      "law": "mci",
+      "articles": [
+        31
+      ]
+    },
+    "mci-025.md": {
+      "law": "mci",
+      "articles": [
+        32
+      ]
+    },
+    "lai-001.md": {
+      "law": "lai",
+      "articles": [
+        1,
+        2
+      ]
+    },
+    "lai-002.md": {
+      "law": "lai",
+      "articles": [
+        3,
+        4
+      ]
+    },
+    "lai-003.md": {
+      "law": "lai",
+      "articles": [
+        5,
+        6
+      ]
+    },
+    "lai-004.md": {
+      "law": "lai",
+      "articles": [
+        7,
+        8
+      ]
+    },
+    "lai-005.md": {
+      "law": "lai",
+      "articles": [
+        9,
+        10
+      ]
+    },
+    "lai-006.md": {
+      "law": "lai",
+      "articles": [
+        11,
+        12
+      ]
+    },
+    "lai-007.md": {
+      "law": "lai",
+      "articles": [
+        13,
+        14
+      ]
+    },
+    "lai-008.md": {
+      "law": "lai",
+      "articles": [
+        15,
+        16
+      ]
+    },
+    "lai-009.md": {
+      "law": "lai",
+      "articles": [
+        17,
+        18
+      ]
+    },
+    "lai-010.md": {
+      "law": "lai",
+      "articles": [
+        19,
+        20
+      ]
+    },
+    "lai-011.md": {
+      "law": "lai",
+      "articles": [
+        21,
+        22
+      ]
+    },
+    "lai-012.md": {
+      "law": "lai",
+      "articles": [
+        23,
+        24
+      ]
+    },
+    "lai-013.md": {
+      "law": "lai",
+      "articles": [
+        25,
+        26
+      ]
+    },
+    "lai-014.md": {
+      "law": "lai",
+      "articles": [
+        27,
+        28
+      ]
+    },
+    "lai-015.md": {
+      "law": "lai",
+      "articles": [
+        29,
+        30
+      ]
+    },
+    "lai-016.md": {
+      "law": "lai",
+      "articles": [
+        31,
+        32
+      ]
+    },
+    "lai-017.md": {
+      "law": "lai",
+      "articles": [
+        33,
+        34
+      ]
+    },
+    "lai-018.md": {
+      "law": "lai",
+      "articles": [
+        35,
+        36
+      ]
+    },
+    "lai-019.md": {
+      "law": "lai",
+      "articles": [
+        37,
+        38
+      ]
+    },
+    "lai-020.md": {
+      "law": "lai",
+      "articles": [
+        39,
+        40
+      ]
+    },
+    "lai-021.md": {
+      "law": "lai",
+      "articles": [
+        41,
+        42
+      ]
+    },
+    "lai-022.md": {
+      "law": "lai",
+      "articles": [
+        43
+      ]
+    },
+    "lai-023.md": {
+      "law": "lai",
+      "articles": [
+        45
+      ]
+    },
+    "lai-024.md": {
+      "law": "lai",
+      "articles": [
+        46
+      ]
+    },
+    "lai-025.md": {
+      "law": "lai",
+      "articles": [
+        47
+      ]
+    }
+  }
+}
