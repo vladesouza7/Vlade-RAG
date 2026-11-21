@@ -150,11 +150,14 @@ def eval_run(
         else None
     )
     try:
-        overrides = RetrievalConfig(
-            retrievers=tuple(r.strip() for r in retrievers.split(",") if r.strip())
-            if retrievers
-            else ("dense", "lexical"),
-            query_transform=query_transform or "none",
+        # model_validate checks the values at run time: the options arrive as plain text.
+        overrides = RetrievalConfig.model_validate(
+            {
+                "retrievers": tuple(r.strip() for r in retrievers.split(",") if r.strip())
+                if retrievers
+                else ("dense", "lexical"),
+                "query_transform": query_transform or "none",
+            }
         )
     except ValidationError as exc:
         typer.echo(f"Invalid option: {exc.errors()[0]['msg']}", err=True)
