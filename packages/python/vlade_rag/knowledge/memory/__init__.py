@@ -45,13 +45,20 @@ from vlade_rag.core.domain import (
     TenantQuotas,
     TenantUsage,
     Unauthenticated,
+    VersionChanged,
     VersionStatus,
     matches,
     uuid7,
 )
 from vlade_rag.core.domain.api_keys import generate_api_key, hash_secret, parse_api_key
 from vlade_rag.core.domain.kb_config import EmbeddingsConfig
-from vlade_rag.core.ports import ApiKeyInfo, ClaimedJob, IssuedApiKey, RateDecision
+from vlade_rag.core.ports import (
+    ApiKeyInfo,
+    ClaimedJob,
+    IssuedApiKey,
+    RateDecision,
+    SpaceMaintenanceInfo,
+)
 from vlade_rag.knowledge.object_keys import validate_object_key
 from vlade_rag.native import token_spans
 
@@ -64,8 +71,11 @@ def _now() -> datetime:
 class _TenantData:
     kbs: dict[UUID, KnowledgeBase] = field(default_factory=dict)
     spaces: dict[UUID, EmbeddingSpace] = field(default_factory=dict)
+    space_times: dict[UUID, tuple[datetime, datetime | None]] = field(default_factory=dict)
     documents: dict[UUID, Document] = field(default_factory=dict)
     versions: dict[UUID, DocumentVersion] = field(default_factory=dict)
+    version_times: dict[UUID, datetime] = field(default_factory=dict)
+    superseded_times: dict[UUID, datetime] = field(default_factory=dict)
     chunks: dict[UUID, Chunk] = field(default_factory=dict)
     published: set[UUID] = field(default_factory=set)
     vectors: dict[UUID, dict[UUID, list[float]]] = field(default_factory=dict)
@@ -142,6 +152,7 @@ class MemoryKnowledgeRepository:
             updated_at=_now(),
         )
         data.spaces[space.id] = space
+        data.space_times[space.id] = (_now(), None)
         data.kbs[kb.id] = kb
         return kb
 
@@ -178,6 +189,63 @@ class MemoryKnowledgeRepository:
             raise NotFound("Embedding space does not exist.")
         return space
 
+    # maintenance (roadmap 4.4)
+
+    async def list_spaces_for_maintenance(self, ctx: TenantContext) -> list[SpaceMaintenanceInfo]:
+        data = self.store.data(ctx)
+        return [
+            SpaceMaintenanceInfo(space, *data.space_times.get(space.id, (_now(), None)))
+            for space in data.spaces.values()
+        ]
+
+    async def delete_embedding_space(self, ctx: TenantContext, space_id: UUID) -> bool:
+        data = self.store.data(ctx)
+        space = data.spaces.get(space_id)
+        if space is None:
+            return False
+        if space.status is SpaceStatus.ACTIVE:
+            return False
+        del data.spaces[space_id]
+        data.vectors.pop(space_id, None)
+        data.space_times.pop(space_id, None)
+        return True
+
+    async def count_superseded_versions(self, ctx: TenantContext, older_than: datetime) -> int:
+        data = self.store.data(ctx)
+        return sum(
+            1
+            for version in data.versions.values()
+            if version.status is VersionStatus.SUPERSEDED
+            and data.superseded_times.get(version.id, data.version_times.get(version.id, _now()))
+            < older_than
+        )
+
+    async def delete_superseded_versions(self, ctx: TenantContext, older_than: datetime) -> int:
+        data = self.store.data(ctx)
+        old = [
+            version.id
+            for version in data.versions.values()
+            if version.status is VersionStatus.SUPERSEDED
+            and data.superseded_times.get(version.id, data.version_times.get(version.id, _now()))
+            < older_than
+        ]
+        for version_id in old:
+            chunk_ids = [
+                chunk_id
+                for chunk_id, chunk in data.chunks.items()
+                if chunk.document_version_id == version_id
+            ]
+            for chunk_id in chunk_ids:
+                del data.chunks[chunk_id]
+                data.published.discard(chunk_id)
+            for vectors in data.vectors.values():
+                for chunk_id in chunk_ids:
+                    vectors.pop(chunk_id, None)
+            del data.versions[version_id]
+            data.version_times.pop(version_id, None)
+            data.superseded_times.pop(version_id, None)
+        return len(old)
+
     # reindex (ADR-0027)
 
     async def create_embedding_space(
@@ -194,6 +262,7 @@ class MemoryKnowledgeRepository:
             status=SpaceStatus.BUILDING,
         )
         data.spaces[space.id] = space
+        data.space_times[space.id] = (_now(), None)
         return space
 
     def _published(self, ctx: TenantContext, kb_id: UUID) -> list[Chunk]:
@@ -235,8 +304,12 @@ class MemoryKnowledgeRepository:
             updated_at=_now(),
         )
         data.spaces[space_id] = replace(data.spaces[space_id], status=SpaceStatus.ACTIVE)
+        created, _ = data.space_times.get(space_id, (_now(), None))
+        data.space_times[space_id] = (created, None)
         if old != space_id and old in data.spaces:
             data.spaces[old] = replace(data.spaces[old], status=SpaceStatus.RETIRED)
+            old_created, _ = data.space_times.get(old, (_now(), None))
+            data.space_times[old] = (old_created, _now())
         return old
 
     async def update_knowledge_base_config(
@@ -344,6 +417,7 @@ class MemoryKnowledgeRepository:
             size_bytes=size_bytes,
         )
         data.versions[version.id] = version
+        data.version_times[version.id] = _now()
         return version
 
     async def get_version(self, ctx: TenantContext, version_id: UUID) -> DocumentVersion:
@@ -412,7 +486,12 @@ class MemoryKnowledgeRepository:
         )
 
     async def publish_version(
-        self, ctx: TenantContext, version_id: UUID, *, embedding_space_id: UUID | None = None
+        self,
+        ctx: TenantContext,
+        version_id: UUID,
+        *,
+        embedding_space_id: UUID | None = None,
+        expected_version_id: UUID | None = None,
     ) -> None:
         data = self.store.data(ctx)
         version = data.versions.get(version_id)
@@ -422,9 +501,12 @@ class MemoryKnowledgeRepository:
         active = data.kbs[doc.knowledge_base_id].active_embedding_space_id
         if embedding_space_id is not None and active != embedding_space_id:
             raise EmbeddingSpaceChanged("The active embedding space of the base changed.")
+        if expected_version_id is not None and doc.current_version_id != expected_version_id:
+            raise VersionChanged("Another version became current while the job ran.")
         if doc.current_version_id and doc.current_version_id != version_id:
             old = data.versions[doc.current_version_id]
             data.versions[old.id] = replace(old, status=VersionStatus.SUPERSEDED)
+            data.superseded_times[old.id] = _now()
             for c in data.chunks.values():
                 if c.document_version_id == old.id:
                     data.published.discard(c.id)
@@ -463,6 +545,8 @@ class MemoryKnowledgeRepository:
                     vectors.pop(cid, None)
             for v in versions:
                 data.versions.pop(v.id, None)
+                data.version_times.pop(v.id, None)
+                data.superseded_times.pop(v.id, None)
             data.documents.pop(document_id, None)
             kb = data.kbs[doc.knowledge_base_id]
             data.kbs[kb.id] = replace(kb, epoch=kb.epoch + 1, updated_at=_now())
@@ -531,6 +615,9 @@ class MemoryVectorIndex:
     ) -> int:
         vectors = self.store.data(ctx).vectors.get(space.id, {})
         return sum(1 for cid in chunk_ids if cid in vectors)
+
+    async def drop_space(self, ctx: TenantContext, space: EmbeddingSpace) -> None:
+        self.store.data(ctx).vectors.pop(space.id, None)
 
 
 def _lexical_terms(text: str) -> list[str]:
@@ -765,6 +852,12 @@ class MemoryJobQueue:
         knowledge_base_id: UUID | None,
         input: Metadata,
     ) -> IngestionJob:
+        if (
+            kind == JobKind.REINDEX
+            and knowledge_base_id is not None
+            and await self.find_active(ctx, knowledge_base_id, kind) is not None
+        ):
+            raise Conflict("A reindex of this knowledge base is already queued.")
         job = IngestionJob(
             id=uuid7(),
             tenant_id=ctx.tenant_id,

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from collections.abc import Mapping, Sequence
+from datetime import datetime
 from typing import Any
 from uuid import UUID
 
@@ -26,10 +27,12 @@ from vlade_rag.core.domain import (
     SpaceStatus,
     TenantContext,
     TenantUsage,
+    VersionChanged,
     VersionStatus,
     uuid7,
 )
 from vlade_rag.core.domain.kb_config import EmbeddingsConfig
+from vlade_rag.core.ports import SpaceMaintenanceInfo
 from vlade_rag.knowledge.postgres.db import PostgresDatabase
 
 TEXT_SEARCH_CONFIG = {"pt": "vlade_pt", "en": "vlade_en"}
@@ -37,6 +40,19 @@ TEXT_SEARCH_CONFIG = {"pt": "vlade_pt", "en": "vlade_en"}
 
 def text_search_config(language: str) -> str:
     return TEXT_SEARCH_CONFIG.get(language.split("-")[0].lower(), "simple")
+
+
+def _space(row: Mapping[str, Any]) -> EmbeddingSpace:
+    return EmbeddingSpace(
+        id=row["id"],
+        tenant_id=row["tenant_id"],
+        provider=row["provider"],
+        model=row["model"],
+        dimension=row["dimension"],
+        version=row["version"],
+        distance=Distance(row["distance"]),
+        status=SpaceStatus(row["status"]),
+    )
 
 
 def _kb(row: Mapping[str, Any]) -> KnowledgeBase:
@@ -209,16 +225,63 @@ class PostgresKnowledgeRepository:
             )
         if row is None:
             raise NotFound("Embedding space does not exist.")
-        return EmbeddingSpace(
-            id=row["id"],
-            tenant_id=row["tenant_id"],
-            provider=row["provider"],
-            model=row["model"],
-            dimension=row["dimension"],
-            version=row["version"],
-            distance=Distance(row["distance"]),
-            status=SpaceStatus(row["status"]),
-        )
+        return _space(row)
+
+    # ------------------------------------------------------------ maintenance (4.4)
+
+    async def list_spaces_for_maintenance(self, ctx: TenantContext) -> list[SpaceMaintenanceInfo]:
+        async with self.db.tenant(ctx) as conn:
+            rows = await conn.fetch(
+                "SELECT * FROM embedding_spaces WHERE tenant_id = $1", ctx.tenant_id
+            )
+        return [
+            SpaceMaintenanceInfo(_space(row), row["created_at"], row["retired_at"]) for row in rows
+        ]
+
+    async def delete_embedding_space(self, ctx: TenantContext, space_id: UUID) -> bool:
+        async with self.db.tenant(ctx) as conn:
+            deleted = await conn.fetchval(
+                "DELETE FROM embedding_spaces WHERE tenant_id = $1 AND id = $2 "
+                "AND status <> 'active' RETURNING id",
+                ctx.tenant_id,
+                space_id,
+            )
+        return deleted is not None
+
+    async def count_superseded_versions(self, ctx: TenantContext, older_than: datetime) -> int:
+        async with self.db.tenant(ctx) as conn:
+            value = await conn.fetchval(
+                "SELECT count(*) FROM document_versions WHERE tenant_id = $1 "
+                "AND status = 'superseded' "
+                "AND coalesce(superseded_at, published_at, created_at) < $2",
+                ctx.tenant_id,
+                older_than,
+            )
+        return int(value)
+
+    async def delete_superseded_versions(self, ctx: TenantContext, older_than: datetime) -> int:
+        async with self.db.tenant(ctx) as conn:
+            rows = await conn.fetch(
+                "SELECT id FROM document_versions WHERE tenant_id = $1 "
+                "AND status = 'superseded' "
+                "AND coalesce(superseded_at, published_at, created_at) < $2",
+                ctx.tenant_id,
+                older_than,
+            )
+            ids = [row["id"] for row in rows]
+            if ids:
+                # chunk_embeddings has ON DELETE CASCADE from chunks.
+                await conn.execute(
+                    "DELETE FROM chunks WHERE tenant_id = $1 AND document_version_id = ANY($2)",
+                    ctx.tenant_id,
+                    ids,
+                )
+                await conn.execute(
+                    "DELETE FROM document_versions WHERE tenant_id = $1 AND id = ANY($2)",
+                    ctx.tenant_id,
+                    ids,
+                )
+        return len(ids)
 
     # ------------------------------------------------------------ reindex (ADR-0027)
 
@@ -305,7 +368,7 @@ class PostgresKnowledgeRepository:
             )
             if old != space_id:
                 await conn.execute(
-                    "UPDATE embedding_spaces SET status = 'retired' "
+                    "UPDATE embedding_spaces SET status = 'retired', retired_at = now() "
                     "WHERE tenant_id = $1 AND id = $2",
                     ctx.tenant_id,
                     old,
@@ -560,7 +623,12 @@ class PostgresKnowledgeRepository:
     # ------------------------------------------------------------ publication and deletion
 
     async def publish_version(
-        self, ctx: TenantContext, version_id: UUID, *, embedding_space_id: UUID | None = None
+        self,
+        ctx: TenantContext,
+        version_id: UUID,
+        *,
+        embedding_space_id: UUID | None = None,
+        expected_version_id: UUID | None = None,
     ) -> None:
         async with self.db.tenant(ctx) as conn:
             version = await conn.fetchrow(
@@ -583,13 +651,17 @@ class PostgresKnowledgeRepository:
             )
             if embedding_space_id is not None and active != embedding_space_id:
                 raise EmbeddingSpaceChanged("The active embedding space of the base changed.")
+            if expected_version_id is not None and doc["current_version_id"] != expected_version_id:
+                raise VersionChanged("Another version became current while the job ran.")
             old = doc["current_version_id"]
             if old is not None and old != version_id:
                 await conn.execute(
                     "UPDATE chunks SET is_published = false WHERE document_version_id = $1", old
                 )
                 await conn.execute(
-                    "UPDATE document_versions SET status = 'superseded' WHERE id = $1", old
+                    "UPDATE document_versions SET status = 'superseded', superseded_at = now() "
+                    "WHERE id = $1",
+                    old,
                 )
             await conn.execute(
                 "UPDATE chunks SET is_published = true WHERE document_version_id = $1", version_id

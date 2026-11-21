@@ -48,6 +48,10 @@ class PgVectorIndex:
                 space.distance.value,
             )
 
+    async def drop_space(self, ctx: TenantContext, space: EmbeddingSpace) -> None:
+        async with self.db.tenant(ctx) as conn:
+            await conn.execute("SELECT vlade_drop_space_index($1, $2)", space.id, ctx.tenant_id)
+
     async def upsert(
         self,
         ctx: TenantContext,

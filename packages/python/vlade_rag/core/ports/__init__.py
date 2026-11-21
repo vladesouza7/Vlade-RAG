@@ -11,6 +11,7 @@ from __future__ import annotations
 from collections.abc import AsyncIterator, Mapping, Sequence
 from contextlib import AbstractContextManager
 from dataclasses import dataclass, field
+from datetime import datetime
 from typing import Literal, Protocol, runtime_checkable
 from uuid import UUID
 
@@ -101,6 +102,15 @@ class EmbeddingProvider(Protocol):
 # ---------------------------------------------------------------- knowledge
 
 
+@dataclass(frozen=True, slots=True)
+class SpaceMaintenanceInfo:
+    """An embedding space with the dates the maintenance module needs."""
+
+    space: EmbeddingSpace
+    created_at: datetime
+    retired_at: datetime | None
+
+
 @runtime_checkable
 class KnowledgeRepository(Protocol):
     # knowledge bases and embedding spaces
@@ -116,6 +126,24 @@ class KnowledgeRepository(Protocol):
         ...
 
     async def get_embedding_space(self, ctx: TenantContext, space_id: UUID) -> EmbeddingSpace: ...
+
+    # maintenance (roadmap 4.4)
+    async def list_spaces_for_maintenance(self, ctx: TenantContext) -> list[SpaceMaintenanceInfo]:
+        """Every space of the tenant with its creation and retirement dates."""
+        ...
+
+    async def delete_embedding_space(self, ctx: TenantContext, space_id: UUID) -> bool:
+        """Delete a retired or building space with its vectors. Never delete an active one.
+        Returns ``True`` when a space was deleted."""
+        ...
+
+    async def count_superseded_versions(self, ctx: TenantContext, older_than: datetime) -> int:
+        """Number of superseded versions created before ``older_than``."""
+        ...
+
+    async def delete_superseded_versions(self, ctx: TenantContext, older_than: datetime) -> int:
+        """Delete superseded versions created before ``older_than`` and their chunks/vectors."""
+        ...
 
     # reindex (ARCHITECTURE section 13, ADR-0027)
     async def create_embedding_space(
@@ -204,12 +232,18 @@ class KnowledgeRepository(Protocol):
 
     # publication and deletion
     async def publish_version(
-        self, ctx: TenantContext, version_id: UUID, *, embedding_space_id: UUID | None = None
+        self,
+        ctx: TenantContext,
+        version_id: UUID,
+        *,
+        embedding_space_id: UUID | None = None,
+        expected_version_id: UUID | None = None,
     ) -> None:
         """Atomically make the version visible, hide the previous one and bump the KB epoch.
 
         With ``embedding_space_id``, raise ``EmbeddingSpaceChanged`` when it is no longer the
-        active space of the base: the vectors of the version are in an old space."""
+        active space of the base: the vectors of the version are in an old space. With
+        ``expected_version_id``, raise ``VersionChanged`` when another version became current."""
         ...
 
     async def delete_document(
@@ -244,6 +278,10 @@ class VectorIndex(Protocol):
         self, ctx: TenantContext, space: EmbeddingSpace, chunk_ids: Sequence[UUID]
     ) -> int:
         """Number of the given chunks that have a vector in the space."""
+        ...
+
+    async def drop_space(self, ctx: TenantContext, space: EmbeddingSpace) -> None:
+        """Drop the physical index of a deleted space. Without one, do nothing."""
         ...
 
 
@@ -549,6 +587,7 @@ __all__ = [
     "RateLimiter",
     "Reranker",
     "Retriever",
+    "SpaceMaintenanceInfo",
     "Span",
     "TenantDirectory",
     "TextNormalizer",

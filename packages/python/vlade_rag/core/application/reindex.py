@@ -15,6 +15,7 @@ from __future__ import annotations
 import math
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
+from datetime import UTC, datetime
 from typing import Any, Literal
 from uuid import UUID
 
@@ -27,8 +28,10 @@ from vlade_rag.core.domain import (
     Conflict,
     EmbeddingSpace,
     IngestionJob,
+    IngestionStep,
     InvalidArgument,
     JobKind,
+    JobStatus,
     KnowledgeBase,
     Metadata,
     MissingVectors,
@@ -40,6 +43,7 @@ from vlade_rag.core.domain.kb_config import ChunkingConfig, EmbeddingsConfig
 ReindexMode = Literal["embeddings", "full"]
 PAGE = 512  # chunks read from the repository at a time
 CATCH_UP_ROUNDS = 5  # passes over the chunks published during the build, before the switch
+VERSION_STEP = "reindex.version"  # marks a document already handled by a full reindex job
 
 
 @dataclass(frozen=True, slots=True)
@@ -156,7 +160,7 @@ class ReindexRunner:
             return await self._embeddings(ctx, kb, config)
         if mode == "full":
             chunking = ChunkingConfig.model_validate(job.input["chunking"])
-            return await self._full(ctx, kb, chunking)
+            return await self._full(ctx, kb, chunking, job)
         raise InvalidArgument(f"Unknown reindex mode '{mode}'.")
 
     # ------------------------------------------------------------ embeddings mode
@@ -242,13 +246,26 @@ class ReindexRunner:
     # ------------------------------------------------------------ full mode
 
     async def _full(
-        self, ctx: TenantContext, kb: KnowledgeBase, chunking: ChunkingConfig
+        self,
+        ctx: TenantContext,
+        kb: KnowledgeBase,
+        chunking: ChunkingConfig,
+        job: IngestionJob,
     ) -> Metadata:
-        repo = self.deps.repository
-        config = kb.config.model_copy(update={"chunking": chunking})
-        await repo.update_knowledge_base_config(ctx, kb.id, config)
+        repo, queue = self.deps.repository, self.deps.job_queue
+        documents = await repo.list_current_versions(ctx, kb.id)
+        # A crashed worker makes the queue requeue the same job. The steps of that job tell us
+        # which documents already have a version and an ingestion job, so we do not create them
+        # again (roadmap 4.4).
+        handled = {
+            step.document_id
+            for step in job.steps
+            if step.name == VERSION_STEP and step.document_id is not None
+        }
         jobs = 0
-        for document, current in await repo.list_current_versions(ctx, kb.id):
+        for document, current in documents:
+            if document.id in handled:
+                continue
             version = await repo.create_version(
                 ctx,
                 document_id=document.id,
@@ -256,7 +273,7 @@ class ReindexRunner:
                 storage_key=current.storage_key,
                 size_bytes=current.size_bytes,
             )
-            await self.deps.job_queue.enqueue(
+            await queue.enqueue(
                 ctx,
                 kind=JobKind.INGEST,
                 knowledge_base_id=kb.id,
@@ -265,11 +282,33 @@ class ReindexRunner:
                     "version_id": str(version.id),
                     "filename": document.title,
                     "mime_type": document.mime_type,
-                    "reindex": True,
+                    # The job carries its own chunking and the version it may replace. A normal
+                    # ingestion that publishes during the reindex is not overwritten (ADR-0027).
+                    "expected_version_id": str(current.id),
+                    "chunking": chunking.model_dump(mode="json"),
                 },
             )
+            now = datetime.now(UTC)
+            await queue.record_step(
+                ctx,
+                job.id,
+                IngestionStep(
+                    VERSION_STEP,
+                    JobStatus.SUCCEEDED,
+                    job.attempt,
+                    document.id,
+                    None,
+                    now,
+                    now,
+                ),
+            )
             jobs += 1
-        return {"mode": "full", "documents": jobs, "ingestion_jobs": jobs}
+        # Store the new chunking only after every document has a job. A failure before this
+        # point leaves extra versions and jobs, but not a base rechunked only in part.
+        latest = await repo.get_knowledge_base_by_id(ctx, kb.id)
+        config = latest.config.model_copy(update={"chunking": chunking})
+        await repo.update_knowledge_base_config(ctx, kb.id, config)
+        return {"mode": "full", "documents": len(documents), "ingestion_jobs": jobs}
 
 
 def _merge(current: Any, override: Mapping[str, Any] | None, name: str) -> Any:

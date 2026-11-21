@@ -7,6 +7,7 @@ import json
 import os
 import sys
 from collections.abc import Awaitable, Callable, Coroutine
+from datetime import timedelta
 from pathlib import Path
 from typing import Any
 from uuid import UUID
@@ -27,6 +28,7 @@ kb_app = typer.Typer(help="Knowledge bases.", no_args_is_help=True)
 audit_app = typer.Typer(help="Audit log of the tenant.", no_args_is_help=True)
 mcp_app = typer.Typer(help="MCP server.", no_args_is_help=True)
 eval_app = typer.Typer(help="Quality evaluation.", no_args_is_help=True)
+ops_app = typer.Typer(help="Operations and maintenance.", no_args_is_help=True)
 app.add_typer(audit_app, name="audit")
 app.add_typer(eval_app, name="eval")
 app.add_typer(mcp_app, name="mcp")
@@ -35,6 +37,7 @@ app.add_typer(db_app, name="db")
 app.add_typer(tenant_app, name="tenant")
 app.add_typer(key_app, name="key")
 app.add_typer(kb_app, name="kb")
+app.add_typer(ops_app, name="ops")
 
 SUPPORTED_SUFFIXES = {".txt", ".text", ".md", ".markdown", ".html", ".htm", ".pdf", ".docx"}
 
@@ -439,6 +442,73 @@ def worker(
             await w.run()
 
     _run(_with_runtime(go))
+
+
+# ---------------------------------------------------------------- operations (roadmap 4.4)
+
+
+@ops_app.command("cleanup")
+def ops_cleanup(
+    retired_days: float = typer.Option(1.0, min=0, help="Grace for retired spaces, in days."),
+    building_days: float = typer.Option(1.0, min=0, help="Grace for orphan building spaces."),
+    dry_run: bool = typer.Option(False, "--dry-run", help="Report without deleting."),
+    as_json: bool = typer.Option(False, "--json", help="Print JSON."),
+) -> None:
+    """Delete retired spaces, orphan building spaces and old superseded versions."""
+    from vlade_rag.ops import OpsService
+
+    async def go(runtime: Any) -> dict[str, int]:
+        ctx = await _ctx(runtime)
+        ctx.require(Role.ADMIN)
+        report = await OpsService(runtime.deps, checks=runtime.checks).cleanup(
+            ctx,
+            retired_after=timedelta(days=retired_days),
+            building_after=timedelta(days=building_days),
+            dry_run=dry_run,
+        )
+        return {
+            "retired_spaces": report.retired_spaces,
+            "building_spaces": report.building_spaces,
+            "versions": report.versions,
+        }
+
+    result = _run(_with_runtime(go))
+    if as_json:
+        _print_json(result)
+    else:
+        typer.echo(
+            f"Spaces: {result['retired_spaces']} retired, {result['building_spaces']} building; "
+            f"old versions: {result['versions']}" + (" (dry run)" if dry_run else "")
+        )
+
+
+@ops_app.command("recover-jobs")
+def ops_recover_jobs() -> None:
+    """Return expired jobs of crashed workers to the queue."""
+    from vlade_rag.ops import OpsService
+
+    async def go(runtime: Any) -> int:
+        ctx = await _ctx(runtime)
+        ctx.require(Role.ADMIN)
+        return await OpsService(runtime.deps, checks=runtime.checks).recover_jobs()
+
+    count = _run(_with_runtime(go))
+    typer.echo(f"Requeued {count} expired jobs.")
+
+
+@ops_app.command("health")
+def ops_health() -> None:
+    """Run the readiness probes and report the failed ones."""
+    from vlade_rag.ops import OpsService
+
+    async def go(runtime: Any) -> dict[str, Any]:
+        report = await OpsService(runtime.deps, checks=runtime.checks).health()
+        return {"ok": report.ok, "failures": list(report.failures)}
+
+    result = _run(_with_runtime(go))
+    _print_json(result)
+    if not result["ok"]:
+        raise typer.Exit(1)
 
 
 # ---------------------------------------------------------------- database and administration

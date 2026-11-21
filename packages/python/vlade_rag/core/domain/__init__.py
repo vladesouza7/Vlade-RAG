@@ -18,6 +18,7 @@ from vlade_rag.core.domain.errors import (
     RequestQuotaExceeded,
     Unauthenticated,
     UnsupportedFilter,
+    VersionChanged,
     VladeError,
 )
 from vlade_rag.core.domain.ids import uuid7
@@ -110,6 +111,7 @@ __all__ = [
     "TokenUsage",
     "Unauthenticated",
     "UnsupportedFilter",
+    "VersionChanged",
     "VersionStatus",
     "VladeError",
     "matches",

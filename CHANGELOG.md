@@ -54,6 +54,7 @@ Este arquivo registra as mudanças relevantes de cada versão. O formato segue o
 - Teste do servidor MCP com o MCP Inspector em modo CLI (`scripts/mcp_inspector.sh`), no job `MCP server (Inspector)` da CI.
 - Leitura da auditoria: `GET /v1/audit-events` e `vlade-rag audit list`. Eventos novos: cota negada, cota alterada, chave emitida e chave revogada.
 - Reindexação sem parada (ADR-0027): `POST /v1/knowledge-bases/{kb}/reindex` e `vlade-rag reindex`, nos modos `embeddings` (modelo novo, espaço novo e troca atômica) e `full` (chunking novo, uma versão nova por documento). Sem `confirm`, a resposta é uma prévia. As buscas continuam durante a reindexação e nunca misturam espaços de embeddings.
+- Módulo `ops` (tarefa 4.4): `vlade-rag ops cleanup` apaga espaços `retired` e `building` órfãos e versões `superseded` depois do período de espera. `vlade-rag ops recover-jobs` devolve jobs vencidos para a fila. `vlade-rag ops health` mostra as verificações de prontidão.
 
 ### Corrigido
 

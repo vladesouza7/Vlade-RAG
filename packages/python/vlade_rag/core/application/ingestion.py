@@ -32,8 +32,10 @@ from vlade_rag.core.domain import (
     Role,
     Section,
     TenantContext,
+    VersionChanged,
     VladeError,
 )
+from vlade_rag.core.domain.kb_config import ChunkingConfig
 from vlade_rag.core.ports import ChunkingParams, ClaimedJob, TextNormalizer
 
 _HEADING = re.compile(r"^(#{1,6}) +(.+)$", re.MULTILINE)
@@ -349,6 +351,17 @@ class RunIngestionJob:
         version = await repo.get_version(ctx, version_id)
         if version.document_id != document_id:
             raise NotFound("Document version does not exist.")
+        expected = job.input.get("expected_version_id")
+        if expected is not None:
+            current = await repo.get_current_version(ctx, document_id)
+            if current is None or current.id != UUID(str(expected)):
+                # A full reindex must not publish an older version over a newer one.
+                await repo.mark_version_failed(ctx, version.id)
+                return {
+                    "document_id": str(document_id),
+                    "version_id": str(version.id),
+                    "skipped": True,
+                }
 
         async with self._step(ctx, job, "extract", document_id):
             parser = deps.parser_for(mime_type)
@@ -367,7 +380,8 @@ class RunIngestionJob:
             if not normalized.text:
                 raise InvalidArgument("The document has no text.")
         async with self._step(ctx, job, "chunk", document_id):
-            cfg = kb.config.chunking
+            override = job.input.get("chunking")
+            cfg = ChunkingConfig.model_validate(override) if override else kb.config.chunking
             drafts = deps.chunker.split(
                 normalized, ChunkingParams(cfg.strategy, cfg.max_tokens, cfg.overlap_tokens)
             )
@@ -392,9 +406,22 @@ class RunIngestionJob:
                     raise InvalidArgument(f"{indexed} vectors for {len(chunks)} chunks.")
             try:
                 async with self._step(ctx, job, "publish", document_id):
-                    await repo.publish_version(ctx, version.id, embedding_space_id=space.id)
+                    await repo.publish_version(
+                        ctx,
+                        version.id,
+                        embedding_space_id=space.id,
+                        expected_version_id=UUID(str(expected)) if expected else None,
+                    )
                 break
             except _StepFailedError as exc:
+                if isinstance(exc.cause, VersionChanged):
+                    # A normal ingestion published during this job. Keep the newer version.
+                    await repo.mark_version_failed(ctx, version.id)
+                    return {
+                        "document_id": str(document_id),
+                        "version_id": str(version.id),
+                        "skipped": True,
+                    }
                 # A reindex switched the space after the vectors were written (ADR-0027):
                 # embed again with the new model, in the new space.
                 if not isinstance(exc.cause, EmbeddingSpaceChanged) or attempt == PUBLISH_ATTEMPTS:

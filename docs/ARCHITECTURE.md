@@ -900,7 +900,7 @@ O processo `vlade-rag worker` roda o worker. No perfil `dev`, a API pode rodar u
 
 As etapas `validate`, `store_original` e `dedupe` acontecem no caso de uso `SubmitIngestion`, antes de o job existir. O job registra as etapas de `extract` a `publish`.
 
-Depois de `publish`, uma tarefa de manutenção apaga os chunks e os vetores das versões `superseded`. O período de espera padrão é de 24 horas.
+Depois de `publish`, uma tarefa de manutenção apaga os chunks e os vetores das versões `superseded`. O período de espera padrão é de 24 horas. O comando `vlade-rag ops cleanup` executa essa tarefa.
 
 ## 11. Pipeline de consulta
 
@@ -1044,6 +1044,7 @@ Ingestão durante a reindexação (ADR-0027):
 - Antes da troca do passo 5, o worker gera os vetores dos chunks publicados durante a construção. A troca confere, com a linha da base travada, que nenhum chunk publicado está sem vetor no espaço novo. Se algum estiver, ela devolve `MissingVectors`, e o worker tenta de novo.
 - A publicação de uma versão trava a mesma linha da base e confere que o espaço em que a ingestão gravou os vetores ainda é o ativo. Se não for, ela devolve `EmbeddingSpaceChanged`, e a ingestão gera os vetores de novo no espaço novo.
 - O espaço antigo fica `retired`, com os vetores, até a limpeza do módulo `ops` (tarefa 4.4).
+- O comando `vlade-rag ops cleanup` apaga os espaços `retired` e os espaços `building` órfãos depois do período de espera. Ele não apaga um espaço `building` enquanto existe um job de reindexação ativo no tenant.
 - O modo `full` não muda o modelo de embeddings. Para trocar os dois, rode o modo `embeddings` primeiro.
 
 ## 14. Interfaces

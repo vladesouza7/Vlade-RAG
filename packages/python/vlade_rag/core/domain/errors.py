@@ -46,6 +46,10 @@ class EmbeddingSpaceChanged(Conflict):
     """The active embedding space of the base changed while a document was indexed (reindex)."""
 
 
+class VersionChanged(Conflict):
+    """Another version became current while a document was being reindexed."""
+
+
 class MissingVectors(Conflict):
     """Some published chunks have no vector in the space a reindex wants to activate."""
 

@@ -303,3 +303,32 @@ async def test_the_full_mode_reprocesses_every_document(world: World) -> None:
     ):
         assert version.version == 2, document.title
     assert (await titles(world, "garantia dos equipamentos"))[0] == "garantia.md"
+
+
+async def test_a_retried_full_reindex_skips_documents_already_enqueued(world: World) -> None:
+    await make_kb(world)
+    result = await reindex(
+        world, mode="full", chunking={"max_tokens": 16, "overlap_tokens": 2}, confirm=True
+    )
+    assert await world.drain_jobs() == 1 + len(DOCS)
+    job = await world.deps.job_queue.get(world.admin, result.job.id)
+    assert job.result is not None and job.result["ingestion_jobs"] == len(DOCS)
+
+    # A crashed worker makes the queue requeue the same job. The steps of the job must keep
+    # the reindex from creating a second version and ingestion job for every document.
+    await world.deps.job_queue.fail(
+        world.admin,
+        job.id,
+        {"message": "Simulated crash."},
+        retry=True,
+        max_attempts=world.deps.limits.job_max_attempts,
+    )
+    assert await world.drain_jobs() == 1
+    retried = await world.deps.job_queue.get(world.admin, job.id)
+    assert retried.status == JobStatus.SUCCEEDED, retried.error
+    assert retried.result is not None
+    assert retried.result["documents"] == len(DOCS)
+    assert retried.result["ingestion_jobs"] == 0
+    kb = await kb_now(world)
+    for document, version in await world.deps.repository.list_current_versions(world.admin, kb.id):
+        assert version.version == 2, document.title

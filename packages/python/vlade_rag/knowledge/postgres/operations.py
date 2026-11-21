@@ -74,6 +74,21 @@ def _job(row: Mapping[str, Any], steps: tuple[IngestionStep, ...] = ()) -> Inges
     )
 
 
+def _steps(rows: Any) -> tuple[IngestionStep, ...]:
+    return tuple(
+        IngestionStep(
+            name=s["name"],
+            status=JobStatus(s["status"]),
+            attempt=s["attempt"],
+            document_id=s["document_id"],
+            error=s["error"],
+            started_at=s["started_at"],
+            finished_at=s["finished_at"],
+        )
+        for s in rows
+    )
+
+
 class PostgresJobQueue:
     def __init__(self, db: PostgresDatabase) -> None:
         self.db = db
@@ -86,17 +101,27 @@ class PostgresJobQueue:
         knowledge_base_id: UUID | None,
         input: Metadata,
     ) -> IngestionJob:
-        async with self.db.tenant(ctx) as conn:
-            row = await conn.fetchrow(
-                "INSERT INTO ingestion_jobs (id, tenant_id, knowledge_base_id, kind, status, "
-                "requested_by, input) VALUES ($1, $2, $3, $4, 'pending', $5, $6) RETURNING *",
-                uuid7(),
-                ctx.tenant_id,
-                knowledge_base_id,
-                kind.value,
-                ctx.principal_id,
-                dict(input),
-            )
+        try:
+            async with self.db.tenant(ctx) as conn:
+                row = await conn.fetchrow(
+                    "INSERT INTO ingestion_jobs (id, tenant_id, knowledge_base_id, kind, status, "
+                    "requested_by, input) VALUES ($1, $2, $3, $4, 'pending', $5, $6) RETURNING *",
+                    uuid7(),
+                    ctx.tenant_id,
+                    knowledge_base_id,
+                    kind.value,
+                    ctx.principal_id,
+                    dict(input),
+                )
+        except asyncpg.exceptions.UniqueViolationError as exc:
+            # Migration 0004 allows one pending or running reindex per base. A second request
+            # can pass find_active() before the first one is enqueued (ADR-0027).
+            if (
+                kind != JobKind.REINDEX
+                or exc.constraint_name != "ingestion_jobs_one_active_reindex_idx"
+            ):
+                raise
+            raise Conflict("A reindex of this knowledge base is already queued.") from exc
         return _job(row)
 
     async def find_active(
@@ -124,21 +149,7 @@ class PostgresJobQueue:
             steps = await conn.fetch(
                 "SELECT * FROM ingestion_steps WHERE job_id = $1 ORDER BY started_at, name", job_id
             )
-        return _job(
-            row,
-            tuple(
-                IngestionStep(
-                    name=s["name"],
-                    status=JobStatus(s["status"]),
-                    attempt=s["attempt"],
-                    document_id=s["document_id"],
-                    error=s["error"],
-                    started_at=s["started_at"],
-                    finished_at=s["finished_at"],
-                )
-                for s in steps
-            ),
-        )
+        return _job(row, _steps(steps))
 
     async def claim(self, worker_id: str, lease_seconds: int) -> ClaimedJob | None:
         async with self.db.system() as conn:
@@ -154,7 +165,13 @@ class PostgresJobQueue:
             roles=frozenset({Role.ADMIN}),
             interface="worker",
         )
-        return ClaimedJob(job=job, ctx=ctx)
+        # The steps survive a lease expiry. A retried full reindex needs them to skip the
+        # documents that already have a version and an ingestion job.
+        async with self.db.tenant(ctx) as conn:
+            step_rows = await conn.fetch(
+                "SELECT * FROM ingestion_steps WHERE job_id = $1 ORDER BY started_at, name", job.id
+            )
+        return ClaimedJob(job=_job(row, _steps(step_rows)), ctx=ctx)
 
     async def heartbeat(self, job_id: UUID, worker_id: str, lease_seconds: int) -> None:
         async with self.db.system() as conn:
@@ -167,7 +184,7 @@ class PostgresJobQueue:
             await conn.execute(
                 "INSERT INTO ingestion_steps (id, tenant_id, job_id, document_id, name, status, "
                 "attempt, error, started_at, finished_at) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10) "
-                "ON CONFLICT (job_id, name) DO UPDATE SET status = EXCLUDED.status, "
+                "ON CONFLICT (job_id, name, document_id) DO UPDATE SET status = EXCLUDED.status, "
                 "attempt = EXCLUDED.attempt, error = EXCLUDED.error, "
                 "started_at = EXCLUDED.started_at, finished_at = EXCLUDED.finished_at",
                 uuid7(),
