@@ -54,6 +54,9 @@ mcp = [
     "jsonschema>=4.20.0",  # validation of tool arguments against the input schema
 ]
 s3 = ["boto3>=1.44.7"]  # S3 API: AWS and compatible services (ADR-0006)
+# Local reranker (ADR-0008, ADR-0018). Pulls PyTorch and, on Linux, NVIDIA CUDA libraries with a
+# proprietary license, so it stays out of "server" and out of the license check (ADR-0001, item 4).
+local-models = ["sentence-transformers>=3.4.0"]
 server = ["vlade-rag[native,api,cli,postgres,ollama,openai,otel,cache,mcp,s3]"]
 
 [project.scripts]

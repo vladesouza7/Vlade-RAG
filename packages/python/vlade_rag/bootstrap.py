@@ -144,6 +144,17 @@ def builtin_plugins(
 
         return factory
 
+    def local_reranker(cfg: RerankConfig, clients: ProviderClients) -> Reranker:
+        from vlade_rag.reranking.local import SentenceTransformersReranker
+
+        local = clients.settings.providers.local_models
+        return SentenceTransformersReranker(
+            cfg.model,
+            device=local.device,
+            batch_size=local.batch_size,
+            max_length=local.max_length,
+        )
+
     def llm_transformer(mode: Mode) -> Callable[..., QueryTransformer]:
         # A query transformer plugin gets the same arguments: the LLM resolver, the prompt
         # registry and the longest query the server accepts.
@@ -161,6 +172,15 @@ def builtin_plugins(
     modes: tuple[Mode, ...] = ("rewrite", "multi_query", "hyde")
     for mode in modes:
         specs.append(PluginSpec("query_transformer", mode, llm_transformer(mode), f"LLM: {mode}"))
+
+    specs.append(
+        PluginSpec(
+            "reranker",
+            "sentence-transformers",
+            local_reranker,
+            "Local cross-encoder (extra local-models)",
+        )
+    )
 
     for name in compatible:
         specs.append(

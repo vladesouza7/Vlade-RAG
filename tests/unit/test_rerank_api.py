@@ -159,8 +159,8 @@ async def test_openrouter_resolves_from_the_environment(monkeypatch: pytest.Monk
         # A provider the user adds gets the same adapter.
         jina = resolve(RerankConfig(provider="jina", model="jina-reranker"))
         assert str(jina.http.client.base_url).rstrip("/") == "https://api.jina.ai/v1"  # type: ignore[attr-defined]
-        # Providers without a rerank endpoint, and the local adapter (not built yet), are refused.
-        for name in ("openai", "gemini", "opencode", "sentence-transformers"):
+        # Providers without a rerank endpoint are refused. The local adapter has its own tests.
+        for name in ("openai", "gemini", "opencode"):
             with pytest.raises(InvalidArgument, match=f"Unknown reranker adapter '{name}'"):
                 resolve(RerankConfig(provider=name, model="m"))
     finally:

@@ -98,12 +98,21 @@ class OpenCodeSettings(OpenAICompatibleSettings):
     base_url: str = "https://opencode.ai/zen/v1"
 
 
+class LocalModelsSettings(BaseModel):
+    """Models that run inside the process (extra ``local-models``): the local reranker."""
+
+    device: str | None = None  # None: CUDA, MPS or CPU, whichever the library finds
+    batch_size: int = Field(default=16, ge=1, le=512)
+    max_length: int = Field(default=512, ge=16, le=8192)
+
+
 class ProvidersSettings(BaseModel):
     ollama: OllamaSettings = Field(default_factory=OllamaSettings)
     openai: OpenAICompatibleSettings = Field(default_factory=OpenAICompatibleSettings)
     openrouter: OpenRouterSettings = Field(default_factory=OpenRouterSettings)
     opencode: OpenCodeSettings = Field(default_factory=OpenCodeSettings)
     gemini: GeminiSettings = Field(default_factory=GeminiSettings)
+    local_models: LocalModelsSettings = Field(default_factory=LocalModelsSettings)
     # Any other OpenAI-compatible API, by name. Example:
     # VLADE_PROVIDERS__COMPATIBLE__GROQ__BASE_URL=https://api.groq.com/openai/v1
     # VLADE_PROVIDERS__COMPATIBLE__GROQ__API_KEY=...
