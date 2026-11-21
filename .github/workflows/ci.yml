@@ -67,7 +67,7 @@ jobs:
         run: >
           uv sync --locked --package vlade-rag
           --extra api --extra cli --extra postgres --extra ollama --extra openai --extra otel
-          --extra cache --extra mcp --extra s3 --extra langgraph
+          --extra cache --extra mcp --extra s3 --extra langgraph --extra eval
           ${{ matrix.native && '--extra native' || '' }}
       - name: Install dev tools
         # Recent uv versions do not install the root dev group with --package.
@@ -195,7 +195,7 @@ jobs:
           uv venv /tmp/lic
           # The docling extra pulls PyTorch and NVIDIA CUDA libraries (proprietary). ADR-0001
           # item 4 keeps non-permissive dependencies in optional extras, so it is not checked here.
-          uv export --frozen --no-dev --package vlade-rag --extra server --extra api --extra cli --extra postgres --extra ollama --extra openai --extra otel --extra cache --extra mcp --extra s3 --extra langgraph --no-emit-workspace -o /tmp/req.txt
+          uv export --frozen --no-dev --package vlade-rag --extra server --extra api --extra cli --extra postgres --extra ollama --extra openai --extra otel --extra cache --extra mcp --extra s3 --extra langgraph --extra eval --no-emit-workspace -o /tmp/req.txt
           uv pip install --python /tmp/lic/bin/python -r /tmp/req.txt
           uvx pip-licenses==5.5.5 --python /tmp/lic/bin/python --from=mixed --format=json > /tmp/licenses.json
           python3 scripts/check_licenses.py /tmp/licenses.json

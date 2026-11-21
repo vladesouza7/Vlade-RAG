@@ -168,6 +168,10 @@ class OtelSettings(BaseModel):
     enabled: bool = False
     endpoint: str | None = None
     service_name: str = "vlade-rag"
+    # Send metrics to <endpoint>/v1/metrics. Arize Phoenix takes only traces: turn it off there.
+    metrics: bool = True
+    # The project of the traces in Arize Phoenix (resource attribute openinference.project.name).
+    project: str = "vlade-rag"
 
 
 class Settings(BaseSettings):

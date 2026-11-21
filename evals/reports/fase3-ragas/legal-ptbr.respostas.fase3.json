@@ -1,0 +1,622 @@
+{
+  "metrics": {
+    "faithfulness": 0.9375,
+    "answer_relevancy": 0.871752,
+    "context_precision": 0.995833,
+    "context_recall": 1.0,
+    "grounded_rate": 1.0
+  },
+  "config": {
+    "evaluator": "answers",
+    "vlade_rag_version": "0.0.1",
+    "date": "2026-11-21T15:39:56+00:00",
+    "knowledge_base": {
+      "slug": "legal-ptbr",
+      "id": "01a1f672-cb84-786c-a880-28977ab03870",
+      "epoch": 100
+    },
+    "knowledge_base_config": {
+      "language": "pt",
+      "chunking": {
+        "strategy": "markdown",
+        "max_tokens": 400,
+        "overlap_tokens": 40,
+        "tokenizer": "BAAI/bge-m3"
+      },
+      "embeddings": {
+        "provider": "openrouter",
+        "model": "openai/text-embedding-3-small",
+        "dimension": 1536,
+        "batch_size": 64
+      },
+      "retrieval": {
+        "retrievers": [
+          "dense",
+          "lexical"
+        ],
+        "top_k_per_retriever": 50,
+        "fusion": {
+          "strategy": "rrf",
+          "k": 60.0,
+          "weights": {}
+        },
+        "rerank": {
+          "enabled": true,
+          "provider": "openrouter",
+          "model": "mongodb/rerank-2.5",
+          "candidates": 50,
+          "top_n": 8
+        },
+        "query_transform": "none",
+        "hnsw_ef_search": 100
+      },
+      "generation": {
+        "provider": "openrouter",
+        "model": "tencent/hy4-flash",
+        "temperature": 0.1,
+        "max_context_tokens": 6000,
+        "max_output_tokens": 4000,
+        "prompt": "answer_with_citations",
+        "require_citations": true
+      },
+      "orchestration": {
+        "engine": "pipeline",
+        "rewrite_below_score": null,
+        "max_attempts": 1,
+        "retry_top_k_factor": 2
+      }
+    },
+    "scorer": {
+      "name": "ragas",
+      "ragas_version": "0.4.4",
+      "judge_model": "deepseek/deepseek-v4.1-flash",
+      "judge_max_tokens": 8192,
+      "judge_reasoning": false,
+      "embeddings_model": "openai/text-embedding-3-small",
+      "base_url": "https://openrouter.ai/api/v1",
+      "metrics": [
+        "faithfulness",
+        "answer_relevancy",
+        "context_precision",
+        "context_recall"
+      ],
+      "errors": {}
+    },
+    "questions": {
+      "in_dataset": 20,
+      "scored_per_metric": {
+        "faithfulness": 20,
+        "answer_relevancy": 20,
+        "context_precision": 20,
+        "context_recall": 20
+      }
+    }
+  },
+  "items": 20,
+  "details": [
+    {
+      "question": "O que é dado pessoal sensível segundo a LGPD?",
+      "expected_answer": "Dado pessoal sobre origem racial ou étnica, convicção religiosa, opinião política, filiação a sindicato ou organização religiosa, filosófica ou política, dado referente à saúde ou à vida sexual, dado genético ou biométrico, quando vinculado a uma pessoa natural.",
+      "answer": "Dado pessoal sensível é o dado pessoal sobre origem racial ou étnica, convicção religiosa, opinião política, filiação a sindicato ou a organização de caráter religioso, filosófico ou político, dado referente à saúde ou à vida sexual, dado genético ou biométrico, quando vinculado a uma pessoa natural [1].",
+      "grounded": true,
+      "cited_documents": [
+        "lgpd-003.md"
+      ],
+      "context_documents": [
+        "lgpd-003.md",
+        "lgpd-006.md",
+        "lgpd-007.md",
+        "lgpd-006.md",
+        "lgpd-031.md",
+        "lgpd-023.md",
+        "lgpd-035.md",
+        "lgpd-004.md"
+      ],
+      "scores": {
+        "faithfulness": 1.0,
+        "answer_relevancy": 0.8197656424651809,
+        "context_precision": 0.9999999999,
+        "context_recall": 1.0
+      },
+      "seconds": 52.19
+    },
+    {
+      "question": "Quando a LGPD entra em vigor?",
+      "expected_answer": "Após decorridos 18 meses de sua publicação oficial.",
+      "answer": "A LGPD entra em vigor após decorridos 18 (dezoito) meses de sua publicação oficial. [1]",
+      "grounded": true,
+      "cited_documents": [
+        "lgpd-050.md"
+      ],
+      "context_documents": [
+        "lgpd-050.md",
+        "lgpd-048.md",
+        "lgpd-002.md",
+        "lgpd-045.md",
+        "lgpd-001.md",
+        "lgpd-003.md",
+        "lgpd-010.md",
+        "lgpd-009.md"
+      ],
+      "scores": {
+        "faithfulness": 1.0,
+        "answer_relevancy": 0.9999995804562531,
+        "context_precision": 0.9999999999,
+        "context_recall": 1.0
+      },
+      "seconds": 42.931
+    },
+    {
+      "question": "Qual é o valor máximo da multa simples prevista na LGPD?",
+      "expected_answer": "Até 2% do faturamento da empresa no Brasil no último exercício, limitada a R$ 50.000.000,00 por infração.",
+      "answer": "A multa simples prevista na LGPD pode ser de até 2% do faturamento da pessoa jurídica de direito privado, grupo ou conglomerado no Brasil no último exercício, excluídos os tributos, limitada, no total, a R$ 50.000.000,00 (cinquenta milhões de reais) por infração [1].",
+      "grounded": true,
+      "cited_documents": [
+        "lgpd-037.md"
+      ],
+      "context_documents": [
+        "lgpd-037.md",
+        "cdc-019.md",
+        "lgpd-039.md",
+        "lgpd-038.md",
+        "lgpd-037.md",
+        "cdc-030.md",
+        "cdc-029.md",
+        "cdc-024.md"
+      ],
+      "scores": {
+        "faithfulness": 1.0,
+        "answer_relevancy": 0.999999718456649,
+        "context_precision": 0.9999999999,
+        "context_recall": 1.0
+      },
+      "seconds": 55.008
+    },
+    {
+      "question": "Como deve ser feito o tratamento de dados pessoais de crianças?",
+      "expected_answer": "Com o consentimento específico e em destaque dado por pelo menos um dos pais ou pelo responsável legal.",
+      "answer": "- O tratamento de dados pessoais de crianças deve ser realizado em seu melhor interesse, nos termos do art. 14 e da legislação pertinente. [1]\n- O tratamento deve ser feito com consentimento específico e em destaque dado por pelo menos um dos pais ou pelo responsável legal. [1]\n- Os controladores devem manter pública a informação sobre os tipos de dados coletados. [1]\n- Os controladores devem manter pública a informação sobre a forma de utilização dos dados coletados. [1]\n- Os controladores devem manter pública a informação sobre os procedimentos para o exercício dos direitos a que se refere o art. 18 da Lei. [1]\n- A coleta de dados pessoais de crianças sem o consentimento dos pais ou do responsável legal é permitida quando necessária para contatá-los. [2]\n- Nessa hipótese, os dados devem ser utilizados uma única vez e sem armazenamento. [2]\n- A coleta sem consentimento também é permitida para a proteção da criança. [2]\n- Em nenhum caso, os dados podem ser repassados a terceiro sem o consentimento de que trata o § 1º do art. 14. [2]\n- Os controladores não devem condicionar a participação das crianças em jogos, aplicações de internet ou outras atividades ao fornecimento de informações pessoais além das estritamente necessárias à atividade. [1][2]\n- O controlador deve realizar todos os esforços razoáveis para verificar que o consentimento foi dado pelo responsável pela criança, consideradas as tecnologias disponíveis. [2]\n- As informações sobre o tratamento devem ser fornecidas de maneira simples, clara e acessível. [2]\n- As informações devem considerar as características físico-motoras, perceptivas, sensoriais, intelectuais e mentais do usuário. [2]\n- Devem ser usados recursos audiovisuais quando adequado. [2]\n- As informações devem proporcionar o necessário aos pais ou ao responsável legal e ser adequadas ao entendimento da criança. [2]",
+      "grounded": true,
+      "cited_documents": [
+        "lgpd-007.md",
+        "lgpd-007.md"
+      ],
+      "context_documents": [
+        "lgpd-007.md",
+        "lgpd-007.md",
+        "lgpd-003.md",
+        "lgpd-004.md",
+        "lgpd-006.md",
+        "lgpd-002.md",
+        "lgpd-005.md",
+        "lgpd-004.md"
+      ],
+      "scores": {
+        "faithfulness": 1.0,
+        "answer_relevancy": 0.9029825505623732,
+        "context_precision": 0.99999999995,
+        "context_recall": 1.0
+      },
+      "seconds": 64.536
+    },
+    {
+      "question": "Quem é o encarregado pelo tratamento de dados pessoais?",
+      "expected_answer": "A pessoa natural indicada pelo controlador que atua como canal de comunicação entre o controlador, os titulares e a autoridade nacional.",
+      "answer": "O encarregado é a pessoa natural indicada pelo controlador, que atua como canal de comunicação entre o controlador e os titulares e a autoridade nacional [2]. O controlador deverá indicar o encarregado pelo tratamento de dados pessoais [1].",
+      "grounded": true,
+      "cited_documents": [
+        "lgpd-003.md",
+        "lgpd-026.md"
+      ],
+      "context_documents": [
+        "lgpd-026.md",
+        "lgpd-003.md",
+        "lgpd-024.md",
+        "lgpd-027.md",
+        "lgpd-012.md",
+        "lgpd-022.md",
+        "lgpd-035.md",
+        "lgpd-004.md"
+      ],
+      "scores": {
+        "faithfulness": 1.0,
+        "answer_relevancy": 0.9347047631924413,
+        "context_precision": 0.99999999995,
+        "context_recall": 1.0
+      },
+      "seconds": 56.802
+    },
+    {
+      "question": "Em quais hipóteses o tratamento de dados pessoais pode ser realizado?",
+      "expected_answer": "Mediante consentimento do titular, para cumprimento de obrigação legal, pela administração pública, para estudos por órgão de pesquisa, para execução de contrato, para exercício regular de direitos, para proteção da vida, para tutela da saúde, para legítimo interesse e para proteção do crédito.",
+      "answer": "O tratamento de dados pessoais somente poderá ser realizado nas seguintes hipóteses [1]:\n\nI - mediante o fornecimento de consentimento pelo titular [1].\n\nII - para o cumprimento de obrigação legal ou regulatória pelo controlador [1].\n\nIII - pela administração pública, para o tratamento e uso compartilhado de dados necessários à execução de políticas públicas previstas em leis e regulamentos ou respaldadas em contratos, convênios ou instrumentos congêneres, observadas as disposições do Capítulo IV desta Lei [1].\n\nIV - para a realização de estudos por órgão de pesquisa, garantida, sempre que possível, a anonimização dos dados pessoais [1].\n\nV - quando necessário para a execução de contrato ou de procedimentos preliminares relacionados a contrato do qual seja parte o titular, a pedido do titular dos dados [1].\n\nVI - para o exercício regular de direitos em processo judicial, administrativo ou arbitral, esse último nos termos da Lei nº 9.307, de 23 de setembro de 1996 (Lei de Arbitragem) [1].\n\nVII - para a proteção da vida ou da incolumidade física do titular ou de terceiro [1].\n\nVIII - para a tutela da saúde, em procedimento realizado por profissionais da área da saúde ou por entidades sanitárias [1].\n\nIX - quando necessário para atender aos interesses legítimos do controlador ou de terceiro, exceto no caso de prevalecerem direitos e liberdades fundamentais do titular que exijam a proteção dos dados pessoais [1].\n\nX - para a proteção do crédito, inclusive quanto ao disposto na legislação pertinente [1].",
+      "grounded": true,
+      "cited_documents": [
+        "lgpd-004.md"
+      ],
+      "context_documents": [
+        "lgpd-004.md",
+        "lgpd-006.md",
+        "lgpd-002.md",
+        "lgpd-005.md",
+        "lgpd-012.md",
+        "lgpd-008.md",
+        "lgpd-003.md",
+        "lgpd-005.md"
+      ],
+      "scores": {
+        "faithfulness": 0.0,
+        "answer_relevancy": 0.9761742746299836,
+        "context_precision": 0.99999999995,
+        "context_recall": 1.0
+      },
+      "seconds": 52.946
+    },
+    {
+      "question": "Em quanto tempo o controlador deve fornecer a declaração completa pedida pelo titular?",
+      "expected_answer": "No prazo de até 15 dias contado do requerimento do titular.",
+      "answer": "Em até 15 (quinze) dias, contados da data do requerimento do titular, ressalvada a possibilidade de a autoridade nacional dispor de forma diferenciada para setores específicos [1].",
+      "grounded": true,
+      "cited_documents": [
+        "lgpd-010.md"
+      ],
+      "context_documents": [
+        "lgpd-010.md",
+        "lgpd-009.md",
+        "lgpd-009.md",
+        "lgpd-033.md",
+        "lgpd-005.md",
+        "lgpd-023.md",
+        "lgpd-005.md",
+        "lgpd-004.md"
+      ],
+      "scores": {
+        "faithfulness": 1.0,
+        "answer_relevancy": 0.6344638753133931,
+        "context_precision": 0.9999999999,
+        "context_recall": 1.0
+      },
+      "seconds": 45.601
+    },
+    {
+      "question": "O que o controlador deve fazer quando ocorre um incidente de segurança?",
+      "expected_answer": "Comunicar à autoridade nacional e ao titular a ocorrência de incidente de segurança que possa acarretar risco ou dano relevante aos titulares.",
+      "answer": "O controlador deve comunicar à autoridade nacional e ao titular a ocorrência de incidente de segurança que possa acarretar risco ou dano relevante aos titulares [1].\n\nA comunicação deve ser feita em prazo razoável, conforme definido pela autoridade nacional [1].\n\nA comunicação deve mencionar, no mínimo [1]:\n\n- a descrição da natureza dos dados pessoais afetados [1];\n- as informações sobre os titulares envolvidos [1];\n- a indicação das medidas técnicas e de segurança utilizadas para a proteção dos dados, observados os segredos comercial e industrial [1];\n- os riscos relacionados ao incidente [1];\n- os motivos da demora, no caso de a comunicação não ter sido imediata [1];\n- as medidas que foram ou que serão adotadas para reverter ou mitigar os efeitos do prejuízo [1].\n\nA autoridade nacional verificará a gravidade do incidente e poderá determinar ao controlador a adoção de providências, como ampla divulgação do fato em meios de comunicação e medidas para reverter ou mitigar os efeitos do incidente [1].",
+      "grounded": true,
+      "cited_documents": [
+        "lgpd-033.md"
+      ],
+      "context_documents": [
+        "lgpd-033.md",
+        "lgpd-029.md",
+        "lgpd-027.md",
+        "lgpd-009.md",
+        "lgpd-035.md",
+        "lgpd-023.md",
+        "lgpd-031.md",
+        "cdc-004.md"
+      ],
+      "scores": {
+        "faithfulness": 1.0,
+        "answer_relevancy": 0.7952236806427644,
+        "context_precision": 0.9999999999,
+        "context_recall": 1.0
+      },
+      "seconds": 91.741
+    },
+    {
+      "question": "Quais são os fundamentos da disciplina da proteção de dados pessoais?",
+      "expected_answer": "O respeito à privacidade, a autodeterminação informativa, a liberdade de expressão, a inviolabilidade da intimidade, o desenvolvimento econômico e tecnológico, a livre iniciativa e os direitos humanos.",
+      "answer": "Os fundamentos da disciplina da proteção de dados pessoais são os seguintes [1]:\n\n- O respeito à privacidade [1].\n- A autodeterminação informativa [1].\n- A liberdade de expressão, de informação, de comunicação e de opinião [1].\n- A inviolabilidade da intimidade, da honra e da imagem [1].\n- O desenvolvimento econômico e tecnológico e a inovação [1].\n- A livre iniciativa, a livre concorrência e a defesa do consumidor [1].\n- Os direitos humanos, o livre desenvolvimento da personalidade, a dignidade e o exercício da cidadania pelas pessoas naturais [1].",
+      "grounded": true,
+      "cited_documents": [
+        "lgpd-001.md"
+      ],
+      "context_documents": [
+        "lgpd-001.md",
+        "lgpd-003.md",
+        "lgpd-004.md",
+        "lgpd-003.md",
+        "lgpd-005.md",
+        "lgpd-002.md",
+        "lgpd-009.md",
+        "lgpd-005.md"
+      ],
+      "scores": {
+        "faithfulness": 1.0,
+        "answer_relevancy": 0.9999996400829375,
+        "context_precision": 0.9999999999,
+        "context_recall": 1.0
+      },
+      "seconds": 59.02
+    },
+    {
+      "question": "A LGPD se aplica ao tratamento de dados feito para fins exclusivamente jornalísticos?",
+      "expected_answer": "Não. A lei não se aplica ao tratamento para fins exclusivamente jornalísticos e artísticos.",
+      "answer": "Não, a LGPD não se aplica ao tratamento de dados pessoais realizado para fins exclusivamente jornalísticos e artísticos [1].",
+      "grounded": true,
+      "cited_documents": [
+        "lgpd-002.md"
+      ],
+      "context_documents": [
+        "lgpd-002.md",
+        "lgpd-004.md",
+        "lgpd-001.md",
+        "lgpd-006.md",
+        "lgpd-005.md",
+        "lgpd-002.md",
+        "lgpd-013.md",
+        "lgpd-003.md"
+      ],
+      "scores": {
+        "faithfulness": 1.0,
+        "answer_relevancy": 0.9572786542990253,
+        "context_precision": 0.9999999999,
+        "context_recall": 1.0
+      },
+      "seconds": 44.876
+    },
+    {
+      "question": "Qual é o prazo para desistir de uma compra feita fora do estabelecimento comercial?",
+      "expected_answer": "7 dias a contar da assinatura do contrato ou do recebimento do produto ou serviço.",
+      "answer": "O prazo é de 7 dias, contados da assinatura do contrato ou do ato de recebimento do produto ou serviço, quando a contratação ocorrer fora do estabelecimento comercial, especialmente por telefone ou a domicílio [1].",
+      "grounded": true,
+      "cited_documents": [
+        "cdc-017.md"
+      ],
+      "context_documents": [
+        "cdc-017.md",
+        "cdc-006.md",
+        "cdc-009.md",
+        "cdc-012.md",
+        "cdc-011.md",
+        "cdc-007.md",
+        "cdc-014.md",
+        "cdc-018.md"
+      ],
+      "scores": {
+        "faithfulness": 0.75,
+        "answer_relevancy": 0.7438657441405088,
+        "context_precision": 0.9999999999,
+        "context_recall": 1.0
+      },
+      "seconds": 51.242
+    },
+    {
+      "question": "Qual é o prazo para reclamar de vícios aparentes em produtos duráveis?",
+      "expected_answer": "90 dias. Para produtos não duráveis, o prazo é de 30 dias.",
+      "answer": "O prazo é de **noventa dias** para reclamar de vícios aparentes ou de fácil constatação em produtos duráveis [1]. A contagem começa a partir da entrega efetiva do produto [1].",
+      "grounded": true,
+      "cited_documents": [
+        "cdc-009.md"
+      ],
+      "context_documents": [
+        "cdc-009.md",
+        "cdc-006.md",
+        "cdc-017.md",
+        "cdc-007.md",
+        "cdc-006.md",
+        "cdc-041.md",
+        "cdc-008.md",
+        "cdc-004.md"
+      ],
+      "scores": {
+        "faithfulness": 1.0,
+        "answer_relevancy": 0.9804951201527872,
+        "context_precision": 0.9999999999,
+        "context_recall": 1.0
+      },
+      "seconds": 62.389
+    },
+    {
+      "question": "Quem é considerado consumidor pelo CDC?",
+      "expected_answer": "Toda pessoa física ou jurídica que adquire ou utiliza produto ou serviço como destinatário final.",
+      "answer": "Consumidor é toda pessoa física ou jurídica que adquire ou utiliza produto ou serviço como destinatário final [1].\n\nEquipara-se a consumidor a coletividade de pessoas, ainda que indetermináveis, que haja intervindo nas relações de consumo [1].\n\nPara os fins do Capítulo IV e do seguinte, equiparam-se aos consumidores todas as pessoas determináveis ou não expostas às práticas nele previstas [2].\n\nPara os efeitos da Seção II, equiparam-se aos consumidores todas as vítimas do evento [3].",
+      "grounded": true,
+      "cited_documents": [
+        "cdc-001.md",
+        "cdc-010.md",
+        "cdc-006.md"
+      ],
+      "context_documents": [
+        "cdc-001.md",
+        "cdc-010.md",
+        "cdc-006.md",
+        "cdc-002.md",
+        "cdc-002.md",
+        "cdc-016.md",
+        "cdc-003.md",
+        "cdc-017.md"
+      ],
+      "scores": {
+        "faithfulness": 1.0,
+        "answer_relevancy": 0.7521116788634168,
+        "context_precision": 0.9999999999,
+        "context_recall": 1.0
+      },
+      "seconds": 57.996
+    },
+    {
+      "question": "Em quanto tempo o fornecedor deve sanar o vício de um produto?",
+      "expected_answer": "No prazo máximo de 30 dias.",
+      "answer": "O fornecedor tem o prazo máximo de 30 dias para sanar o vício do produto [1].\n\nEsse prazo pode ser reduzido ou ampliado por acordo entre as partes, mas não pode ser inferior a 7 dias nem superior a 180 dias [1].\n\nEm contrato de adesão, a cláusula de prazo deve ser convencionada em separado, por manifestação expressa do consumidor [1].\n\nSe o vício não for sanado no prazo, o consumidor pode exigir a substituição do produto, a restituição imediata da quantia paga ou o abatimento proporcional do preço [1].",
+      "grounded": true,
+      "cited_documents": [
+        "cdc-006.md"
+      ],
+      "context_documents": [
+        "cdc-006.md",
+        "cdc-009.md",
+        "cdc-007.md",
+        "cdc-017.md",
+        "cdc-008.md",
+        "cdc-006.md",
+        "cdc-004.md",
+        "cdc-033.md"
+      ],
+      "scores": {
+        "faithfulness": 1.0,
+        "answer_relevancy": 0.9344532318093685,
+        "context_precision": 0.9999999999,
+        "context_recall": 1.0
+      },
+      "seconds": 56.488
+    },
+    {
+      "question": "O que acontece quando o consumidor é cobrado em quantia indevida?",
+      "expected_answer": "Tem direito à repetição do indébito, por valor igual ao dobro do que pagou em excesso, com correção monetária e juros legais.",
+      "answer": "O consumidor cobrado em quantia indevida tem direito à repetição do indébito, por valor igual ao dobro do que pagou em excesso, acrescido de correção monetária e juros legais, salvo hipótese de engano justificável [1].",
+      "grounded": true,
+      "cited_documents": [
+        "cdc-014.md"
+      ],
+      "context_documents": [
+        "cdc-014.md",
+        "cdc-026.md",
+        "cdc-007.md",
+        "cdc-012.md",
+        "cdc-017.md",
+        "cdc-018.md",
+        "cdc-016.md",
+        "cdc-013.md"
+      ],
+      "scores": {
+        "faithfulness": 1.0,
+        "answer_relevancy": 0.8787041326456574,
+        "context_precision": 0.9999999999,
+        "context_recall": 1.0
+      },
+      "seconds": 56.407
+    },
+    {
+      "question": "Por quanto tempo informações negativas podem ficar em cadastros de consumidores?",
+      "expected_answer": "Por no máximo cinco anos.",
+      "answer": "Por até cinco anos: os cadastros e dados de consumidores não podem conter informações negativas referentes a período superior a cinco anos [1].",
+      "grounded": true,
+      "cited_documents": [
+        "cdc-015.md"
+      ],
+      "context_documents": [
+        "cdc-015.md",
+        "cdc-027.md",
+        "lgpd-010.md",
+        "cdc-009.md",
+        "lgpd-005.md",
+        "cdc-013.md",
+        "cdc-048.md",
+        "cdc-041.md"
+      ],
+      "scores": {
+        "faithfulness": 1.0,
+        "answer_relevancy": 0.8545294511383021,
+        "context_precision": 0.9999999999,
+        "context_recall": 1.0
+      },
+      "seconds": 52.038
+    },
+    {
+      "question": "Qual é o prazo de prescrição para pedir reparação de danos causados por fato do produto?",
+      "expected_answer": "Cinco anos, contados do conhecimento do dano e de sua autoria.",
+      "answer": "O prazo de prescrição é de cinco anos, contado a partir do conhecimento do dano e de sua autoria [1].",
+      "grounded": true,
+      "cited_documents": [
+        "cdc-009.md"
+      ],
+      "context_documents": [
+        "cdc-009.md",
+        "cdc-006.md",
+        "cdc-041.md",
+        "cdc-004.md",
+        "cdc-005.md",
+        "cdc-008.md",
+        "cdc-007.md",
+        "cdc-042.md"
+      ],
+      "scores": {
+        "faithfulness": 1.0,
+        "answer_relevancy": 0.673106055127232,
+        "context_precision": 0.9999999999,
+        "context_recall": 1.0
+      },
+      "seconds": 58.62
+    },
+    {
+      "question": "Quais são os direitos básicos do consumidor?",
+      "expected_answer": "Entre outros: proteção da vida, saúde e segurança; educação sobre o consumo; informação adequada; proteção contra publicidade enganosa; prevenção e reparação de danos; acesso à justiça; facilitação da defesa.",
+      "answer": "Os direitos básicos do consumidor previstos no art. 6º são [1]:\n\nI - a proteção da vida, saúde e segurança contra os riscos provocados por práticas no fornecimento de produtos e serviços considerados perigosos ou nocivos [1];\n\nII - a educação e divulgação sobre o consumo adequado dos produtos e serviços, asseguradas a liberdade de escolha e a igualdade nas contratações [1];\n\nIII - a informação adequada e clara sobre os diferentes produtos e serviços, com especificação correta de quantidade, características, composição, qualidade e preço, bem como sobre os riscos que apresentem [1];\n\nIV - a proteção contra a publicidade enganosa e abusiva, métodos comerciais coercitivos ou desleais, bem como contra práticas e cláusulas abusivas ou impostas no fornecimento de produtos e serviços [1];\n\nV - a modificação das cláusulas contratuais que estabeleçam prestações desproporcionais ou sua revisão em razão de fatos supervenientes que as tornem excessivamente onerosas [1];\n\nVI - a efetiva prevenção e reparação de danos patrimoniais e morais, individuais, coletivos e difusos [1];\n\nVII - o acesso aos órgãos judiciários e administrativos com vistas à prevenção ou reparação de danos patrimoniais e morais, individuais, coletivos ou difusos, assegurada a proteção Jurídica, administrativa e técnica aos necessitados [1];\n\nVIII - a facilitação da defesa de seus direitos, inclusive com a inversão do ônus da prova, a seu favor, no processo civil, quando, a critério do juiz, for verossímil a alegação ou quando for ele hipossuficiente, segundo as regras ordinárias de experiências [1].",
+      "grounded": true,
+      "cited_documents": [
+        "cdc-002.md"
+      ],
+      "context_documents": [
+        "cdc-002.md",
+        "cdc-003.md",
+        "cdc-017.md",
+        "cdc-002.md",
+        "cdc-016.md",
+        "cdc-012.md",
+        "cdc-014.md",
+        "cdc-007.md"
+      ],
+      "scores": {
+        "faithfulness": 1.0,
+        "answer_relevancy": 0.862686397745429,
+        "context_precision": 0.9166666666361111,
+        "context_recall": 1.0
+      },
+      "seconds": 62.547
+    },
+    {
+      "question": "O fornecedor pode condicionar a venda de um produto à compra de outro?",
+      "expected_answer": "Não. Condicionar o fornecimento de produto ou serviço ao fornecimento de outro é prática abusiva.",
+      "answer": "Não. É vedado ao fornecedor condicionar o fornecimento de um produto ou serviço ao fornecimento de outro produto ou serviço [1].",
+      "grounded": true,
+      "cited_documents": [
+        "cdc-013.md"
+      ],
+      "context_documents": [
+        "cdc-013.md",
+        "cdc-017.md",
+        "cdc-012.md",
+        "lgpd-005.md",
+        "cdc-018.md",
+        "cdc-016.md",
+        "cdc-017.md",
+        "cdc-018.md"
+      ],
+      "scores": {
+        "faithfulness": 1.0,
+        "answer_relevancy": 0.8686536204491867,
+        "context_precision": 0.9999999999,
+        "context_recall": 1.0
+      },
+      "seconds": 48.544
+    },
+    {
+      "question": "O que é fornecedor segundo o CDC?",
+      "expected_answer": "Toda pessoa física ou jurídica, pública ou privada, nacional ou estrangeira, que desenvolve atividades de produção, montagem, criação, construção, transformação, importação, exportação, distribuição ou comercialização de produtos ou prestação de serviços.",
+      "answer": "No art. 3º, o CDC define fornecedor como toda pessoa física ou jurídica, pública ou privada, nacional ou estrangeira, bem como os entes despersonalizados, que desenvolvem atividade de produção, montagem, criação, construção, transformação, importação, exportação, distribuição ou comercialização de produtos ou prestação de serviços. [1]\n\nPara essa definição, produto é qualquer bem, móvel ou imóvel, material ou imaterial, e serviço é qualquer atividade fornecida no mercado de consumo, mediante remuneração, inclusive as de natureza bancária, financeira, de crédito e securitária, salvo as decorrentes das relações de caráter trabalhista. [1]",
+      "grounded": true,
+      "cited_documents": [
+        "cdc-001.md"
+      ],
+      "context_documents": [
+        "cdc-001.md",
+        "cdc-012.md",
+        "cdc-007.md",
+        "cdc-005.md",
+        "cdc-004.md",
+        "cdc-006.md",
+        "cdc-003.md",
+        "cdc-008.md"
+      ],
+      "scores": {
+        "faithfulness": 1.0,
+        "answer_relevancy": 0.8658504151245229,
+        "context_precision": 0.9999999999,
+        "context_recall": 1.0
+      },
+      "seconds": 31.733
+    }
+  ]
+}

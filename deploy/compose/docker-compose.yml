@@ -29,6 +29,15 @@ x-app-env: &app-env
   VLADE_OBJECT_STORAGE__S3__CREATE_BUCKET: ${S3_CREATE_BUCKET:-false}
   # Server default for new knowledge bases (JSON). See .env.example.
   VLADE_DEFAULT_KB_CONFIG: ${VLADE_DEFAULT_KB_CONFIG:-{}}
+  # Traces (ADR-0015, ADR-0026). With --profile phoenix: VLADE_OTEL__ENABLED=true,
+  # VLADE_OTEL__ENDPOINT=http://phoenix:6006 and VLADE_OTEL__METRICS=false (Phoenix takes no metrics).
+  VLADE_OTEL__ENABLED: ${VLADE_OTEL__ENABLED:-false}
+  VLADE_OTEL__ENDPOINT: ${VLADE_OTEL__ENDPOINT:-}
+  VLADE_OTEL__METRICS: ${VLADE_OTEL__METRICS:-true}
+  VLADE_OTEL__PROJECT: ${VLADE_OTEL__PROJECT:-vlade-rag}
+  OTEL_EXPORTER_OTLP_HEADERS: ${OTEL_EXPORTER_OTLP_HEADERS:-}
+  # true: questions, answers and chunk texts go into the query log and the traces (personal data).
+  VLADE_LIMITS__STORE_QUERY_TEXT: ${VLADE_LIMITS__STORE_QUERY_TEXT:-false}
 
 services:
   migrate:
@@ -175,6 +184,31 @@ services:
     mem_limit: 512m
     restart: unless-stopped
 
+  phoenix:
+    # Arize Phoenix: AI traces and evaluation experiments (ADR-0026). Elastic License 2.0: a
+    # separate service, not part of the Python package. Locally: --profile dev --profile phoenix.
+    # UI and OTLP traces on port 6006. Authentication is off: the port listens on 127.0.0.1 only.
+    # To turn it on, set PHOENIX_ENABLE_AUTH=true and PHOENIX_SECRET in a compose override file:
+    # Phoenix refuses an empty secret, so this file does not pass one.
+    profiles: [phoenix]
+    image: arizephoenix/phoenix:version-22.0.0
+    environment:
+      PHOENIX_WORKING_DIR: /mnt/data
+      PHOENIX_ENABLE_AUTH: "false"
+    volumes:
+      - phoenix:/mnt/data
+    ports:
+      - "127.0.0.1:${PHOENIX_HOST_PORT:-6006}:6006"
+    healthcheck:
+      # The image has no shell and no curl: its Python checks the health endpoint.
+      test: ["CMD", "/usr/bin/python3.13", "-c",
+             "import urllib.request; urllib.request.urlopen('http://127.0.0.1:6006/healthz', timeout=3)"]
+      interval: 10s
+      timeout: 5s
+      retries: 30
+    mem_limit: 1g
+    restart: unless-stopped
+
   ollama:
     profiles: [ollama]
     image: ollama/ollama:0.40.16
@@ -188,4 +222,5 @@ volumes:
   pgdata:
   objects:
   s3data:
+  phoenix:
   ollama:

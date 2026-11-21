@@ -23,6 +23,7 @@ from langgraph.config import get_stream_writer
 from langgraph.graph import END, START, StateGraph
 from langgraph.runtime import Runtime
 
+from vlade_rag.core.application import semconv as sc
 from vlade_rag.core.application.answer import (
     AnswerDelta,
     AnswerQuery,
@@ -86,7 +87,9 @@ async def _rewrite(state: _State, runtime: Runtime[_Run]) -> _State:
     run = runtime.context
     transformer = run.steps.deps.query_transformers["rewrite"]
     original = run.prepared.query
-    with run.steps.deps.tracer.span("query_transform", {"vlade.transform": "rewrite"}) as span:
+    with run.steps.deps.tracer.span(
+        "query_transform", {sc.SPAN_KIND: sc.CHAIN, "vlade.transform": "rewrite"}
+    ) as span:
         queries = await transformer.transform(run.ctx, run.prepared.kb, original)
         derived = [q.text for q in queries if q.text.strip() and q.text != original.text]
         span.set_attribute("vlade.rewritten", bool(derived))
@@ -141,7 +144,8 @@ def _widen(state: _State, runtime: Runtime[_Run]) -> _State:
     factor = run.prepared.kb.config.orchestration.retry_top_k_factor
     top_k = min(state["top_k"] * factor, run.steps.deps.limits.max_top_k)
     with run.steps.deps.tracer.span(
-        "query_retry", {"vlade.attempt": state["attempt"] + 1, "vlade.top_k": top_k}
+        "query_retry",
+        {sc.SPAN_KIND: sc.CHAIN, "vlade.attempt": state["attempt"] + 1, "vlade.top_k": top_k},
     ):
         return {"attempt": state["attempt"] + 1, "top_k": top_k}
 
