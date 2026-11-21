@@ -1,0 +1,467 @@
+{
+  "metrics": {
+    "recall@1": 0.65,
+    "precision@1": 0.65,
+    "ndcg@1": 0.65,
+    "recall@3": 0.9,
+    "precision@3": 0.3,
+    "ndcg@3": 0.788093,
+    "recall@5": 1.0,
+    "precision@5": 0.2,
+    "ndcg@5": 0.831161,
+    "recall@10": 1.0,
+    "precision@10": 0.1,
+    "ndcg@10": 0.831161,
+    "mrr": 0.775
+  },
+  "config": {
+    "evaluator": "retrieval",
+    "vlade_rag_version": "0.0.1",
+    "date": "2026-11-21T00:57:32+00:00",
+    "knowledge_base": {
+      "slug": "legal-ptbr",
+      "id": "01a1f672-cb84-786c-a880-28977ab03870",
+      "epoch": 100
+    },
+    "knowledge_base_config": {
+      "language": "pt",
+      "chunking": {
+        "strategy": "markdown",
+        "max_tokens": 400,
+        "overlap_tokens": 40,
+        "tokenizer": "BAAI/bge-m3"
+      },
+      "embeddings": {
+        "provider": "openrouter",
+        "model": "openai/text-embedding-3-small",
+        "dimension": 1536,
+        "batch_size": 64
+      },
+      "retrieval": {
+        "retrievers": [
+          "dense",
+          "lexical"
+        ],
+        "top_k_per_retriever": 50,
+        "fusion": {
+          "strategy": "rrf",
+          "k": 60.0,
+          "weights": {}
+        },
+        "rerank": {
+          "enabled": false,
+          "provider": "sentence-transformers",
+          "model": "BAAI/bge-reranker-v2-m3",
+          "candidates": 50,
+          "top_n": 8
+        },
+        "query_transform": "hyde",
+        "hnsw_ef_search": 100
+      },
+      "generation": {
+        "provider": "openrouter",
+        "model": "tencent/hy4-flash",
+        "temperature": 0.1,
+        "max_context_tokens": 6000,
+        "max_output_tokens": 4000,
+        "prompt": "answer_with_citations",
+        "require_citations": true
+      }
+    },
+    "questions": {
+      "scored": 20,
+      "in_dataset": 20
+    },
+    "cutoffs": [
+      1,
+      3,
+      5,
+      10
+    ],
+    "chunks_fetched_per_question": 50,
+    "unit": "document (each document counts once, at the rank of its best chunk)"
+  },
+  "items": 20,
+  "details": [
+    {
+      "question": "O que é dado pesosal sensvíel segundo a LGPD?",
+      "relevant_documents": [
+        "lgpd-003.md"
+      ],
+      "retrieved_documents": [
+        "lgpd-003.md",
+        "lgpd-007.md",
+        "lgpd-006.md",
+        "lgpd-004.md",
+        "lgpd-005.md",
+        "lgpd-010.md",
+        "lgpd-002.md",
+        "lgpd-009.md",
+        "lgpd-001.md",
+        "lgpd-014.md"
+      ],
+      "first_relevant_rank": 1
+    },
+    {
+      "question": "Quando a LGPD entra em vigor?",
+      "relevant_documents": [
+        "lgpd-050.md"
+      ],
+      "retrieved_documents": [
+        "lgpd-045.md",
+        "lgpd-001.md",
+        "lgpd-050.md",
+        "lgpd-012.md",
+        "lgpd-002.md",
+        "lgpd-004.md",
+        "lgpd-048.md",
+        "lgpd-015.md",
+        "lgpd-003.md",
+        "lgpd-036.md"
+      ],
+      "first_relevant_rank": 3
+    },
+    {
+      "question": "Qual é o valor máximo da multa simlpes prevsita na LGPD?",
+      "relevant_documents": [
+        "lgpd-037.md"
+      ],
+      "retrieved_documents": [
+        "lgpd-039.md",
+        "lgpd-038.md",
+        "lgpd-037.md",
+        "cdc-019.md",
+        "cdc-030.md",
+        "lgpd-016.md",
+        "lgpd-030.md",
+        "lgpd-029.md",
+        "lgpd-027.md",
+        "cdc-029.md"
+      ],
+      "first_relevant_rank": 3
+    },
+    {
+      "question": "Como deve ser feito o trataemnto de dados pessoais de criaçnas?",
+      "relevant_documents": [
+        "lgpd-007.md"
+      ],
+      "retrieved_documents": [
+        "lgpd-007.md",
+        "lgpd-003.md",
+        "lgpd-006.md",
+        "lgpd-004.md",
+        "lgpd-005.md",
+        "lgpd-012.md",
+        "lgpd-010.md",
+        "lgpd-031.md",
+        "lgpd-002.md",
+        "lgpd-009.md"
+      ],
+      "first_relevant_rank": 1
+    },
+    {
+      "question": "Quem é o encarergado pelo trataemnto de dados pessoais?",
+      "relevant_documents": [
+        "lgpd-003.md"
+      ],
+      "retrieved_documents": [
+        "lgpd-006.md",
+        "lgpd-003.md",
+        "lgpd-026.md",
+        "lgpd-012.md",
+        "lgpd-009.md",
+        "lgpd-004.md",
+        "lgpd-010.md",
+        "lgpd-013.md",
+        "lgpd-007.md",
+        "lgpd-035.md"
+      ],
+      "first_relevant_rank": 2
+    },
+    {
+      "question": "Em quais hipóetses o trataemnto de dados pessoais pode ser realizado?",
+      "relevant_documents": [
+        "lgpd-004.md"
+      ],
+      "retrieved_documents": [
+        "lgpd-004.md",
+        "lgpd-003.md",
+        "lgpd-006.md",
+        "lgpd-007.md",
+        "lgpd-002.md",
+        "lgpd-012.md",
+        "lgpd-009.md",
+        "lgpd-005.md",
+        "lgpd-010.md",
+        "lgpd-013.md"
+      ],
+      "first_relevant_rank": 1
+    },
+    {
+      "question": "Em quanto tempo o contrloador deve fornecer a declaarção completa pedida pelo titular?",
+      "relevant_documents": [
+        "lgpd-010.md"
+      ],
+      "retrieved_documents": [
+        "lgpd-010.md",
+        "lgpd-004.md",
+        "lgpd-009.md",
+        "lgpd-033.md",
+        "lgpd-005.md",
+        "cdc-015.md",
+        "cdc-009.md",
+        "cdc-017.md",
+        "lgpd-006.md",
+        "lgpd-003.md"
+      ],
+      "first_relevant_rank": 1
+    },
+    {
+      "question": "O que o contrloador deve fazer quando ocorre um inciednte de segurança?",
+      "relevant_documents": [
+        "lgpd-033.md"
+      ],
+      "retrieved_documents": [
+        "lgpd-033.md",
+        "lgpd-031.md",
+        "lgpd-035.md",
+        "lgpd-029.md",
+        "cdc-004.md",
+        "lgpd-034.md",
+        "lgpd-023.md",
+        "lgpd-005.md",
+        "lgpd-007.md",
+        "lgpd-032.md"
+      ],
+      "first_relevant_rank": 1
+    },
+    {
+      "question": "Quais são os fundaemntos da discilpina da proteção de dados pessoais?",
+      "relevant_documents": [
+        "lgpd-001.md"
+      ],
+      "retrieved_documents": [
+        "lgpd-003.md",
+        "lgpd-035.md",
+        "lgpd-007.md",
+        "lgpd-001.md",
+        "lgpd-004.md",
+        "lgpd-002.md",
+        "lgpd-005.md",
+        "lgpd-010.md",
+        "lgpd-006.md",
+        "lgpd-031.md"
+      ],
+      "first_relevant_rank": 4
+    },
+    {
+      "question": "A LGPD se aplica ao tratamento de dados feito para fins exclusiavmente jornalsíticos?",
+      "relevant_documents": [
+        "lgpd-002.md"
+      ],
+      "retrieved_documents": [
+        "lgpd-002.md",
+        "lgpd-012.md",
+        "lgpd-004.md",
+        "lgpd-006.md",
+        "lgpd-003.md",
+        "lgpd-014.md",
+        "lgpd-013.md",
+        "lgpd-007.md",
+        "lgpd-005.md",
+        "lgpd-015.md"
+      ],
+      "first_relevant_rank": 1
+    },
+    {
+      "question": "Qual é o prazo para desistir de uma compra feita fora do estabelceimento comecrial?",
+      "relevant_documents": [
+        "cdc-017.md"
+      ],
+      "retrieved_documents": [
+        "cdc-017.md",
+        "cdc-009.md",
+        "cdc-006.md",
+        "cdc-018.md",
+        "cdc-014.md",
+        "cdc-013.md",
+        "cdc-011.md",
+        "cdc-041.md",
+        "cdc-033.md",
+        "cdc-015.md"
+      ],
+      "first_relevant_rank": 1
+    },
+    {
+      "question": "Qual é o prazo para reclamar de vícios aparnetes em produtos duráevis?",
+      "relevant_documents": [
+        "cdc-009.md"
+      ],
+      "retrieved_documents": [
+        "cdc-009.md",
+        "cdc-006.md",
+        "cdc-007.md",
+        "cdc-008.md",
+        "cdc-004.md",
+        "cdc-017.md",
+        "cdc-005.md",
+        "cdc-041.md",
+        "cdc-019.md",
+        "cdc-018.md"
+      ],
+      "first_relevant_rank": 1
+    },
+    {
+      "question": "Quem é consiedrado consuimdor pelo CDC?",
+      "relevant_documents": [
+        "cdc-001.md"
+      ],
+      "retrieved_documents": [
+        "cdc-044.md",
+        "cdc-001.md",
+        "cdc-003.md",
+        "cdc-032.md",
+        "cdc-043.md",
+        "cdc-004.md",
+        "cdc-002.md",
+        "cdc-006.md",
+        "cdc-046.md",
+        "cdc-010.md"
+      ],
+      "first_relevant_rank": 2
+    },
+    {
+      "question": "Em quanto tempo o forneecdor deve sanar o vício de um proudto?",
+      "relevant_documents": [
+        "cdc-006.md"
+      ],
+      "retrieved_documents": [
+        "cdc-006.md",
+        "cdc-007.md",
+        "cdc-009.md",
+        "cdc-008.md",
+        "cdc-004.md",
+        "cdc-041.md",
+        "cdc-017.md",
+        "cdc-011.md",
+        "cdc-012.md",
+        "cdc-020.md"
+      ],
+      "first_relevant_rank": 1
+    },
+    {
+      "question": "O que aconetce quando o consuimdor é cobrado em quantia indevida?",
+      "relevant_documents": [
+        "cdc-014.md"
+      ],
+      "retrieved_documents": [
+        "cdc-014.md",
+        "cdc-007.md",
+        "cdc-017.md",
+        "cdc-006.md",
+        "cdc-012.md",
+        "cdc-018.md",
+        "cdc-013.md",
+        "cdc-026.md",
+        "cdc-027.md",
+        "cdc-020.md"
+      ],
+      "first_relevant_rank": 1
+    },
+    {
+      "question": "Por quanto tempo inforamções negativas podem ficar em cadastros de consumdiores?",
+      "relevant_documents": [
+        "cdc-015.md"
+      ],
+      "retrieved_documents": [
+        "cdc-015.md",
+        "cdc-006.md",
+        "cdc-027.md",
+        "cdc-010.md",
+        "cdc-009.md",
+        "cdc-017.md",
+        "cdc-014.md",
+        "cdc-019.md",
+        "cdc-041.md",
+        "cdc-005.md"
+      ],
+      "first_relevant_rank": 1
+    },
+    {
+      "question": "Qual é o prazo de prescirção para pedir repaarção de danos causados por fato do produto?",
+      "relevant_documents": [
+        "cdc-009.md"
+      ],
+      "retrieved_documents": [
+        "cdc-009.md",
+        "cdc-006.md",
+        "cdc-004.md",
+        "cdc-005.md",
+        "cdc-007.md",
+        "cdc-041.md",
+        "cdc-008.md",
+        "cdc-042.md",
+        "cdc-019.md",
+        "cdc-020.md"
+      ],
+      "first_relevant_rank": 1
+    },
+    {
+      "question": "Quais são os diretios básicos do consuimdor?",
+      "relevant_documents": [
+        "cdc-002.md"
+      ],
+      "retrieved_documents": [
+        "cdc-002.md",
+        "cdc-003.md",
+        "cdc-032.md",
+        "cdc-015.md",
+        "cdc-010.md",
+        "cdc-031.md",
+        "cdc-005.md",
+        "cdc-017.md",
+        "cdc-004.md",
+        "cdc-008.md"
+      ],
+      "first_relevant_rank": 1
+    },
+    {
+      "question": "O forneecdor pode condiiconar a venda de um produto à compra de outro?",
+      "relevant_documents": [
+        "cdc-013.md"
+      ],
+      "retrieved_documents": [
+        "cdc-018.md",
+        "cdc-017.md",
+        "cdc-013.md",
+        "cdc-006.md",
+        "cdc-012.md",
+        "cdc-007.md",
+        "cdc-004.md",
+        "cdc-044.md",
+        "cdc-011.md",
+        "cdc-019.md"
+      ],
+      "first_relevant_rank": 3
+    },
+    {
+      "question": "O que é forneecdor segnudo o CDC?",
+      "relevant_documents": [
+        "cdc-001.md"
+      ],
+      "retrieved_documents": [
+        "cdc-007.md",
+        "cdc-044.md",
+        "cdc-004.md",
+        "cdc-001.md",
+        "cdc-006.md",
+        "cdc-003.md",
+        "cdc-002.md",
+        "cdc-013.md",
+        "cdc-012.md",
+        "cdc-011.md"
+      ],
+      "first_relevant_rank": 4
+    }
+  ]
+}

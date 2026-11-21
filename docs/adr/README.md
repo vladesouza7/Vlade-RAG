@@ -22,6 +22,7 @@ Cada arquivo registra uma decisão. Um ADR aceito não muda. Para mudar uma deci
 | [0016](0016-asyncpg-e-migracoes-sql.md) | asyncpg e migrações em SQL (substitui o item 4 do ADR-0004) | Aceito | — |
 | [0017](0017-minio-deixa-de-ser-o-servico-s3-de-exemplo.md) | O MinIO deixa de ser o serviço S3 de exemplo (substitui o item 3 do ADR-0006) | Aceito | — |
 | [0018](0018-reranker-por-api-primeiro.md) | Reranker por API primeiro, reranker local como extra opcional (complementa o item 2 do ADR-0008) | Aceito | — |
+| [0019](0019-transformadores-de-consulta-e-retriever-fuzzy.md) | Transformadores de consulta e retriever fuzzy (complementa o item 3 do ADR-0005 e o ADR-0018) | Aceito | — |
 
 ## Modelo
 
