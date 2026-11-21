@@ -98,6 +98,16 @@ A pasta [`fase3-dataset-v2/`](fase3-dataset-v2/) guarda 15 relatórios do datase
 
 As tabelas de resultado estão no README do dataset. O resumo por grupo e por estilo sai do script `scripts/datasets/summarize_by_group.py`.
 
+## Benchmark de latência e de vazão (tarefa 3.10)
+
+A pasta [`fase3-benchmark/`](fase3-benchmark/) guarda 36 relatórios do `scripts/benchmarks/bench.py` e o [README](fase3-benchmark/README.md) com o método, o ambiente, as tabelas e as limitações.
+
+| Subpasta | O que tem |
+|---|---|
+| `ingestao/` | Vazão de ingestão por tamanho de documento e por número de jobs |
+| `busca/` | Latência da busca na base real, sem reranker e com dois rerankers |
+| `escala/` | Busca em uma base sintética de 6 mil a 104 mil chunks, a ingestão que a cresceu e o primeiro token |
+
 ## Linha de base da fase 1
 
 | Métrica | Valor |

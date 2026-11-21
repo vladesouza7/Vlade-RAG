@@ -1,0 +1,70 @@
+{
+  "benchmark": "search",
+  "knowledge_base": "bench-hash",
+  "retrievers": [
+    "dense",
+    "lexical"
+  ],
+  "rerank": null,
+  "query_transform": "none",
+  "top_k": 8,
+  "candidates": null,
+  "concurrency": 1,
+  "requests": 100,
+  "failures": 0,
+  "failure_types": [],
+  "throughput_per_second": 1.52,
+  "latency": {
+    "n": 100,
+    "p50_ms": 577.7,
+    "p95_ms": 1183.1,
+    "p99_ms": 1941.9,
+    "mean_ms": 658.3,
+    "max_ms": 2260.5
+  },
+  "stages": {
+    "embed_query": {
+      "n": 100,
+      "p50_ms": 0.3,
+      "p95_ms": 0.4,
+      "p99_ms": 0.7,
+      "mean_ms": 0.3,
+      "max_ms": 1.0,
+      "requests": 100
+    },
+    "retrieval.dense": {
+      "n": 100,
+      "p50_ms": 14.3,
+      "p95_ms": 77.6,
+      "p99_ms": 247.7,
+      "mean_ms": 25.9,
+      "max_ms": 272.8,
+      "requests": 100
+    },
+    "retrieval.lexical": {
+      "n": 100,
+      "p50_ms": 568.4,
+      "p95_ms": 1174.3,
+      "p99_ms": 1932.3,
+      "mean_ms": 650.2,
+      "max_ms": 2249.7,
+      "requests": 100
+    },
+    "fusion": {
+      "n": 100,
+      "p50_ms": 0.2,
+      "p95_ms": 0.4,
+      "p99_ms": 0.6,
+      "mean_ms": 0.2,
+      "max_ms": 0.7,
+      "requests": 100
+    }
+  },
+  "caches": "off",
+  "environment": {
+    "python": "3.12.3",
+    "platform": "Linux-6.18.58.1-microsoft-standard-WSL2-x86_64-with-glibc2.39",
+    "cpus": 4,
+    "memory": "7.7 GB"
+  }
+}

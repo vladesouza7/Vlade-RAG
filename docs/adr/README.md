@@ -23,6 +23,7 @@ Cada arquivo registra uma decisão. Um ADR aceito não muda. Para mudar uma deci
 | [0017](0017-minio-deixa-de-ser-o-servico-s3-de-exemplo.md) | O MinIO deixa de ser o serviço S3 de exemplo (substitui o item 3 do ADR-0006) | Aceito | — |
 | [0018](0018-reranker-por-api-primeiro.md) | Reranker por API primeiro, reranker local como extra opcional (complementa o item 2 do ADR-0008) | Aceito | — |
 | [0019](0019-transformadores-de-consulta-e-retriever-fuzzy.md) | Transformadores de consulta e retriever fuzzy (complementa o item 3 do ADR-0005 e o ADR-0018) | Aceito | — |
+| [0020](0020-metas-de-latencia-e-de-vazao.md) | Metas de latência e de vazão depois do benchmark da fase 3 | Proposto | — |
 
 ## Modelo
 
