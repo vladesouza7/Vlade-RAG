@@ -79,6 +79,7 @@ module = [
     "jsonschema.*",
     "boto3.*",
     "botocore.*",
+    "sentence_transformers.*",
 ]
 ignore_missing_imports = true
 

@@ -55,9 +55,10 @@ Extras de `vlade-rag` disponíveis na fase 1:
 | `cache` | redis-py (fase 2). Atende Valkey e Redis |
 | `mcp` | SDK oficial `mcp` e `jsonschema` (fase 2). Traz o servidor MCP |
 | `s3` | boto3 (fase 2). Traz o armazenamento de objetos pela API S3 |
+| `local-models` | `sentence-transformers` (fase 3). Traz o reranker local. Puxa o PyTorch e, no Linux, bibliotecas NVIDIA CUDA com licença proprietária. Fica fora do extra `server` e da verificação de licenças (ADR-0001, item 4) |
 | `server` | `native`, `api`, `cli`, `postgres`, `ollama`, `openai`, `otel`, `cache`, `mcp`, `s3` |
 
-O Gemini usa o endpoint compatível com a API da OpenAI e não precisa de extra. Extras previstos para as fases seguintes: `qdrant`, `local-models` (sentence-transformers), `langgraph`, `eval` (RAGAS), `langfuse` e `all`.
+O Gemini usa o endpoint compatível com a API da OpenAI e não precisa de extra. Extras previstos para as fases seguintes: `qdrant`, `langgraph`, `eval` (RAGAS), `langfuse` e `all`.
 
 Os parsers de texto, Markdown e HTML não precisam de extra. Eles usam só a biblioteca padrão.
 
@@ -794,8 +795,8 @@ retrieval:
     k: 60
   rerank:
     enabled: false
-    provider: sentence-transformers   # openrouter (ADR-0018) ou um provedor compatível. O adapter local ainda não existe
-    model: BAAI/bge-reranker-v2-m3    # com openrouter: por exemplo cohere/rerank-v3.5
+    provider: sentence-transformers   # local (extra local-models), openrouter (ADR-0018) ou um provedor compatível
+    model: BAAI/bge-reranker-v2-m3    # local: cerca de 2,3 GB de memória. Com openrouter: por exemplo cohere/rerank-v3.5
     candidates: 50
     top_n: 8
   query_transform: none          # none, rewrite, multi_query, hyde (usa o LLM da base, ADR-0019)
