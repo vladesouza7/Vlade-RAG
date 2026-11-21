@@ -252,7 +252,9 @@ class Reranker(Protocol):
 class QueryTransformer(Protocol):
     name: str
 
-    async def transform(self, ctx: TenantContext, query: Query) -> list[Query]: ...
+    async def transform(self, ctx: TenantContext, kb: KnowledgeBase, query: Query) -> list[Query]:
+        """Return the queries to run. The first one is the original query."""
+        ...
 
 
 @runtime_checkable

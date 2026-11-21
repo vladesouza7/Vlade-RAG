@@ -100,6 +100,9 @@ class Query:
     knowledge_base_id: UUID
     filters: MetadataFilter | None = None
     language: str | None = None
+    # Names of the retrievers that run this query. None: every retriever of the base. A query
+    # transformer sets it, for example HyDE sends its hypothetical answer only to "dense".
+    retrievers: tuple[str, ...] | None = None
 
 
 @dataclass(frozen=True, slots=True)

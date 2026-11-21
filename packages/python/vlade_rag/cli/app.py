@@ -125,9 +125,22 @@ def eval_run(
     rerank_provider: str = typer.Option(
         "openrouter", help="The provider of --rerank-model (a plugin of kind 'reranker')."
     ),
+    retrievers: str | None = typer.Option(
+        None,
+        help="Comma-separated retrievers for this run only, for example dense,lexical,fuzzy.",
+    ),
+    query_transform: str | None = typer.Option(
+        None,
+        help="Query transform for this run only: none, rewrite, multi_query or hyde.",
+    ),
 ) -> None:
-    """Score the retrieval of a knowledge base with a dataset (no LLM). Needs the admin role."""
-    from vlade_rag.core.domain.kb_config import RerankConfig
+    """Score the retrieval of a knowledge base with a dataset. Needs the admin role.
+
+    The scoring uses no LLM. A reranker or a query transform calls the provider you choose.
+    """
+    from pydantic import ValidationError
+
+    from vlade_rag.core.domain.kb_config import RerankConfig, RetrievalConfig
     from vlade_rag.evaluation.datasets import load_dataset
     from vlade_rag.evaluation.retrieval import RetrievalEvaluator
 
@@ -136,12 +149,33 @@ def eval_run(
         if rerank_model
         else None
     )
+    try:
+        # model_validate checks the values at run time: the options arrive as plain text.
+        overrides = RetrievalConfig.model_validate(
+            {
+                "retrievers": tuple(r.strip() for r in retrievers.split(",") if r.strip())
+                if retrievers
+                else ("dense", "lexical"),
+                "query_transform": query_transform or "none",
+            }
+        )
+    except ValidationError as exc:
+        typer.echo(f"Invalid option: {exc.errors()[0]['msg']}", err=True)
+        raise typer.Exit(2) from exc
+    names = overrides.retrievers if retrievers else None
+    transform = overrides.query_transform if query_transform else None
 
     async def go(rt: Any) -> Any:
         items = load_dataset(dataset)
         ctx = await _ctx(rt)
         kb = await rt.deps.repository.get_knowledge_base(ctx, knowledge_base)
-        return await RetrievalEvaluator(rt.deps, rerank=rerank).evaluate(ctx, kb, items, k)
+        evaluator = RetrievalEvaluator(
+            rt.deps,
+            rerank=rerank,
+            retrievers=names,
+            query_transform=transform,
+        )
+        return await evaluator.evaluate(ctx, kb, items, k)
 
     report = _run(_with_runtime(go))
     payload = {

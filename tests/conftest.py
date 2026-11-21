@@ -105,7 +105,7 @@ async def _memory_world() -> World:
     deps = _common(
         repository=adapters.repository,
         vector_index=adapters.vector_index,
-        lexical_indexes={"lexical": adapters.lexical_index},
+        lexical_indexes={"lexical": adapters.lexical_index, "fuzzy": adapters.fuzzy_index},
         object_storage=adapters.object_storage,
         job_queue=adapters.job_queue,
         audit_log=adapters.audit_log,
@@ -180,6 +180,7 @@ async def _postgres_world(app_url: str) -> World:
         PostgresJobQueue,
         PostgresKnowledgeRepository,
         PostgresTenantDirectory,
+        TrigramLexicalIndex,
         TsvectorLexicalIndex,
     )
 
@@ -190,7 +191,7 @@ async def _postgres_world(app_url: str) -> World:
     deps = _common(
         repository=PostgresKnowledgeRepository(db),
         vector_index=PgVectorIndex(db),
-        lexical_indexes={"lexical": TsvectorLexicalIndex(db)},
+        lexical_indexes={"lexical": TsvectorLexicalIndex(db), "fuzzy": TrigramLexicalIndex(db)},
         object_storage=MemoryObjectStorage(objects),
         job_queue=queue,
         audit_log=PostgresAuditLog(db),

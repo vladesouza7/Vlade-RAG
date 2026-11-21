@@ -19,6 +19,8 @@ from vlade_rag.core.ports import (
     DocumentParser,
     EmbeddingProvider,
     LLMProvider,
+    PromptRegistry,
+    QueryTransformer,
     Reranker,
     TenantDirectory,
     Tracer,
@@ -30,6 +32,7 @@ from vlade_rag.generation.providers.extractive import ExtractiveLLM
 from vlade_rag.ingestion.chunking import NativeChunker, NativeTextNormalizer
 from vlade_rag.ingestion.parsers.basic import basic_parsers
 from vlade_rag.retrieval.fusion import RRFFusion
+from vlade_rag.retrieval.transform import Mode
 
 Closer = Callable[[], Awaitable[None]]
 
@@ -141,6 +144,24 @@ def builtin_plugins(
 
         return factory
 
+    def llm_transformer(mode: Mode) -> Callable[..., QueryTransformer]:
+        # A query transformer plugin gets the same arguments: the LLM resolver, the prompt
+        # registry and the longest query the server accepts.
+        def factory(
+            llms: Callable[[GenerationConfig], LLMProvider],
+            prompts: PromptRegistry,
+            max_query_chars: int,
+        ) -> QueryTransformer:
+            from vlade_rag.retrieval.transform import LLMQueryTransformer
+
+            return LLMQueryTransformer(mode, llms, prompts, max_query_chars=max_query_chars)
+
+        return factory
+
+    modes: tuple[Mode, ...] = ("rewrite", "multi_query", "hyde")
+    for mode in modes:
+        specs.append(PluginSpec("query_transformer", mode, llm_transformer(mode), f"LLM: {mode}"))
+
     for name in compatible:
         specs.append(
             PluginSpec("embeddings", name, openai_embeddings(name), f"{name} (OpenAI-compatible)")
@@ -223,7 +244,7 @@ async def build_runtime(
         ports = {
             "repository": mem.repository,
             "vector_index": mem.vector_index,
-            "lexical_indexes": {"lexical": mem.lexical_index},
+            "lexical_indexes": {"lexical": mem.lexical_index, "fuzzy": mem.fuzzy_index},
             "job_queue": mem.job_queue,
             "audit_log": mem.audit_log,
             "cache": mem.cache,
@@ -244,6 +265,7 @@ async def build_runtime(
             PostgresJobQueue,
             PostgresKnowledgeRepository,
             PostgresTenantDirectory,
+            TrigramLexicalIndex,
             TsvectorLexicalIndex,
         )
 
@@ -257,7 +279,10 @@ async def build_runtime(
         ports = {
             "repository": PostgresKnowledgeRepository(db),
             "vector_index": PgVectorIndex(db),
-            "lexical_indexes": {"lexical": TsvectorLexicalIndex(db)},
+            "lexical_indexes": {
+                "lexical": TsvectorLexicalIndex(db),
+                "fuzzy": TrigramLexicalIndex(db),
+            },
             "job_queue": PostgresJobQueue(db),
             "audit_log": PostgresAuditLog(db),
             "cache": MemoryCache(MemoryStore()),  # per process unless VLADE_CACHE__URL is set
@@ -307,16 +332,23 @@ async def build_runtime(
         ports["rate_limiter"] = ValkeyRateLimiter(client)
 
     limits = settings.limits
+    prompts = BuiltinPromptRegistry()
+    llms = _resolver(registry, "llm", clients)
+    query_transformers = {
+        name: registry.create("query_transformer", name, llms, prompts, limits.max_query_chars)
+        for name in registry.names("query_transformer")
+    }
     deps = Dependencies(
         object_storage=object_storage,
         parsers=default_parsers(),
         normalizer=NativeTextNormalizer(),
         chunker=NativeChunker(),
         fusion=RRFFusion(),
-        prompts=BuiltinPromptRegistry(),
+        prompts=prompts,
         embeddings=_resolver(registry, "embeddings", clients),
-        llms=_resolver(registry, "llm", clients),
+        llms=llms,
         rerankers=_resolver(registry, "reranker", clients),
+        query_transformers=query_transformers,
         limits=Limits(
             max_upload_bytes=limits.max_upload_bytes,
             max_query_chars=limits.max_query_chars,

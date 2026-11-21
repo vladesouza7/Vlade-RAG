@@ -51,3 +51,11 @@ def test_main_without_cli_extra(monkeypatch: pytest.MonkeyPatch) -> None:
     with pytest.raises(SystemExit) as exc:
         main()
     assert exc.value.code == 1
+
+
+@pytest.mark.parametrize("option", [["--retrievers", "dense,nope"], ["--query-transform", "nope"]])
+def test_eval_run_refuses_an_unknown_retrieval_option(option: list[str]) -> None:
+    # The options are checked before the command opens the database.
+    result = runner.invoke(app, ["eval", "run", "kb", "--dataset", "questions.jsonl", *option])
+    assert result.exit_code == 2
+    assert "Invalid option" in result.output

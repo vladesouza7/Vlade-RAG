@@ -168,13 +168,23 @@ class Search:
         cached = await self._cache_get(ctx, cache_key)
         if cached is not None:
             return cached
+        queries = await self._transform(ctx, kb, query)
+        # One list per (query, retriever). The original query keeps the plain retriever name, so
+        # the weights of the fusion and the tie-break (ARCHITECTURE 11.2) still apply to it. The
+        # lists of a derived query are named "dense#1", "lexical#1", and so on.
+        jobs = [
+            (r.name if i == 0 else f"{r.name}#{i}", r, q)
+            for i, q in enumerate(queries)
+            for r in retrievers
+            if q.retrievers is None or r.name in q.retrievers
+        ]
         lists = await asyncio.gather(
-            *(r.retrieve(ctx, kb, query, cfg.top_k_per_retriever) for r in retrievers)
+            *(r.retrieve(ctx, kb, q, cfg.top_k_per_retriever) for _, r, q in jobs)
         )
         candidates = max(top_k, cfg.rerank.candidates) if use_rerank else top_k
-        with self.deps.tracer.span("fusion", {"vlade.retrievers": len(retrievers)}):
+        with self.deps.tracer.span("fusion", {"vlade.lists": len(jobs)}):
             fused = self.deps.fusion.fuse(
-                {r.name: results for r, results in zip(retrievers, lists, strict=True)},
+                {name: results for (name, _, _), results in zip(jobs, lists, strict=True)},
                 candidates,
             )
         if use_rerank and self.deps.rerankers is not None and fused:
@@ -184,6 +194,22 @@ class Search:
         results = fused[:top_k]
         await self._cache_put(ctx, cache_key, results)
         return results
+
+    async def _transform(self, ctx: TenantContext, kb: KnowledgeBase, query: Query) -> list[Query]:
+        """Apply ``retrieval.query_transform``. The first query returned is the original one."""
+        mode = kb.config.retrieval.query_transform
+        if mode == "none":
+            return [query]
+        transformer = self.deps.query_transformers.get(mode)
+        if transformer is None:
+            raise InvalidArgument(f"Query transform '{mode}' is not configured on this server.")
+        with self.deps.tracer.span("query_transform", {"vlade.transform": mode}) as span:
+            queries = await transformer.transform(ctx, kb, query)
+            span.set_attribute("vlade.queries", len(queries))
+        # A transformer must keep the original query first. Enforce it here, so a faulty plugin
+        # cannot make the search lose the question of the user.
+        rest = [q for q in queries if q != query]
+        return [query, *rest]
 
     # Result cache (ARCHITECTURE 11.6). The key holds the base epoch: publishing, deleting or
     # reindexing bumps it, so an old entry is never read again and needs no sweep.

@@ -22,6 +22,7 @@ from vlade_rag.core.ports import (
     LLMProvider,
     ObjectStorage,
     PromptRegistry,
+    QueryTransformer,
     RateLimiter,
     Reranker,
     Span,
@@ -78,6 +79,8 @@ class Dependencies:
     embeddings: Callable[[EmbeddingsConfig], EmbeddingProvider]
     llms: Callable[[GenerationConfig], LLMProvider]
     rerankers: Callable[[RerankConfig], Reranker] | None = None
+    # ``retrieval.query_transform`` value -> transformer ("rewrite", "multi_query", "hyde").
+    query_transformers: Mapping[str, QueryTransformer] = field(default_factory=dict)
     cache: Cache | None = None
     rate_limiter: RateLimiter | None = None  # without it no request limit applies
     tenants: TenantDirectory | None = None  # needed for quotas; without it no quota applies
