@@ -14,7 +14,7 @@ Cada arquivo registra uma decisão. Um ADR aceito não muda. Para mudar uma deci
 | [0008](0008-modelos-padrao.md) | Modelos padrão de embeddings e de reranking | Aceito. Item 2 complementado pelo ADR-0018 | D4, D5 |
 | [0009](0009-idiomas-do-projeto.md) | Idiomas do código e da documentação | Aceito | — |
 | [0010](0010-extracao-docling.md) | Docling para extração de documentos | Aceito | D6 |
-| [0011](0011-orquestracao-kestra-langgraph.md) | Kestra para operação, LangGraph para consulta, fila no PostgreSQL | Aceito | — |
+| [0011](0011-orquestracao-kestra-langgraph.md) | Kestra para operação, LangGraph para consulta, fila no PostgreSQL | Aceito. Item 2 complementado pelo ADR-0023 | — |
 | [0012](0012-multi-tenancy-rls.md) | Isolamento de tenants com Row-Level Security | Aceito | — |
 | [0013](0013-mcp-qualquer-cliente.md) | MCP como interface de primeira classe para qualquer cliente | Aceito | D8 |
 | [0014](0014-sem-human-in-the-loop-v1.md) | Sem human-in-the-loop na versão 1 | Aceito | D9 |
@@ -26,6 +26,8 @@ Cada arquivo registra uma decisão. Um ADR aceito não muda. Para mudar uma deci
 | [0020](0020-metas-de-latencia-e-de-vazao.md) | Metas de latência e de vazão depois do benchmark da fase 3 | Proposto | — |
 | [0021](0021-rustfs-servico-s3-de-exemplo.md) | RustFS é o serviço S3 de exemplo (completa os itens 3 e 4 do ADR-0017) | Aceito | D2 |
 | [0022](0022-retriever-bm25-com-pg-search.md) | Retriever bm25 com pg_search (complementa o item 2 do ADR-0005 e o item 2 do ADR-0020) | Aceito | D1 |
+| [0023](0023-motor-de-consulta-langgraph.md) | Motor de consulta LangGraph (complementa o item 2 do ADR-0011) | Aceito | — |
+| [0024](0024-gate-de-qualidade-na-ci.md) | Gate de qualidade na CI | Aceito | — |
 
 ## Modelo
 

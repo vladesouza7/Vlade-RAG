@@ -31,6 +31,7 @@ from vlade_rag.generation.prompts import BuiltinPromptRegistry
 from vlade_rag.generation.providers.extractive import ExtractiveLLM
 from vlade_rag.ingestion.chunking import NativeChunker, NativeTextNormalizer
 from vlade_rag.ingestion.parsers.basic import basic_parsers
+from vlade_rag.orchestration import answer_engines
 from vlade_rag.retrieval.fusion import RRFFusion
 from vlade_rag.retrieval.transform import Mode
 
@@ -375,6 +376,7 @@ async def build_runtime(
         llms=llms,
         rerankers=_resolver(registry, "reranker", clients),
         query_transformers=query_transformers,
+        answer_engines=answer_engines(),
         limits=Limits(
             max_upload_bytes=limits.max_upload_bytes,
             max_query_chars=limits.max_query_chars,

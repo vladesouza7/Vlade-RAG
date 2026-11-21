@@ -202,6 +202,51 @@ def eval_run(
         typer.echo(f"  - {d['question']}")
 
 
+@eval_app.command("gate")
+def eval_gate(
+    config: Path = typer.Option(Path("evals/gate/gate.json"), help="The gate file (JSON)."),
+    baseline: Path = typer.Option(
+        Path("evals/gate/baseline.json"), help="The metrics the gate compares with."
+    ),
+    update_baseline: bool = typer.Option(
+        False, "--update-baseline", help="Write the measured metrics to the baseline file."
+    ),
+    output: Path | None = typer.Option(None, help="Write the measured metrics (JSON) here."),
+) -> None:
+    """Quality gate (RF-73): fail when a retrieval metric drops more than the configured limit.
+
+    Every run builds throwaway knowledge bases from the datasets, with hashing embeddings, in
+    the storage of the runtime. Use the memory backend: VLADE_STORAGE__BACKEND=memory.
+    """
+    from pydantic import ValidationError
+
+    from vlade_rag.evaluation import gate
+
+    try:
+        cfg = gate.load_config(config)
+    except (OSError, ValidationError) as exc:
+        typer.echo(f"Invalid gate file {config}: {exc}", err=True)
+        raise typer.Exit(2) from exc
+
+    async def go(rt: Any) -> Any:
+        return await gate.run_gate(rt, cfg)
+
+    measured = _run(_with_runtime(go)).metrics
+    text = json.dumps(gate.baseline_payload(measured), indent=2) + "\n"
+    if output is not None:
+        output.write_text(text, encoding="utf-8")
+    if update_baseline:
+        baseline.parent.mkdir(parents=True, exist_ok=True)
+        baseline.write_text(text, encoding="utf-8")
+        typer.echo(f"Baseline written to {baseline}.")
+        return
+    result = gate.compare(cfg, measured, gate.load_baseline(baseline))
+    for line in gate.format_result(result, cfg):
+        typer.echo(line)
+    if not result.passed:
+        raise typer.Exit(1)
+
+
 @mcp_app.command("serve")
 def mcp_serve(
     transport: str = typer.Option("stdio", help="stdio or http."),

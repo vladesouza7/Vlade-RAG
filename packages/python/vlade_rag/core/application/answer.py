@@ -1,4 +1,10 @@
-"""Answer generation with citations (docs/ARCHITECTURE.md sections 11.3 to 11.5)."""
+"""Answer generation with citations (docs/ARCHITECTURE.md sections 11.3 to 11.5 and 12.1).
+
+``AnswerQuery`` prepares the query, runs an engine and records the answer. An engine
+(``AnswerEngine``) runs the steps of the flow: retrieve, assemble the context, generate and
+validate. ``PipelineEngine`` runs them once, in order. The LangGraph engine
+(``vlade_rag.orchestration.langgraph``) adds two conditional edges.
+"""
 
 from __future__ import annotations
 
@@ -8,6 +14,7 @@ import time
 from collections.abc import AsyncIterator, Mapping, Sequence
 from dataclasses import dataclass
 from html import escape
+from typing import Protocol
 
 from vlade_rag.core.application.deps import Dependencies
 from vlade_rag.core.application.search import Search
@@ -15,6 +22,7 @@ from vlade_rag.core.domain import (
     Answer,
     Citation,
     GenerationParams,
+    InvalidArgument,
     KnowledgeBase,
     Message,
     Query,
@@ -137,14 +145,61 @@ AnswerEvent = AnswerDelta | AnswerFinal
 
 
 @dataclass(frozen=True, slots=True)
-class _Prepared:
+class PreparedQuery:
+    """The validated request: the base, the query, the number of chunks and the prompt."""
+
     kb: KnowledgeBase
     query: Query
-    context: list[ScoredChunk]
+    top_k: int
     template: PromptTemplate
-    messages: list[Message]
-    params: GenerationParams
     started: float
+
+
+@dataclass(frozen=True, slots=True)
+class Generated:
+    text: str
+    usage: TokenUsage
+    model: str
+
+
+@dataclass(frozen=True, slots=True)
+class Draft:
+    """The result of one pass of the flow: the context, the raw text and the validated answer."""
+
+    context: list[ScoredChunk]
+    generated: Generated
+    validated: ValidatedAnswer
+
+
+class AnswerEngine(Protocol):
+    """Runs the query flow. It yields the streamed text and, last, one ``Draft``."""
+
+    name: str
+
+    def run(
+        self, steps: AnswerQuery, ctx: TenantContext, prepared: PreparedQuery, streaming: bool
+    ) -> AsyncIterator[AnswerDelta | Draft]: ...
+
+
+class PipelineEngine:
+    """The linear flow of section 11.1: each step runs once, in order. The default engine."""
+
+    name = "pipeline"
+
+    async def run(
+        self, steps: AnswerQuery, ctx: TenantContext, prepared: PreparedQuery, streaming: bool
+    ) -> AsyncIterator[AnswerDelta | Draft]:
+        results = await steps.retrieve(ctx, prepared.kb, prepared.query, prepared.top_k)
+        context = steps.assemble(prepared.kb, results)
+        generated: Generated | None = None
+        async for item in steps.generate(prepared, context, streaming):
+            if isinstance(item, Generated):
+                generated = item
+            else:
+                yield item
+        if generated is None:  # pragma: no cover - generate always ends with Generated
+            raise RuntimeError("The generation step ended without a result.")
+        yield Draft(context, generated, steps.validate(prepared, generated.text, context))
 
 
 class AnswerQuery:
@@ -184,7 +239,9 @@ class AnswerQuery:
     ) -> AsyncIterator[AnswerEvent]:
         return self._run(ctx, knowledge_base, question, top_k, filters, language, True)
 
-    async def _prepare(
+    # ------------------------------------------------------------ steps
+
+    async def prepare(
         self,
         ctx: TenantContext,
         knowledge_base: str,
@@ -192,7 +249,7 @@ class AnswerQuery:
         top_k: int | None,
         filters: Mapping[str, JsonValue] | None,
         language: str | None,
-    ) -> _Prepared:
+    ) -> PreparedQuery:
         ctx.require(Role.READER)
         started = time.perf_counter()
         kb = await self.deps.repository.get_knowledge_base(ctx, knowledge_base)
@@ -200,24 +257,94 @@ class AnswerQuery:
         lang = language or cfg.language
         query = Query(self.search.validate_text(question), kb.id, parse_filter(filters), lang)
         k = self.search.validate_top_k(top_k or cfg.retrieval.rerank.top_n)
-        with self.deps.tracer.span("query_analysis", {"vlade.language": lang}):
-            results = await self.search.run(ctx, kb, query, k)
-        with self.deps.tracer.span("context_assembly", {"vlade.candidates": len(results)}):
-            context = assemble_context(results, cfg.generation.max_context_tokens)
         template = await self.deps.prompts.get(cfg.generation.prompt, lang)
+        return PreparedQuery(kb, query, k, template, started)
+
+    async def retrieve(
+        self, ctx: TenantContext, kb: KnowledgeBase, query: Query, top_k: int
+    ) -> list[ScoredChunk]:
+        language = query.language or kb.config.language
+        with self.deps.tracer.span("query_analysis", {"vlade.language": language}):
+            return await self.search.run(ctx, kb, query, top_k)
+
+    def assemble(self, kb: KnowledgeBase, results: Sequence[ScoredChunk]) -> list[ScoredChunk]:
+        with self.deps.tracer.span("context_assembly", {"vlade.candidates": len(results)}):
+            return assemble_context(results, kb.config.generation.max_context_tokens)
+
+    async def generate(
+        self, prepared: PreparedQuery, context: Sequence[ScoredChunk], streaming: bool
+    ) -> AsyncIterator[AnswerDelta | Generated]:
+        """Yield the streamed text (when ``streaming``) and, last, the ``Generated`` result.
+
+        Without context, the answer is the "not found" text of the prompt and no LLM runs.
+        """
+        gen_cfg = prepared.kb.config.generation
+        if not context:
+            text = prepared.template.not_found_answer
+            if streaming:
+                yield AnswerDelta(text)
+            yield Generated(text, TokenUsage(), gen_cfg.model)
+            return
         messages = [
-            Message("system", template.system),
+            Message("system", prepared.template.system),
             Message(
                 "user",
-                template.render_user(sources=format_sources(context), question=query.text),
+                prepared.template.render_user(
+                    sources=format_sources(context), question=prepared.query.text
+                ),
             ),
         ]
         params = GenerationParams(
-            model=cfg.generation.model,
-            temperature=cfg.generation.temperature,
-            max_output_tokens=cfg.generation.max_output_tokens,
+            model=gen_cfg.model,
+            temperature=gen_cfg.temperature,
+            max_output_tokens=gen_cfg.max_output_tokens,
         )
-        return _Prepared(kb, query, context, template, messages, params, started)
+        llm = self.deps.llms(gen_cfg)
+        with self.deps.tracer.span(
+            "llm_generation", {"gen_ai.request.model": gen_cfg.model, "vlade.adapter": llm.name}
+        ):
+            if streaming:
+                usage = TokenUsage()
+                parts: list[str] = []
+                async for delta in llm.stream(messages, params):
+                    if delta.text:
+                        parts.append(delta.text)
+                        yield AnswerDelta(delta.text)
+                    if delta.usage is not None:
+                        usage = delta.usage
+                yield Generated("".join(parts), usage, gen_cfg.model)
+            else:
+                generation = await llm.generate(messages, params)
+                yield Generated(generation.text, generation.usage, generation.model)
+
+    def validate(
+        self, prepared: PreparedQuery, text: str, context: Sequence[ScoredChunk]
+    ) -> ValidatedAnswer:
+        with self.deps.tracer.span("response_validation") as span:
+            validated = validate_answer(
+                text,
+                context,
+                prepared.template,
+                prepared.kb.config.generation.require_citations,
+            )
+            span.set_attribute("vlade.grounded", validated.grounded)
+            if validated.removed_indexes:
+                span.add_event("citations.removed", {"count": len(validated.removed_indexes)})
+        return validated
+
+    # ------------------------------------------------------------ flow
+
+    def engine(self, kb: KnowledgeBase) -> AnswerEngine:
+        name = kb.config.orchestration.engine
+        engine = self.deps.answer_engines.get(name)
+        if engine is not None:
+            return engine
+        if name == "pipeline":
+            return _PIPELINE
+        raise InvalidArgument(
+            f"The query engine '{name}' is not installed on this server. "
+            f"Install the extra '{name}' or set orchestration.engine to 'pipeline'."
+        )
 
     async def _run(
         self,
@@ -229,44 +356,27 @@ class AnswerQuery:
         language: str | None,
         streaming: bool,
     ) -> AsyncIterator[AnswerEvent]:
-        p = await self._prepare(ctx, knowledge_base, question, top_k, filters, language)
-        gen_cfg = p.kb.config.generation
-        usage = TokenUsage()
-        model = gen_cfg.model
-        if not p.context:
-            raw_text = p.template.not_found_answer
-            if streaming:
-                yield AnswerDelta(raw_text)
-        else:
-            llm = self.deps.llms(gen_cfg)
-            with self.deps.tracer.span(
-                "llm_generation", {"gen_ai.request.model": gen_cfg.model, "vlade.adapter": llm.name}
-            ):
-                if streaming:
-                    parts: list[str] = []
-                    async for delta in llm.stream(p.messages, p.params):
-                        if delta.text:
-                            parts.append(delta.text)
-                            yield AnswerDelta(delta.text)
-                        if delta.usage is not None:
-                            usage = delta.usage
-                    raw_text = "".join(parts)
-                else:
-                    generation = await llm.generate(p.messages, p.params)
-                    raw_text, usage, model = generation.text, generation.usage, generation.model
-        with self.deps.tracer.span("response_validation") as span:
-            validated = validate_answer(raw_text, p.context, p.template, gen_cfg.require_citations)
-            span.set_attribute("vlade.grounded", validated.grounded)
-            if validated.removed_indexes:
-                span.add_event("citations.removed", {"count": len(validated.removed_indexes)})
+        p = await self.prepare(ctx, knowledge_base, question, top_k, filters, language)
+        engine = self.engine(p.kb)
+        streamed: list[str] = []
+        draft: Draft | None = None
+        async for item in engine.run(self, ctx, p, streaming):
+            if isinstance(item, Draft):
+                draft = item
+            else:
+                streamed.append(item.text)
+                yield item
+        if draft is None:  # pragma: no cover - an engine always ends with a Draft
+            raise RuntimeError(f"The query engine '{engine.name}' ended without an answer.")
+        validated = draft.validated
         answer = Answer(
             text=validated.text,
             citations=validated.citations,
             grounded=validated.grounded,
             prompt_name=p.template.name,
             prompt_version=p.template.version,
-            model=model,
-            usage=usage,
+            model=draft.generated.model,
+            usage=draft.generated.usage,
             trace_id=self.deps.tracer.current_trace_id(),
         )
         await self.deps.audit_log.record_query(
@@ -275,7 +385,7 @@ class AnswerQuery:
                 interface=ctx.interface,
                 mode="query",
                 query_hash=hashlib.sha256(p.query.text.encode("utf-8")).digest(),
-                result_count=len(p.context),
+                result_count=len(draft.context),
                 latency_ms=int((time.perf_counter() - p.started) * 1000),
                 knowledge_base_id=p.kb.id,
                 principal_id=ctx.principal_id,
@@ -284,4 +394,9 @@ class AnswerQuery:
                 trace_id=answer.trace_id,
             ),
         )
-        yield AnswerFinal(answer, replaced=validated.text != raw_text)
+        # The streamed text is what the client already shows. Without streaming, it is the raw text.
+        shown = "".join(streamed) if streaming else draft.generated.text
+        yield AnswerFinal(answer, replaced=validated.text != shown)
+
+
+_PIPELINE = PipelineEngine()
