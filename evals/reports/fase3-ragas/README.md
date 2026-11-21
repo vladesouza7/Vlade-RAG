@@ -1,13 +1,13 @@
 # Fase 1 contra fase 3: recuperação e respostas (critério de aceite da fase 3)
 
-O critério de aceite da fase 3 pede um relatório que compare a configuração da fase 1 com a configuração da fase 3 no mesmo dataset, com Recall@10 e faithfulness. Este relatório cumpre o critério com o dataset `legal-ptbr`. O `legal-ptbr-v2` ficou incompleto: o limite de gasto da chave do OpenRouter acabou na última etapa.
+O critério de aceite da fase 3 pede um relatório que compare a configuração da fase 1 com a configuração da fase 3 no mesmo dataset, com Recall@10 e faithfulness. Este relatório cumpre o critério com os datasets `legal-ptbr` e `legal-ptbr-v2`.
 
 **Resumo.**
 
 - **O reranker melhora a recuperação.** No `legal-ptbr`, o MRR sobe de 0,786 para 0,975 e o Recall@1 de 0,70 para 0,95. No `legal-ptbr-v2`, o MRR sobe de 0,740 para 0,959.
 - **O Recall@10 já era alto na fase 1.** Ele fica em 1,000 no `legal-ptbr` e sobe de 0,979 para 1,000 no `legal-ptbr-v2`.
-- **A faithfulness fica no mesmo nível.** No `legal-ptbr`, ela é de 0,950 na fase 1 e de 0,938 na fase 3. A queda vem de uma pergunta em que o juiz errou (ver "Erro do juiz"). Sem essa pergunta, a fase 3 tem 0,987.
-- **O contexto fica mais preciso.** A context precision sobe de 0,720 para 0,996, e todas as 20 respostas da fase 3 têm citação.
+- **A faithfulness sobe no dataset maior.** No `legal-ptbr-v2` (109 perguntas), ela sobe de 0,904 para 0,934. No `legal-ptbr` (20 perguntas), ela é de 0,950 na fase 1 e de 0,938 na fase 3. Essa queda vem de uma pergunta em que o juiz errou (ver "Erro do juiz"). Sem essa pergunta, a fase 3 tem 0,987.
+- **O contexto fica mais preciso.** A context precision sobe de 0,720 para 0,996 no `legal-ptbr` e de 0,697 para 0,902 no `legal-ptbr-v2`. Todas as 20 respostas da fase 3 do `legal-ptbr` têm citação.
 
 ## Configurações
 
@@ -47,13 +47,22 @@ Todas as perguntas receberam as quatro métricas nas duas fases. O juiz não tev
 | Recall@10 | 0,979 | **1,000** |
 | MRR | 0,740 | **0,959** |
 | NDCG@10 | 0,788 | **0,969** |
-| Faithfulness | 0,904 | Sem medida |
-| Answer relevancy | 0,757 | Sem medida |
-| Context precision | 0,697 | Sem medida |
-| Context recall | 0,933 | Sem medida |
-| Respostas com citação (`grounded`) | 0,927 | Sem medida |
+| Faithfulness | 0,904 | **0,934** |
+| Answer relevancy | 0,757 | 0,773 |
+| Context precision | 0,697 | **0,902** |
+| Context recall | 0,933 | **0,995** |
+| Respostas com citação (`grounded`) | 0,927 | 0,945 |
 
-As respostas da fase 3 não foram medidas: a chave do OpenRouter chegou ao limite total de US$ 5,00 nessa etapa. Na fase 1, 9 perguntas tiveram faithfulness abaixo de 0,5 e 8 respostas ficaram sem citação.
+Todas as perguntas receberam as quatro métricas nas duas fases. O juiz não teve erro. As perguntas com faithfulness abaixo de 0,5 caem de 9 para 5, e as respostas sem citação caem de 8 para 6.
+
+Por estilo de pergunta:
+
+| Estilo | Perguntas | Faithfulness (fase 1 → fase 3) | Context precision | Answer relevancy |
+|---|---|---|---|---|
+| Formal | 74 | 0,907 → **0,956** | 0,722 → 0,925 | 0,810 → 0,833 |
+| Coloquial | 35 | 0,896 → 0,887 | 0,643 → 0,853 | 0,645 → 0,648 |
+
+O reranker melhora o contexto nos dois estilos. A faithfulness sobe só nas perguntas formais. Nas coloquiais, a answer relevancy continua baixa: a resposta usa os termos da lei, e a pergunta usa outras palavras.
 
 ## O que mudou entre as fases no `legal-ptbr`
 
@@ -73,23 +82,23 @@ Na pergunta sobre as hipóteses de tratamento de dados, as duas fases dão a mes
 
 - Cada pergunta levou cerca de 55 s, com 4 perguntas ao mesmo tempo. Quase todo o tempo é o juiz, que faz de 4 a 10 chamadas por pergunta.
 - Com o raciocínio do juiz ligado, cada chamada de faithfulness gastou de 3.692 a 4.651 tokens de saída. Com o raciocínio desligado, gastou de 500 a 846, com a mesma nota. O raciocínio ligado também cortou a saída de 3 respostas longas (`IncompleteOutputException`). O padrão do `vlade-rag eval answers` é o raciocínio desligado.
-- O custo exato da medida não foi registrado. As execuções desta pasta e a do `legal-ptbr-v2` sem reranker terminaram antes de a chave chegar a US$ 5,00.
+- A fase 3 do `legal-ptbr-v2` (109 perguntas, com reranker) custou US$ 0,49 no OpenRouter, medido pelo uso da chave antes e depois. São cerca de US$ 0,0045 por pergunta, com a geração, o reranker, o juiz e os embeddings. O custo das outras execuções não foi registrado.
 
 ## Experimentos no Arize Phoenix
 
-Os três relatórios completos foram publicados no Phoenix local com `vlade-rag eval publish` (ADR-0026). Os traces da medida estão no projeto `vlade-rag-avaliacao`.
+Os quatro relatórios de respostas foram publicados no Phoenix local com `vlade-rag eval publish` (ADR-0026). Os traces da medida estão no projeto `vlade-rag-avaliacao`.
 
 | Dataset do Phoenix | Experimento |
 |---|---|
 | `legal-ptbr` | `fase 1: dense+lexical, sem reranker` |
 | `legal-ptbr` | `fase 3: dense+lexical + mongodb/rerank-2.5` |
 | `legal-ptbr-v2` | `fase 1: dense+lexical, sem reranker` |
+| `legal-ptbr-v2` | `fase 3: dense+lexical + mongodb/rerank-2.5` |
 
 ## Limites da medida
 
-- **20 perguntas são poucas para a faithfulness.** Uma pergunta muda a média em 0,05.
+- **20 perguntas são poucas para a faithfulness.** No `legal-ptbr`, uma pergunta muda a média em 0,05. O `legal-ptbr-v2` (109 perguntas) dá a comparação mais firme.
 - **O juiz erra.** Um erro do juiz apareceu nesta medida. Ninguém conferiu as outras notas à mão.
-- **O `legal-ptbr-v2` está incompleto.** Falta a fase 3 das respostas.
 - **Só uma execução de cada configuração.** O juiz e o gerador não são determinísticos.
 
 ## Arquivos

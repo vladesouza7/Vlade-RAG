@@ -100,12 +100,12 @@ As tabelas de resultado estão no README do dataset. O resumo por grupo e por es
 
 ## Benchmark de latência e de vazão (tarefa 3.10)
 
-A pasta [`fase3-benchmark/`](fase3-benchmark/) guarda 36 relatórios do `scripts/benchmarks/bench.py` e o [README](fase3-benchmark/README.md) com o método, o ambiente, as tabelas e as limitações.
+A pasta [`fase3-benchmark/`](fase3-benchmark/) guarda 40 relatórios do `scripts/benchmarks/bench.py` e o [README](fase3-benchmark/README.md) com o método, o ambiente, as tabelas e as limitações.
 
 | Subpasta | O que tem |
 |---|---|
 | `ingestao/` | Vazão de ingestão por tamanho de documento e por número de jobs |
-| `busca/` | Latência da busca na base real, sem reranker e com dois rerankers |
+| `busca/` | Latência da busca na base real: sem reranker, com três rerankers e com as três transformações de consulta |
 | `escala/` | Busca em uma base sintética de 6 mil a 104 mil chunks, a ingestão que a cresceu e o primeiro token |
 
 ## Critério de aceite da fase 3 (tarefas 3.7 e 3.8)
