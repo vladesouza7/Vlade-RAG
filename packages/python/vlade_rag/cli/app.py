@@ -49,12 +49,15 @@ def _run[T](coro: Coroutine[Any, Any, T]) -> T:
 
 async def _with_runtime[T](fn: Callable[[Any], Awaitable[T]]) -> T:
     from vlade_rag.bootstrap import build_runtime
+    from vlade_rag.observability.opentelemetry import flush_telemetry, setup_telemetry
 
-    runtime = await build_runtime(get_settings())
+    settings = get_settings()
+    runtime = await build_runtime(settings, tracer=setup_telemetry(settings))
     try:
         return await fn(runtime)
     finally:
         await runtime.aclose()
+        flush_telemetry()
 
 
 async def _ctx(runtime: Any) -> TenantContext:
@@ -200,6 +203,145 @@ def eval_run(
     typer.echo(f"Questions without a relevant document in the first {k}: {len(misses)}")
     for d in misses:
         typer.echo(f"  - {d['question']}")
+
+
+@eval_app.command("answers")
+def eval_answers(
+    knowledge_base: str,
+    dataset: Path = typer.Option(..., help="JSON Lines file: question and expected_answer."),
+    judge_model: str = typer.Option(..., help="The judge LLM, for example on OpenRouter."),
+    embeddings_model: str = typer.Option(
+        "openai/text-embedding-3-small", help="The embedding model of answer_relevancy."
+    ),
+    judge_provider: str = typer.Option(
+        "openrouter", help="An OpenAI-compatible provider of the server settings."
+    ),
+    judge_max_tokens: int = typer.Option(
+        8192, min=256, help="The output limit of each judge call."
+    ),
+    judge_reasoning: bool = typer.Option(
+        False, help="Let the judge reason first (OpenRouter). It costs more tokens."
+    ),
+    output: Path | None = typer.Option(None, help="Write the full report (JSON) to this file."),
+    limit: int | None = typer.Option(None, min=1, help="Score only the first N questions."),
+    concurrency: int = typer.Option(4, min=1, max=32, help="Questions scored at the same time."),
+    rerank_model: str | None = typer.Option(
+        None, help="Rerank with this model for this run only. The base is not changed."
+    ),
+    rerank_provider: str = typer.Option("openrouter", help="The provider of --rerank-model."),
+    retrievers: str | None = typer.Option(
+        None, help="Comma-separated retrievers for this run only, for example dense,lexical."
+    ),
+) -> None:
+    """Score the answers of a knowledge base with RAGAS (RF-71). Needs the admin role.
+
+    Every question runs the query flow of the base (its LLM) and calls the judge LLM several
+    times. Both cost money. Install the extra 'eval'.
+    """
+    from pydantic import ValidationError
+
+    from vlade_rag.core.domain.kb_config import RerankConfig, RetrievalConfig
+    from vlade_rag.evaluation.answers import AnswerEvaluator
+    from vlade_rag.evaluation.datasets import load_dataset
+    from vlade_rag.evaluation.ragas import RagasScorer
+
+    providers = get_settings().providers.openai_compatible()
+    provider = providers.get(judge_provider.lower())
+    if provider is None or provider.api_key is None:
+        typer.echo(f"The provider '{judge_provider}' has no API key in the settings.", err=True)
+        raise typer.Exit(2)
+    try:
+        names = (
+            RetrievalConfig.model_validate(
+                {"retrievers": tuple(r.strip() for r in retrievers.split(",") if r.strip())}
+            ).retrievers
+            if retrievers
+            else None
+        )
+    except ValidationError as exc:
+        typer.echo(f"Invalid option: {exc.errors()[0]['msg']}", err=True)
+        raise typer.Exit(2) from exc
+    rerank = (
+        RerankConfig(enabled=True, provider=rerank_provider, model=rerank_model)
+        if rerank_model
+        else None
+    )
+    items = load_dataset(dataset)[:limit] if limit else load_dataset(dataset)
+    scorer = RagasScorer(
+        judge_model=judge_model,
+        embeddings_model=embeddings_model,
+        base_url=provider.base_url,
+        api_key=provider.api_key.get_secret_value(),
+        max_tokens=judge_max_tokens,
+        reasoning=judge_reasoning,
+    )
+
+    async def go(rt: Any) -> Any:
+        ctx = await _ctx(rt)
+        kb = await rt.deps.repository.get_knowledge_base(ctx, knowledge_base)
+        evaluator = AnswerEvaluator(
+            rt.deps, scorer, rerank=rerank, retrievers=names, concurrency=concurrency
+        )
+        return await evaluator.evaluate(ctx, kb, items)
+
+    report = _run(_with_runtime(go))
+    payload = {
+        "metrics": dict(report.metrics),
+        "config": dict(report.config),
+        "items": report.items,
+        "details": [dict(d) for d in report.details],
+    }
+    if output is not None:
+        output.write_text(
+            json.dumps(payload, ensure_ascii=False, indent=2, default=str) + "\n",
+            encoding="utf-8",
+        )
+    typer.echo(f"{report.items} questions, knowledge base '{knowledge_base}'")
+    for name, value in sorted(report.metrics.items()):
+        typer.echo(f"  {name:<18}{value:.4f}")
+    errors = scorer.describe().get("errors") or {}
+    if errors:
+        typer.echo(f"Judge errors (the metric is left out for that question): {errors}")
+
+
+@eval_app.command("publish")
+def eval_publish(
+    report: Path = typer.Argument(..., help="A report of 'vlade-rag eval answers' (JSON)."),
+    dataset_name: str = typer.Option(
+        ..., help="The Phoenix dataset. A new one gets the questions."
+    ),
+    experiment_name: str | None = typer.Option(None, help="Default: base, retrievers, reranker."),
+    phoenix_url: str = typer.Option(
+        "http://127.0.0.1:6006", envvar="PHOENIX_URL", help="The address of Arize Phoenix."
+    ),
+) -> None:
+    """Publish an answer evaluation to Arize Phoenix as an experiment (ADR-0026).
+
+    Set PHOENIX_API_KEY when the Phoenix server needs authentication.
+    """
+    from vlade_rag.evaluation.phoenix import PhoenixClient, publish_report
+
+    try:
+        data = json.loads(report.read_text(encoding="utf-8"))
+    except (OSError, ValueError) as exc:
+        typer.echo(f"Cannot read {report}: {exc}", err=True)
+        raise typer.Exit(2) from exc
+    client = PhoenixClient(phoenix_url, os.environ.get("PHOENIX_API_KEY") or None)
+    try:
+        result = publish_report(
+            client, data, dataset_name=dataset_name, experiment_name=experiment_name
+        )
+    except VladeError as exc:
+        typer.echo(f"Error ({exc.code}): {exc.message}", err=True)
+        raise typer.Exit(2) from exc
+    typer.echo(
+        f"Experiment {result.experiment_id}: {result.runs} runs, "
+        f"{result.evaluations} evaluations. {result.url}"
+    )
+    if result.skipped_questions:
+        typer.echo(
+            f"{len(result.skipped_questions)} questions are not in the dataset and were skipped."
+        )
 
 
 @eval_app.command("gate")

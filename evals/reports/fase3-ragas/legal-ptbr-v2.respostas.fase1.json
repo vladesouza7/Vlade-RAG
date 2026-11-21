@@ -1,0 +1,2950 @@
+{
+  "metrics": {
+    "faithfulness": 0.903628,
+    "answer_relevancy": 0.757053,
+    "context_precision": 0.696702,
+    "context_recall": 0.932722,
+    "grounded_rate": 0.926606
+  },
+  "config": {
+    "evaluator": "answers",
+    "vlade_rag_version": "0.0.1",
+    "date": "2026-11-21T16:13:16+00:00",
+    "knowledge_base": {
+      "slug": "legal-ptbr-v2",
+      "id": "01a1fbc9-e014-734c-bdc3-b661d2430126",
+      "epoch": 150
+    },
+    "knowledge_base_config": {
+      "language": "pt",
+      "chunking": {
+        "strategy": "markdown",
+        "max_tokens": 400,
+        "overlap_tokens": 40,
+        "tokenizer": "BAAI/bge-m3"
+      },
+      "embeddings": {
+        "provider": "openrouter",
+        "model": "openai/text-embedding-3-small",
+        "dimension": 1536,
+        "batch_size": 64
+      },
+      "retrieval": {
+        "retrievers": [
+          "dense",
+          "lexical"
+        ],
+        "top_k_per_retriever": 50,
+        "fusion": {
+          "strategy": "rrf",
+          "k": 60.0,
+          "weights": {}
+        },
+        "rerank": {
+          "enabled": false,
+          "provider": "sentence-transformers",
+          "model": "BAAI/bge-reranker-v2-m3",
+          "candidates": 50,
+          "top_n": 8
+        },
+        "query_transform": "none",
+        "hnsw_ef_search": 100
+      },
+      "generation": {
+        "provider": "openrouter",
+        "model": "tencent/hy4-flash",
+        "temperature": 0.1,
+        "max_context_tokens": 6000,
+        "max_output_tokens": 4000,
+        "prompt": "answer_with_citations",
+        "require_citations": true
+      },
+      "orchestration": {
+        "engine": "pipeline",
+        "rewrite_below_score": null,
+        "max_attempts": 1,
+        "retry_top_k_factor": 2
+      }
+    },
+    "scorer": {
+      "name": "ragas",
+      "ragas_version": "0.4.4",
+      "judge_model": "deepseek/deepseek-v4.1-flash",
+      "judge_max_tokens": 8192,
+      "judge_reasoning": false,
+      "embeddings_model": "openai/text-embedding-3-small",
+      "base_url": "https://openrouter.ai/api/v1",
+      "metrics": [
+        "faithfulness",
+        "answer_relevancy",
+        "context_precision",
+        "context_recall"
+      ],
+      "errors": {}
+    },
+    "questions": {
+      "in_dataset": 109,
+      "scored_per_metric": {
+        "faithfulness": 109,
+        "answer_relevancy": 109,
+        "context_precision": 109,
+        "context_recall": 109
+      }
+    }
+  },
+  "items": 109,
+  "details": [
+    {
+      "question": "O que é dado pessoal sensível segundo a LGPD?",
+      "expected_answer": "Dado pessoal sobre origem racial ou étnica, convicção religiosa, opinião política, filiação a sindicato ou organização religiosa, filosófica ou política, dado referente à saúde ou à vida sexual, dado genético ou biométrico, quando vinculado a uma pessoa natural.",
+      "answer": "Segundo a LGPD, considera-se dado pessoal sensível o dado pessoal sobre origem racial ou étnica, convicção religiosa, opinião política, filiação a sindicato ou a organização de caráter religioso, filosófico ou político, dado referente à saúde ou à vida sexual e dado genético ou biométrico, quando vinculado a uma pessoa natural. [1]",
+      "grounded": true,
+      "cited_documents": [
+        "lgpd-003.md"
+      ],
+      "context_documents": [
+        "lgpd-003.md",
+        "lgpd-007.md",
+        "lgpd-006.md",
+        "lgpd-004.md",
+        "lgpd-009.md",
+        "lgpd-010.md",
+        "lgpd-006.md",
+        "lgpd-005.md"
+      ],
+      "scores": {
+        "faithfulness": 1.0,
+        "answer_relevancy": 0.9295150814249666,
+        "context_precision": 0.9999999999,
+        "context_recall": 1.0
+      },
+      "seconds": 63.384
+    },
+    {
+      "question": "Quando a LGPD entra em vigor?",
+      "expected_answer": "Após decorridos 18 meses de sua publicação oficial.",
+      "answer": "A LGPD entra em vigor após decorridos 18 (dezoito) meses de sua publicação oficial. [1]",
+      "grounded": true,
+      "cited_documents": [
+        "lgpd-050.md"
+      ],
+      "context_documents": [
+        "lgpd-050.md",
+        "lgpd-045.md",
+        "lgpd-001.md",
+        "lgpd-048.md",
+        "lgpd-004.md",
+        "lgpd-002.md",
+        "lgpd-012.md",
+        "lgpd-003.md"
+      ],
+      "scores": {
+        "faithfulness": 1.0,
+        "answer_relevancy": 0.9999995804562531,
+        "context_precision": 0.9999999999,
+        "context_recall": 1.0
+      },
+      "seconds": 51.81
+    },
+    {
+      "question": "Qual é o valor máximo da multa simples prevista na LGPD?",
+      "expected_answer": "Até 2% do faturamento da empresa no Brasil no último exercício, limitada a R$ 50.000.000,00 por infração.",
+      "answer": "A multa simples prevista na LGPD pode chegar a 2% do faturamento da pessoa jurídica de direito privado, grupo ou conglomerado no Brasil no último exercício, excluídos os tributos, limitada, no total, a R$ 50.000.000,00 (cinquenta milhões de reais) por infração. [3]",
+      "grounded": true,
+      "cited_documents": [
+        "lgpd-037.md"
+      ],
+      "context_documents": [
+        "lgpd-038.md",
+        "lgpd-039.md",
+        "lgpd-037.md",
+        "lgpd-037.md",
+        "cdc-019.md",
+        "cdc-030.md",
+        "cdc-029.md",
+        "lgpd-027.md"
+      ],
+      "scores": {
+        "faithfulness": 1.0,
+        "answer_relevancy": 0.9999995776849734,
+        "context_precision": 0.3333333333,
+        "context_recall": 1.0
+      },
+      "seconds": 64.158
+    },
+    {
+      "question": "Como deve ser feito o tratamento de dados pessoais de crianças?",
+      "expected_answer": "Com o consentimento específico e em destaque dado por pelo menos um dos pais ou pelo responsável legal.",
+      "answer": "O tratamento de dados pessoais de crianças deve ser realizado em seu melhor interesse, nos termos do art. 14 e da legislação pertinente [1].\n\nNo caso de crianças, o tratamento deve ser feito com consentimento específico e em destaque dado por pelo menos um dos pais ou pelo responsável legal [1].\n\nOs controladores devem manter pública a informação sobre os tipos de dados coletados, a forma de sua utilização e os procedimentos para o exercício dos direitos a que se refere o art. 18 da Lei [1].",
+      "grounded": true,
+      "cited_documents": [
+        "lgpd-007.md"
+      ],
+      "context_documents": [
+        "lgpd-007.md",
+        "lgpd-003.md",
+        "lgpd-003.md",
+        "lgpd-006.md",
+        "lgpd-004.md",
+        "lgpd-003.md",
+        "lgpd-004.md",
+        "lgpd-002.md"
+      ],
+      "scores": {
+        "faithfulness": 1.0,
+        "answer_relevancy": 0.9901960451972623,
+        "context_precision": 0.9999999999,
+        "context_recall": 1.0
+      },
+      "seconds": 62.593
+    },
+    {
+      "question": "Quem é o encarregado pelo tratamento de dados pessoais?",
+      "expected_answer": "A pessoa natural indicada pelo controlador que atua como canal de comunicação entre o controlador, os titulares e a autoridade nacional.",
+      "answer": "O encarregado pelo tratamento de dados pessoais é a pessoa natural indicada pelo controlador, que atua como canal de comunicação entre o controlador e os titulares e a autoridade nacional [7].",
+      "grounded": true,
+      "cited_documents": [
+        "lgpd-003.md"
+      ],
+      "context_documents": [
+        "lgpd-003.md",
+        "lgpd-003.md",
+        "lgpd-006.md",
+        "lgpd-007.md",
+        "lgpd-026.md",
+        "lgpd-004.md",
+        "lgpd-003.md",
+        "lgpd-012.md"
+      ],
+      "scores": {
+        "faithfulness": 1.0,
+        "answer_relevancy": 1.0,
+        "context_precision": 0.24285714284499998,
+        "context_recall": 1.0
+      },
+      "seconds": 57.136
+    },
+    {
+      "question": "Em quais hipóteses o tratamento de dados pessoais pode ser realizado?",
+      "expected_answer": "Mediante consentimento do titular, para cumprimento de obrigação legal, pela administração pública, para estudos por órgão de pesquisa, para execução de contrato, para exercício regular de direitos, para proteção da vida, para tutela da saúde, para legítimo interesse e para proteção do crédito.",
+      "answer": "O tratamento de dados pessoais somente poderá ser realizado nas seguintes hipóteses [3]:\n\nI - mediante o fornecimento de consentimento pelo titular [3].\n\nII - para o cumprimento de obrigação legal ou regulatória pelo controlador [3].\n\nIII - pela administração pública, para o tratamento e uso compartilhado de dados necessários à execução de políticas públicas previstas em leis e regulamentos ou respaldadas em contratos, convênios ou instrumentos congêneres, observadas as disposições do Capítulo IV desta Lei [3].\n\nIV - para a realização de estudos por órgão de pesquisa, garantida, sempre que possível, a anonimização dos dados pessoais [3].\n\nV - quando necessário para a execução de contrato ou de procedimentos preliminares relacionados a contrato do qual seja parte o titular, a pedido do titular dos dados [3].\n\nVI - para o exercício regular de direitos em processo judicial, administrativo ou arbitral, esse último nos termos da Lei nº 9.307, de 23 de setembro de 1996 (Lei de Arbitragem) [3].\n\nVII - para a proteção da vida ou da incolumidade física do titular ou de terceiro [3].\n\nVIII - para a tutela da saúde, em procedimento realizado por profissionais da área da saúde ou por entidades sanitárias [3].\n\nIX - quando necessário para atender aos interesses legítimos do controlador ou de terceiro, exceto no caso de prevalecerem direitos e liberdades fundamentais do titular que exijam a proteção dos dados pessoais [3].\n\nX - para a proteção do crédito, inclusive quanto ao disposto na legislação pertinente [3].",
+      "grounded": true,
+      "cited_documents": [
+        "lgpd-004.md"
+      ],
+      "context_documents": [
+        "lgpd-003.md",
+        "lgpd-003.md",
+        "lgpd-004.md",
+        "lgpd-006.md",
+        "lgpd-007.md",
+        "lgpd-002.md",
+        "lgpd-003.md",
+        "lgpd-006.md"
+      ],
+      "scores": {
+        "faithfulness": 0.0,
+        "answer_relevancy": 0.9761633999430637,
+        "context_precision": 0.4166666666458333,
+        "context_recall": 1.0
+      },
+      "seconds": 60.203
+    },
+    {
+      "question": "Em quanto tempo o controlador deve fornecer a declaração completa pedida pelo titular?",
+      "expected_answer": "No prazo de até 15 dias contado do requerimento do titular.",
+      "answer": "A declaração clara e completa deve ser fornecida no prazo de até 15 (quinze) dias, contado da data do requerimento do titular [1].",
+      "grounded": true,
+      "cited_documents": [
+        "lgpd-010.md"
+      ],
+      "context_documents": [
+        "lgpd-010.md",
+        "lgpd-004.md",
+        "lgpd-009.md",
+        "lgpd-033.md",
+        "lai-006.md",
+        "lgpd-005.md",
+        "lgpd-005.md",
+        "lgpd-004.md"
+      ],
+      "scores": {
+        "faithfulness": 1.0,
+        "answer_relevancy": 0.7457376618634508,
+        "context_precision": 0.9999999999,
+        "context_recall": 1.0
+      },
+      "seconds": 48.021
+    },
+    {
+      "question": "O que o controlador deve fazer quando ocorre um incidente de segurança?",
+      "expected_answer": "Comunicar à autoridade nacional e ao titular a ocorrência de incidente de segurança que possa acarretar risco ou dano relevante aos titulares.",
+      "answer": "O controlador deve comunicar à autoridade nacional e ao titular a ocorrência de incidente de segurança que possa acarretar risco ou dano relevante aos titulares. [1]\n\nA comunicação deve ser feita em prazo razoável, conforme definido pela autoridade nacional. [1]\n\nA comunicação deve mencionar, no mínimo:\n\n- a descrição da natureza dos dados pessoais afetados; [1]\n- as informações sobre os titulares envolvidos; [1]\n- a indicação das medidas técnicas e de segurança utilizadas para a proteção dos dados, observados os segredos comercial e industrial; [1]\n- os riscos relacionados ao incidente; [1]\n- os motivos da demora, se a comunicação não tiver sido imediata; [1]\n- as medidas que foram ou que serão adotadas para reverter ou mitigar os efeitos do prejuízo. [1]\n\nA autoridade nacional poderá, se necessário para salvaguardar os direitos dos titulares, determinar ao controlador a ampla divulgação do fato em meios de comunicação e a adoção de medidas para reverter ou mitigar os efeitos do incidente. [1]",
+      "grounded": true,
+      "cited_documents": [
+        "lgpd-033.md"
+      ],
+      "context_documents": [
+        "lgpd-033.md",
+        "lgpd-035.md",
+        "lgpd-005.md",
+        "lgpd-023.md",
+        "lgpd-007.md",
+        "cdc-004.md",
+        "mci-007.md",
+        "lgpd-029.md"
+      ],
+      "scores": {
+        "faithfulness": 1.0,
+        "answer_relevancy": 0.8903484089611017,
+        "context_precision": 0.9999999999,
+        "context_recall": 1.0
+      },
+      "seconds": 58.351
+    },
+    {
+      "question": "Quais são os fundamentos da disciplina da proteção de dados pessoais?",
+      "expected_answer": "O respeito à privacidade, a autodeterminação informativa, a liberdade de expressão, a inviolabilidade da intimidade, o desenvolvimento econômico e tecnológico, a livre iniciativa e os direitos humanos.",
+      "answer": "A disciplina da proteção de dados pessoais tem como fundamentos: [3]\n\n- o respeito à privacidade; [3]\n- a autodeterminação informativa; [3]\n- a liberdade de expressão, de informação, de comunicação e de opinião; [3]\n- a inviolabilidade da intimidade, da honra e da imagem; [3]\n- o desenvolvimento econômico e tecnológico e a inovação; [3]\n- a livre iniciativa, a livre concorrência e a defesa do consumidor; e [3]\n- os direitos humanos, o livre desenvolvimento da personalidade, a dignidade e o exercício da cidadania pelas pessoas naturais. [3]",
+      "grounded": true,
+      "cited_documents": [
+        "lgpd-001.md"
+      ],
+      "context_documents": [
+        "lgpd-003.md",
+        "lgpd-007.md",
+        "lgpd-001.md",
+        "lgpd-003.md",
+        "lgpd-035.md",
+        "lgpd-003.md",
+        "lgpd-004.md",
+        "lgpd-002.md"
+      ],
+      "scores": {
+        "faithfulness": 1.0,
+        "answer_relevancy": 1.0000000000000002,
+        "context_precision": 0.3333333333,
+        "context_recall": 1.0
+      },
+      "seconds": 43.05
+    },
+    {
+      "question": "A LGPD se aplica ao tratamento de dados feito para fins exclusivamente jornalísticos?",
+      "expected_answer": "Não. A lei não se aplica ao tratamento para fins exclusivamente jornalísticos e artísticos.",
+      "answer": "Não: a LGPD não se aplica ao tratamento de dados pessoais realizado para fins exclusivamente jornalísticos e artísticos [1].",
+      "grounded": true,
+      "cited_documents": [
+        "lgpd-002.md"
+      ],
+      "context_documents": [
+        "lgpd-002.md",
+        "lgpd-003.md",
+        "lgpd-004.md",
+        "lgpd-006.md",
+        "lgpd-012.md",
+        "lgpd-005.md",
+        "lgpd-007.md",
+        "lgpd-013.md"
+      ],
+      "scores": {
+        "faithfulness": 1.0,
+        "answer_relevancy": 0.9531825947882399,
+        "context_precision": 0.9999999999,
+        "context_recall": 1.0
+      },
+      "seconds": 40.664
+    },
+    {
+      "question": "Qual é o prazo para desistir de uma compra feita fora do estabelecimento comercial?",
+      "expected_answer": "7 dias a contar da assinatura do contrato ou do recebimento do produto ou serviço.",
+      "answer": "O prazo é de 7 dias, contados da assinatura do contrato ou do ato de recebimento do produto ou serviço, quando a contratação ocorrer fora do estabelecimento comercial, especialmente por telefone ou a domicílio. [1]",
+      "grounded": true,
+      "cited_documents": [
+        "cdc-017.md"
+      ],
+      "context_documents": [
+        "cdc-017.md",
+        "cdc-009.md",
+        "cdc-006.md",
+        "cdc-018.md",
+        "cdc-011.md",
+        "cdc-014.md",
+        "cdc-019.md",
+        "cdc-041.md"
+      ],
+      "scores": {
+        "faithfulness": 1.0,
+        "answer_relevancy": 0.8815269615660685,
+        "context_precision": 0.9999999999,
+        "context_recall": 1.0
+      },
+      "seconds": 60.571
+    },
+    {
+      "question": "Qual é o prazo para reclamar de vícios aparentes em produtos duráveis?",
+      "expected_answer": "90 dias. Para produtos não duráveis, o prazo é de 30 dias.",
+      "answer": "O prazo é de **noventa dias** para reclamar de vícios aparentes ou de fácil constatação em produtos duráveis [1]. A contagem começa a partir da entrega efetiva do produto [1].",
+      "grounded": true,
+      "cited_documents": [
+        "cdc-009.md"
+      ],
+      "context_documents": [
+        "cdc-009.md",
+        "cdc-006.md",
+        "cdc-007.md",
+        "cdc-004.md",
+        "cdc-008.md",
+        "cdc-017.md",
+        "cdc-006.md",
+        "cdc-019.md"
+      ],
+      "scores": {
+        "faithfulness": 1.0,
+        "answer_relevancy": 0.9804931716743304,
+        "context_precision": 0.9999999999,
+        "context_recall": 1.0
+      },
+      "seconds": 62.829
+    },
+    {
+      "question": "Quem é considerado consumidor pelo CDC?",
+      "expected_answer": "Toda pessoa física ou jurídica que adquire ou utiliza produto ou serviço como destinatário final.",
+      "answer": "É considerado consumidor toda pessoa física ou jurídica que adquire ou utiliza produto ou serviço como destinatário final [5].\n\nTambém se equipara a consumidor a coletividade de pessoas, ainda que indetermináveis, que haja intervindo nas relações de consumo [5].\n\nPara os fins dos Capítulos IV e seguinte do CDC, equiparam-se aos consumidores todas as pessoas determináveis ou não expostas às práticas previstas nesses capítulos [8].",
+      "grounded": true,
+      "cited_documents": [
+        "cdc-001.md",
+        "cdc-010.md"
+      ],
+      "context_documents": [
+        "cdc-044.md",
+        "cdc-002.md",
+        "cdc-015.md",
+        "cdc-002.md",
+        "cdc-001.md",
+        "cdc-003.md",
+        "cdc-004.md",
+        "cdc-010.md"
+      ],
+      "scores": {
+        "faithfulness": 1.0,
+        "answer_relevancy": 0.7521116788634168,
+        "context_precision": 0.19999999998,
+        "context_recall": 1.0
+      },
+      "seconds": 64.414
+    },
+    {
+      "question": "Em quanto tempo o fornecedor deve sanar o vício de um produto?",
+      "expected_answer": "No prazo máximo de 30 dias.",
+      "answer": "Para produtos de consumo duráveis ou não duráveis, o vício deve ser sanado no prazo máximo de trinta dias [1].\n\nEsse prazo pode ser reduzido ou ampliado por acordo das partes, mas não pode ser inferior a sete dias nem superior a cento e oitenta dias [1].\n\nEm contratos de adesão, a cláusula de prazo deve ser convencionada em separado, por manifestação expressa do consumidor [1].\n\nSe o vício não for sanado nesse prazo, o consumidor pode exigir a substituição do produto, a restituição imediata da quantia paga, monetariamente atualizada, ou o abatimento proporcional do preço [1].",
+      "grounded": true,
+      "cited_documents": [
+        "cdc-006.md"
+      ],
+      "context_documents": [
+        "cdc-006.md",
+        "cdc-007.md",
+        "cdc-004.md",
+        "cdc-009.md",
+        "cdc-008.md",
+        "cdc-006.md",
+        "cdc-019.md",
+        "cdc-012.md"
+      ],
+      "scores": {
+        "faithfulness": 1.0,
+        "answer_relevancy": 0.7743810631358875,
+        "context_precision": 0.9999999999,
+        "context_recall": 1.0
+      },
+      "seconds": 65.192
+    },
+    {
+      "question": "O que acontece quando o consumidor é cobrado em quantia indevida?",
+      "expected_answer": "Tem direito à repetição do indébito, por valor igual ao dobro do que pagou em excesso, com correção monetária e juros legais.",
+      "answer": "O consumidor cobrado em quantia indevida tem direito à repetição do indébito, por valor igual ao dobro do que pagou em excesso, acrescido de correção monetária e juros legais, salvo hipótese de engano justificável [1].",
+      "grounded": true,
+      "cited_documents": [
+        "cdc-014.md"
+      ],
+      "context_documents": [
+        "cdc-014.md",
+        "cdc-013.md",
+        "cdc-017.md",
+        "cdc-017.md",
+        "cdc-018.md",
+        "cdc-013.md",
+        "cdc-007.md",
+        "cdc-019.md"
+      ],
+      "scores": {
+        "faithfulness": 1.0,
+        "answer_relevancy": 0.8787330800730399,
+        "context_precision": 0.9999999999,
+        "context_recall": 1.0
+      },
+      "seconds": 54.444
+    },
+    {
+      "question": "Por quanto tempo informações negativas podem ficar em cadastros de consumidores?",
+      "expected_answer": "Por no máximo cinco anos.",
+      "answer": "Informações negativas não podem ficar em cadastros de consumidores por período superior a cinco anos [1].",
+      "grounded": true,
+      "cited_documents": [
+        "cdc-015.md"
+      ],
+      "context_documents": [
+        "cdc-015.md",
+        "cdc-006.md",
+        "cdc-017.md",
+        "cdc-027.md",
+        "cdc-013.md",
+        "cdc-010.md",
+        "cdc-014.md",
+        "cdc-019.md"
+      ],
+      "scores": {
+        "faithfulness": 1.0,
+        "answer_relevancy": 0.9953159553560486,
+        "context_precision": 0.9999999999,
+        "context_recall": 1.0
+      },
+      "seconds": 80.146
+    },
+    {
+      "question": "Qual é o prazo de prescrição para pedir reparação de danos causados por fato do produto?",
+      "expected_answer": "Cinco anos, contados do conhecimento do dano e de sua autoria.",
+      "answer": "O prazo de prescrição é de cinco anos [1]. A contagem se inicia a partir do conhecimento do dano e de sua autoria [1].",
+      "grounded": true,
+      "cited_documents": [
+        "cdc-009.md"
+      ],
+      "context_documents": [
+        "cdc-009.md",
+        "cdc-006.md",
+        "cdc-004.md",
+        "cdc-005.md",
+        "cdc-007.md",
+        "cdc-008.md",
+        "cdc-041.md",
+        "cdc-006.md"
+      ],
+      "scores": {
+        "faithfulness": 1.0,
+        "answer_relevancy": 0.6164480612755683,
+        "context_precision": 0.9999999999,
+        "context_recall": 1.0
+      },
+      "seconds": 60.54
+    },
+    {
+      "question": "Quais são os direitos básicos do consumidor?",
+      "expected_answer": "Entre outros: proteção da vida, saúde e segurança; educação sobre o consumo; informação adequada; proteção contra publicidade enganosa; prevenção e reparação de danos; acesso à justiça; facilitação da defesa.",
+      "answer": "Os direitos básicos do consumidor previstos no art. 6º são [1]:\n\nI - a proteção da vida, saúde e segurança contra os riscos provocados por práticas no fornecimento de produtos e serviços considerados perigosos ou nocivos [1];\n\nII - a educação e divulgação sobre o consumo adequado dos produtos e serviços, asseguradas a liberdade de escolha e a igualdade nas contratações [1];\n\nIII - a informação adequada e clara sobre os diferentes produtos e serviços, com especificação correta de quantidade, características, composição, qualidade e preço, bem como sobre os riscos que apresentem [1];\n\nIV - a proteção contra a publicidade enganosa e abusiva, métodos comerciais coercitivos ou desleais, bem como contra práticas e cláusulas abusivas ou impostas no fornecimento de produtos e serviços [1];\n\nV - a modificação das cláusulas contratuais que estabeleçam prestações desproporcionais ou sua revisão em razão de fatos supervenientes que as tornem excessivamente onerosas [1];\n\nVI - a efetiva prevenção e reparação de danos patrimoniais e morais, individuais, coletivos e difusos [1];\n\nVII - o acesso aos órgãos judiciários e administrativos com vistas à prevenção ou reparação de danos patrimoniais e morais, individuais, coletivos ou difusos, assegurada a proteção Jurídica, administrativa e técnica aos necessitados [1];\n\nVIII - a facilitação da defesa de seus direitos, inclusive com a inversão do ônus da prova, a seu favor, no processo civil, quando, a critério do juiz, for verossímil a alegação ou quando for ele hipossuficiente, segundo as regras ordinárias de experiências [1].\n\nO inciso IX aparece como vetado [1].",
+      "grounded": true,
+      "cited_documents": [
+        "cdc-002.md"
+      ],
+      "context_documents": [
+        "cdc-002.md",
+        "cdc-002.md",
+        "cdc-017.md",
+        "cdc-003.md",
+        "cdc-015.md",
+        "cdc-031.md",
+        "cdc-044.md",
+        "cdc-014.md"
+      ],
+      "scores": {
+        "faithfulness": 1.0,
+        "answer_relevancy": 0.8625450855608469,
+        "context_precision": 0.7499999999625,
+        "context_recall": 1.0
+      },
+      "seconds": 61.183
+    },
+    {
+      "question": "O fornecedor pode condicionar a venda de um produto à compra de outro?",
+      "expected_answer": "Não. Condicionar o fornecimento de produto ou serviço ao fornecimento de outro é prática abusiva.",
+      "answer": "Não: é vedado ao fornecedor condicionar o fornecimento de produto ou serviço ao fornecimento de outro produto ou serviço [5].",
+      "grounded": true,
+      "cited_documents": [
+        "cdc-013.md"
+      ],
+      "context_documents": [
+        "cdc-018.md",
+        "cdc-006.md",
+        "cdc-007.md",
+        "cdc-012.md",
+        "cdc-013.md",
+        "cdc-017.md",
+        "cdc-006.md",
+        "cdc-004.md"
+      ],
+      "scores": {
+        "faithfulness": 1.0,
+        "answer_relevancy": 0.8835768493764514,
+        "context_precision": 0.19999999998,
+        "context_recall": 1.0
+      },
+      "seconds": 52.528
+    },
+    {
+      "question": "O que é fornecedor segundo o CDC?",
+      "expected_answer": "Toda pessoa física ou jurídica, pública ou privada, nacional ou estrangeira, que desenvolve atividades de produção, montagem, criação, construção, transformação, importação, exportação, distribuição ou comercialização de produtos ou prestação de serviços.",
+      "answer": "Não encontrei essa informação nas fontes disponíveis.",
+      "grounded": false,
+      "cited_documents": [],
+      "context_documents": [
+        "cdc-007.md",
+        "cdc-004.md",
+        "cdc-007.md",
+        "cdc-012.md",
+        "cdc-005.md",
+        "cdc-044.md",
+        "cdc-003.md",
+        "cdc-002.md"
+      ],
+      "scores": {
+        "faithfulness": 0.0,
+        "answer_relevancy": 0.0,
+        "context_precision": 0.0,
+        "context_recall": 0.0
+      },
+      "seconds": 54.985
+    },
+    {
+      "question": "A LGPD vale para uma empresa estrangeira que trata dados de pessoas que estão no Brasil?",
+      "expected_answer": "Sim. A lei se aplica quando a atividade de tratamento tem por objetivo a oferta de bens ou serviços, ou o tratamento de dados de indivíduos localizados no território nacional, independentemente do país da sede.",
+      "answer": "Sim: a LGPD se aplica a operações de tratamento realizadas por pessoa jurídica de direito privado independentemente do país de sua sede, quando a atividade tenha por objetivo o tratamento de dados de indivíduos localizados no território nacional [1]. Também se consideram coletados no território nacional os dados pessoais cujo titular nele se encontre no momento da coleta [1]. Assim, uma empresa estrangeira que trata dados de pessoas no Brasil está sujeita à LGPD, ressalvadas as hipóteses de não aplicação previstas no art. 4º [1].",
+      "grounded": true,
+      "cited_documents": [
+        "lgpd-002.md"
+      ],
+      "context_documents": [
+        "lgpd-002.md",
+        "lgpd-004.md",
+        "lgpd-018.md",
+        "lgpd-003.md",
+        "lgpd-012.md",
+        "lgpd-019.md",
+        "lgpd-006.md",
+        "lgpd-001.md"
+      ],
+      "scores": {
+        "faithfulness": 1.0,
+        "answer_relevancy": 0.9532226535915317,
+        "context_precision": 0.9999999999,
+        "context_recall": 1.0
+      },
+      "seconds": 58.525
+    },
+    {
+      "question": "Se eu der meu consentimento para uma empresa usar meus dados, posso desistir depois?",
+      "expected_answer": "Sim. O consentimento pode ser revogado a qualquer momento, por manifestação expressa do titular, em procedimento gratuito e facilitado.",
+      "answer": "Sim: o consentimento pode ser revogado a qualquer momento, mediante manifestação expressa do titular, por procedimento gratuito e facilitado [1]. O titular tem direito de obter do controlador a revogação do consentimento [2]. Os tratamentos realizados sob o consentimento anterior ficam ratificados enquanto não houver requerimento de eliminação [1]. Você também pode requerer a eliminação dos dados tratados com consentimento, exceto nas hipóteses previstas no art. 16 da Lei [2]. A comunicação do titular, inclusive no exercício da revogação, é hipótese de término do tratamento, resguardado o interesse público [5].",
+      "grounded": true,
+      "cited_documents": [
+        "lgpd-004.md",
+        "lgpd-009.md",
+        "lgpd-008.md"
+      ],
+      "context_documents": [
+        "lgpd-004.md",
+        "lgpd-009.md",
+        "lgpd-006.md",
+        "lgpd-006.md",
+        "lgpd-008.md",
+        "lgpd-003.md",
+        "lgpd-005.md",
+        "lgpd-004.md"
+      ],
+      "scores": {
+        "faithfulness": 1.0,
+        "answer_relevancy": 0.6653014584013025,
+        "context_precision": 0.7928571428373214,
+        "context_recall": 1.0
+      },
+      "seconds": 57.071
+    },
+    {
+      "question": "Uma autorização genérica para o tratamento de dados pessoais é válida?",
+      "expected_answer": "Não. O consentimento deve se referir a finalidades determinadas, e as autorizações genéricas para o tratamento de dados pessoais são nulas.",
+      "answer": "Não: as autorizações genéricas para o tratamento de dados pessoais serão nulas, pois o consentimento deve referir-se a finalidades determinadas [8]. O consentimento é a manifestação livre, informada e inequívoca pela qual o titular concorda com o tratamento de seus dados pessoais para uma finalidade determinada [1].",
+      "grounded": true,
+      "cited_documents": [
+        "lgpd-004.md",
+        "lgpd-003.md"
+      ],
+      "context_documents": [
+        "lgpd-003.md",
+        "lgpd-003.md",
+        "lgpd-006.md",
+        "lgpd-004.md",
+        "lgpd-002.md",
+        "lgpd-007.md",
+        "lgpd-003.md",
+        "lgpd-004.md"
+      ],
+      "scores": {
+        "faithfulness": 1.0,
+        "answer_relevancy": 0.8976148474750564,
+        "context_precision": 0.8392857142689285,
+        "context_recall": 1.0
+      },
+      "seconds": 54.484
+    },
+    {
+      "question": "Em que situações dados pessoais sensíveis podem ser tratados sem o consentimento do titular?",
+      "expected_answer": "Quando o tratamento for indispensável para cumprir obrigação legal ou regulatória, executar políticas públicas, realizar estudos por órgão de pesquisa, exercer direitos, proteger a vida, tutelar a saúde ou prevenir fraude nos processos de identificação e autenticação.",
+      "answer": "Sem consentimento, o tratamento de dados pessoais sensíveis pode ocorrer apenas quando for indispensável para: [1]\n\n- cumprimento de obrigação legal ou regulatória pelo controlador; [1]\n- tratamento compartilhado de dados necessários à execução, pela administração pública, de políticas públicas previstas em leis ou regulamentos; [1]\n- realização de estudos por órgão de pesquisa, garantida, sempre que possível, a anonimização dos dados pessoais sensíveis; [1]\n- exercício regular de direitos, inclusive em contrato e em processo judicial, administrativo e arbitral, este último nos termos da Lei nº 9.307, de 23 de setembro de 1996; [1]\n- proteção da vida ou da incolumidade física do titular ou de terceiro; [1]\n- tutela da saúde, em procedimento realizado por profissionais da área da saúde ou por entidades sanitárias; [1]\n- garantia da prevenção à fraude e à segurança do titular, nos processos de identificação e autenticação de cadastro em sistemas eletrônicos, resguardados os direitos mencionados no art. 9º da Lei e exceto no caso de prevalecerem direitos e liberdades fundamentais do titular que exijam a proteção dos dados pessoais. [1]\n\nNos casos de obrigação legal ou regulatória e de execução de políticas públicas aplicados por órgãos e entidades públicas, será dada publicidade à dispensa de consentimento. [1]",
+      "grounded": true,
+      "cited_documents": [
+        "lgpd-006.md"
+      ],
+      "context_documents": [
+        "lgpd-006.md",
+        "lgpd-003.md",
+        "lgpd-004.md",
+        "lgpd-009.md",
+        "lgpd-004.md",
+        "lgpd-007.md",
+        "lgpd-006.md",
+        "lai-016.md"
+      ],
+      "scores": {
+        "faithfulness": 1.0,
+        "answer_relevancy": 0.8822024250281851,
+        "context_precision": 0.609523809503492,
+        "context_recall": 1.0
+      },
+      "seconds": 78.272
+    },
+    {
+      "question": "Dados anonimizados ainda contam como dados pessoais?",
+      "expected_answer": "Em regra não. Só contam se o processo de anonimização for revertido com meios próprios ou puder ser revertido com esforços razoáveis.",
+      "answer": "Em regra, não: os dados anonimizados não são considerados dados pessoais para os fins da Lei [3].\n\nHá exceção se o processo de anonimização for revertido, utilizando exclusivamente meios próprios, ou se, com esforços razoáveis, puder ser revertido [3].\n\nDado anonimizado é dado relativo a titular que não possa ser identificado, considerando meios técnicos razoáveis e disponíveis na ocasião de seu tratamento [1].",
+      "grounded": true,
+      "cited_documents": [
+        "lgpd-006.md",
+        "lgpd-003.md"
+      ],
+      "context_documents": [
+        "lgpd-003.md",
+        "lgpd-007.md",
+        "lgpd-006.md",
+        "lgpd-006.md",
+        "lgpd-003.md",
+        "lgpd-004.md",
+        "lgpd-003.md",
+        "lai-016.md"
+      ],
+      "scores": {
+        "faithfulness": 1.0,
+        "answer_relevancy": 0.8172632157841259,
+        "context_precision": 0.8333333332916666,
+        "context_recall": 1.0
+      },
+      "seconds": 51.407
+    },
+    {
+      "question": "O que acontece com os dados pessoais depois que o tratamento termina?",
+      "expected_answer": "Eles são eliminados, e a conservação só é autorizada para cumprir obrigação legal, para estudo por órgão de pesquisa, para transferência a terceiro ou para uso exclusivo do controlador com os dados anonimizados.",
+      "answer": "Após o término do tratamento, os dados pessoais serão eliminados, no âmbito e nos limites técnicos das atividades [2].\n\nA conservação dos dados fica autorizada para estas finalidades [2]:\n\n- cumprimento de obrigação legal ou regulatória pelo controlador [2];\n- estudo por órgão de pesquisa, garantida, sempre que possível, a anonimização dos dados pessoais [2];\n- transferência a terceiro, desde que respeitados os requisitos de tratamento de dados dispostos na Lei [2];\n- uso exclusivo do controlador, vedado o acesso por terceiro e desde que anonimizados os dados [2].",
+      "grounded": true,
+      "cited_documents": [
+        "lgpd-008.md"
+      ],
+      "context_documents": [
+        "lgpd-003.md",
+        "lgpd-008.md",
+        "lgpd-003.md",
+        "lgpd-007.md",
+        "lgpd-003.md",
+        "lgpd-006.md",
+        "lgpd-002.md",
+        "lgpd-006.md"
+      ],
+      "scores": {
+        "faithfulness": 1.0,
+        "answer_relevancy": 0.8603528640044577,
+        "context_precision": 0.49999999995,
+        "context_recall": 1.0
+      },
+      "seconds": 58.697
+    },
+    {
+      "question": "Posso levar meus dados de um serviço para outro concorrente?",
+      "expected_answer": "Sim. O titular tem direito à portabilidade dos dados a outro fornecedor de serviço ou produto, mediante requisição expressa.",
+      "answer": "Se forem dados pessoais sensíveis referentes à saúde, a comunicação ou o uso compartilhado entre controladores com objetivo de obter vantagem econômica é vedado, exceto nos casos de portabilidade de dados quando consentido pelo titular [1]. Para os demais casos: Não encontrei essa informação nas fontes disponíveis.",
+      "grounded": true,
+      "cited_documents": [
+        "lgpd-006.md"
+      ],
+      "context_documents": [
+        "lgpd-006.md",
+        "lgpd-018.md",
+        "cdc-015.md",
+        "lgpd-013.md",
+        "cdc-013.md",
+        "lgpd-002.md",
+        "lgpd-019.md",
+        "mci-005.md"
+      ],
+      "scores": {
+        "faithfulness": 0.8,
+        "answer_relevancy": 0.5003567805261936,
+        "context_precision": 0.0,
+        "context_recall": 0.5
+      },
+      "seconds": 58.054
+    },
+    {
+      "question": "Quais são os direitos do titular dos dados pessoais perante o controlador?",
+      "expected_answer": "Confirmação da existência de tratamento, acesso, correção, anonimização, bloqueio ou eliminação de dados, portabilidade, eliminação dos dados tratados com consentimento, informação sobre o compartilhamento, informação sobre a possibilidade de não consentir e revogação do consentimento.",
+      "answer": "Não encontrei essa informação nas fontes disponíveis.",
+      "grounded": false,
+      "cited_documents": [],
+      "context_documents": [
+        "lgpd-009.md",
+        "lgpd-010.md",
+        "lgpd-005.md",
+        "lgpd-004.md",
+        "lgpd-003.md",
+        "lgpd-003.md",
+        "lgpd-006.md",
+        "lgpd-009.md"
+      ],
+      "scores": {
+        "faithfulness": 0.0,
+        "answer_relevancy": 0.0,
+        "context_precision": 0.9999999999,
+        "context_recall": 1.0
+      },
+      "seconds": 77.11
+    },
+    {
+      "question": "Preciso pagar para pedir à empresa acesso aos meus dados pessoais?",
+      "expected_answer": "Não. O requerimento do titular é atendido sem custos, nos prazos e nos termos previstos em regulamento.",
+      "answer": "Não é necessário pagar: o livre acesso garante consulta facilitada e gratuita sobre a forma e a duração do tratamento, bem como sobre a integralidade dos dados pessoais [3].\n\nO titular pode requerer ao controlador, a qualquer momento, a confirmação da existência de tratamento e o acesso aos dados [2]. A confirmação ou o acesso devem ser providenciados mediante requisição do titular, em formato simplificado imediatamente ou por declaração clara e completa no prazo de até 15 dias [1].",
+      "grounded": true,
+      "cited_documents": [
+        "lgpd-003.md",
+        "lgpd-009.md",
+        "lgpd-010.md"
+      ],
+      "context_documents": [
+        "lgpd-010.md",
+        "lgpd-009.md",
+        "lgpd-003.md",
+        "lgpd-004.md",
+        "lgpd-006.md",
+        "lgpd-006.md",
+        "lai-016.md",
+        "lgpd-005.md"
+      ],
+      "scores": {
+        "faithfulness": 0.875,
+        "answer_relevancy": 0.8408549030636728,
+        "context_precision": 0.9999999999666667,
+        "context_recall": 1.0
+      },
+      "seconds": 52.793
+    },
+    {
+      "question": "Em que casos a transferência internacional de dados pessoais é permitida?",
+      "expected_answer": "Para países ou organismos com grau de proteção adequado, quando o controlador oferece garantias (cláusulas contratuais, cláusulas-padrão, normas corporativas globais, selos), para cooperação jurídica internacional, para proteger a vida, com autorização da autoridade nacional, com consentimento específico e em destaque do titular, entre outros casos.",
+      "answer": "A transferência internacional de dados pessoais somente é permitida nos seguintes casos, conforme o art. 33 da Lei [1]:\n\n1. Para países ou organismos internacionais que proporcionem grau de proteção de dados pessoais adequado ao previsto na Lei [1].\n\n2. Quando o controlador oferecer e comprovar garantias de cumprimento dos princípios, dos direitos do titular e do regime de proteção de dados previstos na Lei, na forma de cláusulas contratuais específicas para determinada transferência, cláusulas-padrão contratuais, normas corporativas globais, selos, certificados e códigos de conduta regularmente emitidos [1].\n\n3. Quando a transferência for necessária para a cooperação jurídica internacional entre órgãos públicos de inteligência, de investigação e de persecução, de acordo com os instrumentos de direito internacional [1].\n\n4. Quando a transferência for necessária para a proteção da vida ou da incolumidade física do titular ou de terceiro [1].\n\n5. Quando a autoridade nacional autorizar a transferência [1].\n\n6. Quando a transferência resultar em compromisso assumido em acordo de cooperação internacional [1].\n\n7. Quando a transferência for necessária para a execução de política pública ou atribuição legal do serviço público, sendo dada publicidade nos termos do inciso I do caput do art. 23 da Lei [1].\n\n8. Quando o titular tiver fornecido consentimento específico e em destaque para a transferência, com informação prévia sobre o caráter internacional da operação, distinguindo claramente esta de outras finalidades [1].\n\n9. Quando necessário para atender às hipóteses previstas nos incisos II, V e VI do art. 7º da Lei [1].",
+      "grounded": true,
+      "cited_documents": [
+        "lgpd-018.md"
+      ],
+      "context_documents": [
+        "lgpd-018.md",
+        "lgpd-002.md",
+        "lgpd-003.md",
+        "lgpd-006.md",
+        "lgpd-007.md",
+        "lgpd-003.md",
+        "lgpd-019.md",
+        "lgpd-004.md"
+      ],
+      "scores": {
+        "faithfulness": 1.0,
+        "answer_relevancy": 0.8818231138654964,
+        "context_precision": 0.9999999999,
+        "context_recall": 1.0
+      },
+      "seconds": 57.642
+    },
+    {
+      "question": "Se uma empresa vazar meus dados e eu tiver prejuízo, quem tem que me indenizar?",
+      "expected_answer": "O controlador ou o operador que causou o dano em violação à legislação de proteção de dados é obrigado a repará-lo. Em certos casos eles respondem solidariamente.",
+      "answer": "Quem deve indenizar é o controlador ou o operador que, em razão do tratamento de dados pessoais, causar dano patrimonial, moral, individual ou coletivo em violação à legislação de proteção de dados [1].\n\nNo caso de violação da segurança dos dados, responde pelos danos o controlador ou o operador que, ao deixar de adotar as medidas de segurança previstas na LGPD, der causa ao dano [3].\n\nO operador responde solidariamente quando descumpre obrigações da legislação ou não segue instruções lícitas do controlador; os controladores diretamente envolvidos no tratamento do qual decorreram danos também respondem solidariamente, salvo as hipóteses de exclusão [1].\n\nAs hipóteses de exclusão são: provar que não realizou o tratamento atribuído, que o realizou sem violação à legislação ou que o dano decorreu de culpa exclusiva do titular ou de terceiro [2].\n\nQuem reparar o dano tem direito de regresso contra os demais responsáveis, na medida de sua participação no evento danoso [1].",
+      "grounded": true,
+      "cited_documents": [
+        "lgpd-027.md",
+        "lgpd-029.md",
+        "lgpd-028.md"
+      ],
+      "context_documents": [
+        "lgpd-027.md",
+        "lgpd-028.md",
+        "lgpd-029.md",
+        "lgpd-037.md",
+        "lgpd-006.md",
+        "lgpd-033.md",
+        "lgpd-003.md",
+        "lgpd-009.md"
+      ],
+      "scores": {
+        "faithfulness": 0.9230769230769231,
+        "answer_relevancy": 0.7717927045046323,
+        "context_precision": 0.9999999999666667,
+        "context_recall": 1.0
+      },
+      "seconds": 59.387
+    },
+    {
+      "question": "O juiz pode inverter o ônus da prova a favor do titular dos dados em uma ação de reparação?",
+      "expected_answer": "Sim, quando a alegação for verossímil, houver hipossuficiência para produzir a prova ou a produção da prova for excessivamente onerosa para o titular.",
+      "answer": "Sim [1]. No processo civil, o juiz poderá inverter o ônus da prova a favor do titular dos dados quando, a seu juízo, a alegação for verossímil, houver hipossuficiência para fins de produção de prova ou quando a produção de prova pelo titular resultar-lhe excessivamente onerosa [1]. Essa previsão está no art. 42 da LGPD, que trata da reparação de dano causado por controlador ou operador em violação à legislação de proteção de dados pessoais [1].",
+      "grounded": true,
+      "cited_documents": [
+        "lgpd-027.md"
+      ],
+      "context_documents": [
+        "lgpd-027.md",
+        "cdc-033.md",
+        "cdc-042.md",
+        "cdc-041.md",
+        "cdc-040.md",
+        "lgpd-011.md",
+        "lgpd-009.md",
+        "lgpd-028.md"
+      ],
+      "scores": {
+        "faithfulness": 1.0,
+        "answer_relevancy": 0.8803543931904513,
+        "context_precision": 0.9999999999,
+        "context_recall": 1.0
+      },
+      "seconds": 59.373
+    },
+    {
+      "question": "Que medidas de segurança os agentes de tratamento devem adotar?",
+      "expected_answer": "Medidas de segurança, técnicas e administrativas, aptas a proteger os dados pessoais de acessos não autorizados e de situações acidentais ou ilícitas, observadas desde a concepção do produto ou do serviço até a sua execução.",
+      "answer": "Os agentes de tratamento devem adotar medidas de segurança, técnicas e administrativas aptas a proteger os dados pessoais. [2]\n\nEssas medidas devem proteger contra acessos não autorizados e contra situações acidentais ou ilícitas de destruição, perda, alteração, comunicação ou qualquer forma de tratamento inadequado ou ilícito. [2]\n\nA autoridade nacional poderá dispor sobre padrões técnicos mínimos, considerando a natureza das informações tratadas, as características específicas do tratamento, o estado atual da tecnologia, especialmente no caso de dados pessoais sensíveis, e os princípios previstos no caput do art. 6º da Lei. [2]\n\nAs medidas devem ser observadas desde a fase de concepção do produto ou do serviço até a sua execução. [2]",
+      "grounded": true,
+      "cited_documents": [
+        "lgpd-031.md"
+      ],
+      "context_documents": [
+        "lgpd-003.md",
+        "lgpd-031.md",
+        "lgpd-033.md",
+        "lai-013.md",
+        "lgpd-026.md",
+        "lgpd-035.md",
+        "lgpd-023.md",
+        "lgpd-003.md"
+      ],
+      "scores": {
+        "faithfulness": 1.0,
+        "answer_relevancy": 0.7936285389973557,
+        "context_precision": 0.8333333333055556,
+        "context_recall": 1.0
+      },
+      "seconds": 52.844
+    },
+    {
+      "question": "Além da multa, que outras punições uma empresa pode receber por descumprir a lei de proteção de dados?",
+      "expected_answer": "Advertência, multa diária, publicização da infração, bloqueio ou eliminação dos dados, suspensão do banco de dados ou da atividade de tratamento por até 6 meses, e proibição parcial ou total das atividades de tratamento.",
+      "answer": "Desconsiderando a multa simples e a multa diária, as demais sanções administrativas previstas para os agentes de tratamento de dados, aplicáveis pela autoridade nacional, são: [2]\n\n- advertência, com indicação de prazo para adoção de medidas corretivas; [2]\n- publicização da infração após devidamente apurada e confirmada a sua ocorrência; [2]\n- bloqueio dos dados pessoais a que se refere a infração até a sua regularização; [2]\n- eliminação dos dados pessoais a que se refere a infração; [2]\n- suspensão parcial ou total do funcionamento do banco de dados a que se refere a infração pelo período máximo de 6 meses, prorrogável por igual período até a regularização da atividade de tratamento pelo controlador; [2]\n- suspensão do exercício da atividade de tratamento dos dados pessoais a que se refere a infração pelo período máximo de 6 meses, prorrogável por igual período; [2]\n- proibição parcial ou total do exercício de atividades relacionadas a tratamento de dados. [2]\n\nEssas sanções podem ser aplicadas de forma gradativa, isolada ou cumulativa, de acordo com as peculiaridades do caso concreto. [2]\n\nElas não substituem sanções administrativas, civis ou penais definidas em legislação específica. [3]",
+      "grounded": true,
+      "cited_documents": [
+        "lgpd-037.md",
+        "lgpd-037.md"
+      ],
+      "context_documents": [
+        "lgpd-027.md",
+        "lgpd-037.md",
+        "lgpd-037.md",
+        "lgpd-006.md",
+        "lgpd-012.md",
+        "lgpd-003.md",
+        "mci-006.md",
+        "lgpd-002.md"
+      ],
+      "scores": {
+        "faithfulness": 1.0,
+        "answer_relevancy": 0.7145741545419041,
+        "context_precision": 0.49999999995,
+        "context_recall": 1.0
+      },
+      "seconds": 71.081
+    },
+    {
+      "question": "Preciso do consentimento de alguém para usar dados que essa própria pessoa tornou públicos?",
+      "expected_answer": "Não. A lei dispensa o consentimento para os dados tornados manifestamente públicos pelo titular, resguardados os direitos do titular e os princípios da lei.",
+      "answer": "Não, se os dados forem tornados manifestamente públicos pelo próprio titular, a Lei dispensa a exigência de consentimento nessa hipótese [2].\n\nA dispensa resguarda os direitos do titular e os princípios previstos na Lei [2].\n\nO tratamento de dados cujo acesso é público deve considerar a finalidade, a boa-fé e o interesse público que justificaram sua disponibilização [2].",
+      "grounded": true,
+      "cited_documents": [
+        "lgpd-004.md"
+      ],
+      "context_documents": [
+        "lgpd-006.md",
+        "lgpd-004.md",
+        "lgpd-006.md",
+        "lgpd-003.md",
+        "lgpd-007.md",
+        "lgpd-013.md",
+        "lgpd-004.md",
+        "lgpd-009.md"
+      ],
+      "scores": {
+        "faithfulness": 1.0,
+        "answer_relevancy": 0.7580529025234527,
+        "context_precision": 0.5833333333041666,
+        "context_recall": 0.5
+      },
+      "seconds": 56.559
+    },
+    {
+      "question": "O fabricante responde pelos danos causados por um defeito do produto mesmo sem culpa?",
+      "expected_answer": "Sim. O fabricante, o produtor, o construtor e o importador respondem independentemente da existência de culpa pela reparação dos danos causados por defeitos do produto.",
+      "answer": "Sim [2]. O fabricante responde, independentemente da existência de culpa, pela reparação dos danos causados aos consumidores por defeitos do produto, inclusive por informações insuficientes ou inadequadas sobre sua utilização e riscos [2]. Ele só não será responsabilizado se provar que não colocou o produto no mercado ou que, embora o tenha colocado, o defeito inexiste [2].",
+      "grounded": true,
+      "cited_documents": [
+        "cdc-004.md"
+      ],
+      "context_documents": [
+        "cdc-005.md",
+        "cdc-004.md",
+        "cdc-009.md",
+        "cdc-007.md",
+        "cdc-006.md",
+        "cdc-008.md",
+        "cdc-003.md"
+      ],
+      "scores": {
+        "faithfulness": 0.6,
+        "answer_relevancy": 0.9751862603443427,
+        "context_precision": 0.9999999999857143,
+        "context_recall": 1.0
+      },
+      "seconds": 41.651
+    },
+    {
+      "question": "Em que situações o fabricante não é responsabilizado pelo defeito do produto?",
+      "expected_answer": "Quando prova que não colocou o produto no mercado, que o defeito não existe ou que houve culpa exclusiva do consumidor ou de terceiro.",
+      "answer": "O fabricante só não será responsabilizado quando provar uma destas situações [1]:\n\n- Que não colocou o produto no mercado [1].\n- Que, embora tenha colocado o produto no mercado, o defeito inexiste [1].",
+      "grounded": true,
+      "cited_documents": [
+        "cdc-004.md"
+      ],
+      "context_documents": [
+        "cdc-004.md",
+        "cdc-005.md",
+        "cdc-009.md",
+        "cdc-006.md",
+        "cdc-006.md",
+        "cdc-007.md",
+        "cdc-003.md"
+      ],
+      "scores": {
+        "faithfulness": 1.0,
+        "answer_relevancy": 0.8498125209073667,
+        "context_precision": 0.9999999999,
+        "context_recall": 0.6666666666666666
+      },
+      "seconds": 41.951
+    },
+    {
+      "question": "Se a empresa descobrir depois da venda que um produto é perigoso, o que ela tem que fazer?",
+      "expected_answer": "Comunicar o fato imediatamente às autoridades competentes e aos consumidores, mediante anúncios publicitários.",
+      "answer": "O fornecedor deve comunicar imediatamente às autoridades competentes e aos consumidores que o produto apresenta periculosidade, mediante anúncios publicitários. [1]\n\nOs anúncios devem ser veiculados na imprensa, rádio e televisão, às expensas do fornecedor. [1]\n\nSe a autoridade competente determinar, o fornecedor deve retirar imediatamente do mercado os produtos nocivos ou perigosos. [8]",
+      "grounded": true,
+      "cited_documents": [
+        "cdc-004.md",
+        "cdc-023.md"
+      ],
+      "context_documents": [
+        "cdc-004.md",
+        "cdc-006.md",
+        "cdc-019.md",
+        "cdc-006.md",
+        "cdc-009.md",
+        "cdc-013.md",
+        "cdc-005.md",
+        "cdc-023.md"
+      ],
+      "scores": {
+        "faithfulness": 1.0,
+        "answer_relevancy": 0.7780847986332925,
+        "context_precision": 0.62499999996875,
+        "context_recall": 1.0
+      },
+      "seconds": 79.118
+    },
+    {
+      "question": "O que o consumidor pode exigir quando um serviço é prestado com vício de qualidade?",
+      "expected_answer": "Alternativamente e à sua escolha: a reexecução do serviço sem custo adicional, a restituição imediata da quantia paga com atualização monetária ou o abatimento proporcional do preço.",
+      "answer": "Quando o serviço tem vício de qualidade que o torna impróprio ao consumo, diminui seu valor ou decorre de disparidade com a oferta ou mensagem publicitária, o consumidor pode exigir, alternativamente e à sua escolha [1]:\n\n- a reexecução dos serviços, sem custo adicional e quando cabível [1];\n- a restituição imediata da quantia paga, monetariamente atualizada, sem prejuízo de eventuais perdas e danos [1];\n- o abatimento proporcional do preço [1].",
+      "grounded": true,
+      "cited_documents": [
+        "cdc-007.md"
+      ],
+      "context_documents": [
+        "cdc-007.md",
+        "cdc-006.md",
+        "cdc-005.md",
+        "cdc-009.md",
+        "cdc-017.md",
+        "cdc-008.md",
+        "cdc-004.md",
+        "cdc-014.md"
+      ],
+      "scores": {
+        "faithfulness": 1.0,
+        "answer_relevancy": 0.9829239400765535,
+        "context_precision": 0.9999999999,
+        "context_recall": 1.0
+      },
+      "seconds": 54.356
+    },
+    {
+      "question": "A oficina pode usar peça usada ou paralela no conserto do meu aparelho?",
+      "expected_answer": "A oficina deve empregar componentes de reposição originais adequados e novos, ou que mantenham as especificações técnicas do fabricante, salvo autorização em contrário do consumidor.",
+      "answer": "Na reparação de produtos, usar peça ou componente de reposição usado sem autorização do consumidor é infração penal, com pena de detenção de três meses a um ano e multa [3]. Portanto, a oficina pode empregar peça usada somente se o consumidor autorizar [3].\n\nPeça paralela: Não encontrei essa informação nas fontes disponíveis.",
+      "grounded": true,
+      "cited_documents": [
+        "cdc-026.md"
+      ],
+      "context_documents": [
+        "cdc-006.md",
+        "cdc-007.md",
+        "cdc-026.md",
+        "cdc-005.md",
+        "cdc-044.md",
+        "cdc-017.md",
+        "cdc-010.md",
+        "cdc-014.md"
+      ],
+      "scores": {
+        "faithfulness": 0.75,
+        "answer_relevancy": 0.6832164988100459,
+        "context_precision": 0.3333333333,
+        "context_recall": 0.0
+      },
+      "seconds": 61.164
+    },
+    {
+      "question": "A garantia legal de adequação do produto depende de um termo escrito?",
+      "expected_answer": "Não. A garantia legal independe de termo expresso, e a lei veda a exoneração contratual do fornecedor.",
+      "answer": "Não. A garantia legal de adequação do produto ou serviço independe de termo expresso, vedada a exoneração contratual do fornecedor [1]. Já a garantia contratual, que é complementar à legal, é que será conferida mediante termo escrito [4].",
+      "grounded": true,
+      "cited_documents": [
+        "cdc-008.md",
+        "cdc-017.md"
+      ],
+      "context_documents": [
+        "cdc-008.md",
+        "cdc-004.md",
+        "cdc-006.md",
+        "cdc-017.md",
+        "cdc-018.md",
+        "cdc-009.md",
+        "cdc-005.md",
+        "cdc-007.md"
+      ],
+      "scores": {
+        "faithfulness": 1.0,
+        "answer_relevancy": 0.9138449710931537,
+        "context_precision": 0.624999999984375,
+        "context_recall": 1.0
+      },
+      "seconds": 52.155
+    },
+    {
+      "question": "Que informações a oferta e a apresentação de um produto devem trazer?",
+      "expected_answer": "Informações corretas, claras, precisas, ostensivas e em língua portuguesa sobre características, qualidades, quantidade, composição, preço, garantia, prazos de validade, origem e riscos.",
+      "answer": "A oferta e a apresentação do produto devem assegurar informações corretas, claras, precisas, ostensivas e em língua portuguesa [1].\n\nDevem informar sobre suas características, qualidades, quantidade, composição, preço, garantia, prazos de validade e origem, entre outros dados [1].\n\nTambém devem informar sobre os riscos que o produto apresenta à saúde e à segurança dos consumidores [1].\n\nSe a oferta ou venda for por telefone ou reembolso postal, devem constar o nome do fabricante e o endereço na embalagem, na publicidade e em todos os impressos utilizados na transação comercial [1].",
+      "grounded": true,
+      "cited_documents": [
+        "cdc-011.md"
+      ],
+      "context_documents": [
+        "cdc-011.md",
+        "cdc-004.md",
+        "cdc-012.md",
+        "cdc-013.md",
+        "cdc-003.md",
+        "cdc-006.md",
+        "cdc-018.md",
+        "cdc-006.md"
+      ],
+      "scores": {
+        "faithfulness": 1.0,
+        "answer_relevancy": 0.7345438316124663,
+        "context_precision": 0.9999999999,
+        "context_recall": 1.0
+      },
+      "seconds": 54.421
+    },
+    {
+      "question": "Até quando o fabricante precisa vender peças de reposição do produto que fez?",
+      "expected_answer": "Enquanto não cessar a fabricação ou a importação do produto. Depois disso, a oferta deve ser mantida por período razoável de tempo, na forma da lei.",
+      "answer": "Os fabricantes e importadores devem assegurar a oferta de componentes e peças de reposição enquanto não cessar a fabricação ou importação do produto [5]. Cessadas a produção ou importação, a oferta deverá ser mantida por período razoável de tempo, na forma da lei [5].",
+      "grounded": true,
+      "cited_documents": [
+        "cdc-011.md"
+      ],
+      "context_documents": [
+        "cdc-009.md",
+        "cdc-004.md",
+        "cdc-006.md",
+        "cdc-006.md",
+        "cdc-011.md",
+        "cdc-005.md",
+        "cdc-007.md",
+        "cdc-007.md"
+      ],
+      "scores": {
+        "faithfulness": 1.0,
+        "answer_relevancy": 0.7560461933003353,
+        "context_precision": 0.19999999998,
+        "context_recall": 1.0
+      },
+      "seconds": 47.36
+    },
+    {
+      "question": "O que é publicidade enganosa?",
+      "expected_answer": "Qualquer informação ou comunicação publicitária, inteira ou parcialmente falsa, ou capaz de induzir o consumidor em erro, inclusive por omissão de dado essencial.",
+      "answer": "Publicidade enganosa é qualquer modalidade de informação ou comunicação de caráter publicitário, inteira ou parcialmente falsa, ou, por qualquer outro modo, mesmo por omissão, capaz de induzir em erro o consumidor a respeito da natureza, características, qualidade, quantidade, propriedades, origem, preço e quaisquer outros dados sobre produtos e serviços [1].\n\nTambém é enganosa por omissão quando deixa de informar sobre dado essencial do produto ou serviço [1].\n\nToda publicidade enganosa é proibida [1].",
+      "grounded": true,
+      "cited_documents": [
+        "cdc-013.md"
+      ],
+      "context_documents": [
+        "cdc-013.md",
+        "cdc-021.md",
+        "cdc-012.md",
+        "cdc-024.md",
+        "cdc-025.md",
+        "lai-017.md",
+        "cdc-002.md",
+        "cdc-015.md"
+      ],
+      "scores": {
+        "faithfulness": 0.8,
+        "answer_relevancy": 0.947024679294858,
+        "context_precision": 0.6999999999766667,
+        "context_recall": 1.0
+      },
+      "seconds": 53.067
+    },
+    {
+      "question": "Numa propaganda, quem precisa provar que o que ela diz é verdade?",
+      "expected_answer": "Quem patrocina a publicidade. O ônus da prova da veracidade e da correção da informação cabe a ele.",
+      "answer": "Cabe a quem patrocina a informação ou comunicação publicitária provar sua veracidade e correção [1].",
+      "grounded": true,
+      "cited_documents": [
+        "cdc-013.md"
+      ],
+      "context_documents": [
+        "cdc-013.md",
+        "cdc-002.md",
+        "cdc-042.md",
+        "cdc-004.md",
+        "cdc-011.md",
+        "cdc-010.md"
+      ],
+      "scores": {
+        "faithfulness": 1.0,
+        "answer_relevancy": 0.6186695018952341,
+        "context_precision": 0.6666666666333333,
+        "context_recall": 1.0
+      },
+      "seconds": 64.568
+    },
+    {
+      "question": "Recebi em casa um produto que eu não pedi. Preciso pagar por ele?",
+      "expected_answer": "Não. O produto enviado sem solicitação prévia equipara-se a amostra grátis, e não existe obrigação de pagamento.",
+      "answer": "Não encontrei essa informação nas fontes disponíveis.",
+      "grounded": false,
+      "cited_documents": [],
+      "context_documents": [
+        "cdc-005.md",
+        "cdc-014.md",
+        "cdc-006.md",
+        "cdc-004.md",
+        "cdc-007.md",
+        "cdc-017.md",
+        "cdc-018.md",
+        "cdc-009.md"
+      ],
+      "scores": {
+        "faithfulness": 0.0,
+        "answer_relevancy": 0.0,
+        "context_precision": 0.0,
+        "context_recall": 0.0
+      },
+      "seconds": 52.551
+    },
+    {
+      "question": "Como as cláusulas de um contrato de consumo são interpretadas?",
+      "expected_answer": "De maneira mais favorável ao consumidor.",
+      "answer": "As cláusulas contratuais serão interpretadas de maneira mais favorável ao consumidor [3].\n\nOs contratos que regulam relações de consumo não obrigarão os consumidores se não lhes for dada oportunidade de tomar conhecimento prévio do conteúdo, ou se forem redigidos de modo a dificultar a compreensão de seu sentido e alcance [3].\n\nNos contratos de adesão escritos, a redação deve ser clara, com caracteres ostensivos e legíveis, e as cláusulas que limitam direitos do consumidor devem ser redigidas com destaque, permitindo sua imediata e fácil compreensão [4].",
+      "grounded": true,
+      "cited_documents": [
+        "cdc-016.md",
+        "cdc-018.md"
+      ],
+      "context_documents": [
+        "cdc-017.md",
+        "cdc-018.md",
+        "cdc-016.md",
+        "cdc-018.md",
+        "mci-004.md",
+        "cdc-002.md",
+        "cdc-002.md",
+        "cdc-017.md"
+      ],
+      "scores": {
+        "faithfulness": 1.0,
+        "answer_relevancy": 0.9230309934586574,
+        "context_precision": 0.2916666666520833,
+        "context_recall": 1.0
+      },
+      "seconds": 55.732
+    },
+    {
+      "question": "Que cláusulas contratuais são nulas de pleno direito nas relações de consumo?",
+      "expected_answer": "Entre outras, as que exoneram ou atenuam a responsabilidade do fornecedor por vícios, transferem responsabilidades a terceiros, invertem o ônus da prova em prejuízo do consumidor, impõem arbitragem compulsória ou permitem a variação unilateral do preço.",
+      "answer": "Não encontrei essa informação nas fontes disponíveis.",
+      "grounded": false,
+      "cited_documents": [],
+      "context_documents": [
+        "cdc-017.md",
+        "cdc-017.md",
+        "cdc-018.md",
+        "mci-004.md",
+        "cdc-002.md",
+        "cdc-016.md",
+        "cdc-002.md",
+        "cdc-018.md"
+      ],
+      "scores": {
+        "faithfulness": 0.0,
+        "answer_relevancy": 0.0,
+        "context_precision": 0.99999999995,
+        "context_recall": 1.0
+      },
+      "seconds": 77.509
+    },
+    {
+      "question": "O que a loja precisa me informar antes de eu fechar um financiamento?",
+      "expected_answer": "O preço em moeda corrente nacional, o montante dos juros de mora e a taxa efetiva anual de juros, os acréscimos legais, o número e a periodicidade das prestações e a soma total a pagar, com e sem financiamento.",
+      "answer": "No fornecimento de produto ou serviço que envolva crédito ou financiamento ao consumidor, o fornecedor deve informar prévia e adequadamente [1]:\n\n- O preço do produto ou serviço em moeda corrente nacional [1].\n- O montante dos juros de mora e da taxa efetiva anual de juros [1].\n- Os acréscimos legalmente previstos [1].\n- O número e a periodicidade das prestações [1].\n- A soma total a pagar, com e sem financiamento [1].",
+      "grounded": true,
+      "cited_documents": [
+        "cdc-018.md"
+      ],
+      "context_documents": [
+        "cdc-018.md",
+        "cdc-011.md",
+        "cdc-010.md",
+        "lgpd-005.md",
+        "cdc-013.md",
+        "lai-006.md",
+        "cdc-041.md",
+        "cdc-003.md"
+      ],
+      "scores": {
+        "faithfulness": 1.0,
+        "answer_relevancy": 0.621751884243177,
+        "context_precision": 0.9999999999,
+        "context_recall": 1.0
+      },
+      "seconds": 47.795
+    },
+    {
+      "question": "Como devem ser redigidos os contratos de adesão escritos?",
+      "expected_answer": "Em termos claros e com caracteres ostensivos e legíveis, de modo a facilitar a compreensão pelo consumidor.",
+      "answer": "Os contratos de adesão escritos devem ser redigidos em termos claros e com caracteres ostensivos e legíveis, de modo a facilitar sua compreensão pelo consumidor [1]. As cláusulas que implicarem limitação de direito do consumidor devem ser redigidas com destaque, permitindo sua imediata e fácil compreensão [1].",
+      "grounded": true,
+      "cited_documents": [
+        "cdc-018.md"
+      ],
+      "context_documents": [
+        "cdc-018.md",
+        "cdc-018.md",
+        "cdc-017.md",
+        "cdc-017.md",
+        "cdc-014.md",
+        "cdc-016.md",
+        "cdc-006.md",
+        "cdc-041.md"
+      ],
+      "scores": {
+        "faithfulness": 1.0,
+        "answer_relevancy": 0.8856510192342609,
+        "context_precision": 0.9999999999,
+        "context_recall": 1.0
+      },
+      "seconds": 37.04
+    },
+    {
+      "question": "Em que caso o sigilo das comunicações privadas pela internet pode ser quebrado?",
+      "expected_answer": "Somente por ordem judicial, na forma da lei.",
+      "answer": "O sigilo das comunicações privadas pela internet pode ser excepcionado somente por ordem judicial, na forma da lei [1]. O conteúdo das comunicações privadas somente poderá ser disponibilizado mediante ordem judicial, nas hipóteses e na forma que a lei estabelecer [2].",
+      "grounded": true,
+      "cited_documents": [
+        "mci-004.md",
+        "mci-005.md"
+      ],
+      "context_documents": [
+        "mci-004.md",
+        "mci-005.md",
+        "mci-004.md",
+        "mci-007.md",
+        "mci-006.md",
+        "mci-005.md",
+        "mci-008.md",
+        "lai-013.md"
+      ],
+      "scores": {
+        "faithfulness": 1.0,
+        "answer_relevancy": 0.8608452064409922,
+        "context_precision": 0.8303571428363838,
+        "context_recall": 1.0
+      },
+      "seconds": 69.98
+    },
+    {
+      "question": "Por quanto tempo a empresa que me dá acesso à internet precisa guardar meus registros de conexão?",
+      "expected_answer": "Pelo prazo de 1 ano, sob sigilo, em ambiente controlado e de segurança, nos termos do regulamento.",
+      "answer": "O prazo é de 1 (um) ano, nos termos do regulamento; na provisão de conexão à internet, cabe ao administrador de sistema autônomo respectivo manter os registros de conexão sob sigilo, em ambiente controlado e de segurança [1]. Esse prazo pode ser superior se a autoridade policial ou administrativa ou o Ministério Público requerer cautelarmente a guarda dos registros por prazo maior [1].",
+      "grounded": true,
+      "cited_documents": [
+        "mci-007.md"
+      ],
+      "context_documents": [
+        "mci-007.md",
+        "mci-008.md",
+        "mci-004.md",
+        "mci-015.md",
+        "mci-006.md",
+        "mci-003.md",
+        "mci-009.md",
+        "mci-005.md"
+      ],
+      "scores": {
+        "faithfulness": 1.0,
+        "answer_relevancy": 0.8447388483479789,
+        "context_precision": 0.9999999999,
+        "context_recall": 1.0
+      },
+      "seconds": 56.491
+    },
+    {
+      "question": "Por quanto tempo o provedor de aplicações de internet deve guardar os registros de acesso a aplicações?",
+      "expected_answer": "Pelo prazo de 6 meses, sob sigilo, em ambiente controlado e de segurança, nos termos do regulamento.",
+      "answer": "Em regra, o provedor de aplicações de internet constituído como pessoa jurídica e que exerce a atividade de forma organizada, profissional e com fins econômicos deve manter os registros de acesso, sob sigilo, em ambiente controlado e de segurança, pelo prazo de 6 (seis) meses, nos termos do regulamento [2].\n\nEsse prazo pode ser superior se autoridade policial, administrativa ou o Ministério Público requerer cautelarmente a guarda, observados os §§ 3º e 4º do art. 13 [2].\n\nPara provedores não sujeitos à regra dos 6 meses, ordem judicial pode determinar a guarda por tempo certo, desde que se trate de registros relativos a fatos específicos em período determinado [2].",
+      "grounded": true,
+      "cited_documents": [
+        "mci-008.md"
+      ],
+      "context_documents": [
+        "mci-007.md",
+        "mci-008.md",
+        "mci-004.md",
+        "mci-006.md",
+        "mci-015.md",
+        "mci-009.md",
+        "mci-005.md",
+        "mci-004.md"
+      ],
+      "scores": {
+        "faithfulness": 1.0,
+        "answer_relevancy": 0.8218760815669907,
+        "context_precision": 0.49999999995,
+        "context_recall": 1.0
+      },
+      "seconds": 55.617
+    },
+    {
+      "question": "Qual é a multa máxima por violar as regras de privacidade e de guarda de dados do Marco Civil da Internet?",
+      "expected_answer": "Até 10% do faturamento do grupo econômico no Brasil no último exercício, excluídos os tributos.",
+      "answer": "A multa máxima é de até 10% (dez por cento) do faturamento do grupo econômico no Brasil no último exercício, excluídos os tributos, nas infrações às normas dos arts. 10 e 11 do Marco Civil da Internet [1].\n\nA sanção pode ser aplicada de forma isolada ou cumulativa, sem prejuízo das demais sanções cíveis, criminais ou administrativas [1].",
+      "grounded": true,
+      "cited_documents": [
+        "mci-006.md"
+      ],
+      "context_documents": [
+        "mci-006.md",
+        "mci-004.md",
+        "mci-007.md",
+        "mci-008.md",
+        "mci-005.md",
+        "lgpd-037.md",
+        "mci-009.md",
+        "mci-002.md"
+      ],
+      "scores": {
+        "faithfulness": 1.0,
+        "answer_relevancy": 0.8341028840727304,
+        "context_precision": 0.9999999999,
+        "context_recall": 1.0
+      },
+      "seconds": 56.604
+    },
+    {
+      "question": "Quando um provedor de aplicações pode ser responsabilizado por conteúdo gerado por terceiros?",
+      "expected_answer": "Somente se, após ordem judicial específica, não tomar as providências para tornar indisponível o conteúdo apontado como infringente, no prazo assinalado.",
+      "answer": "Regra geral: o provedor de aplicações de internet somente poderá ser responsabilizado civilmente por danos decorrentes de conteúdo gerado por terceiros se, após ordem judicial específica, não tomar as providências para, no âmbito e nos limites técnicos do serviço e dentro do prazo assinalado, tornar indisponível o conteúdo apontado como infringente, ressalvadas disposições legais em contrário [1].\n\nA ordem judicial deve conter, sob pena de nulidade, identificação clara e específica do conteúdo apontado como infringente, permitindo a localização inequívoca do material [1].\n\nHá também responsabilidade subsidiária quando o provedor, após notificação do participante ou de seu representante legal, deixa de promover, de forma diligente e nos limites técnicos do serviço, a indisponibilização de imagens, vídeos ou outros materiais com cenas de nudez ou atos sexuais de caráter privado divulgados sem autorização dos participantes; a notificação deve permitir a identificação específica do material e a verificação da legitimidade do pedido, sob pena de nulidade [3].",
+      "grounded": true,
+      "cited_documents": [
+        "mci-012.md",
+        "mci-014.md"
+      ],
+      "context_documents": [
+        "mci-012.md",
+        "mci-013.md",
+        "mci-014.md",
+        "mci-008.md",
+        "mci-011.md",
+        "mci-007.md",
+        "cdc-005.md",
+        "cdc-007.md"
+      ],
+      "scores": {
+        "faithfulness": 1.0,
+        "answer_relevancy": 0.9081781122779864,
+        "context_precision": 0.9999999999,
+        "context_recall": 1.0
+      },
+      "seconds": 59.041
+    },
+    {
+      "question": "Alguém publicou um vídeo íntimo meu sem eu deixar. A plataforma precisa tirar do ar?",
+      "expected_answer": "Sim. O provedor responde subsidiariamente se, depois de notificado pelo participante ou por seu representante legal, deixar de indisponibilizar o conteúdo de forma diligente.",
+      "answer": "Sim, se o vídeo contiver cenas de nudez ou atos sexuais de caráter privado e foi divulgado sem autorização dos participantes, o provedor de aplicações de internet responde subsidiariamente se, após notificação do participante ou de seu representante legal, deixar de promover, de forma diligente e nos limites técnicos do serviço, a indisponibilização do conteúdo. [2]\n\nA notificação deve conter, sob pena de nulidade, elementos que permitam a identificação específica do material apontado como violador da intimidade e a verificação da legitimidade para apresentação do pedido. [2]\n\nTambém é assegurado ao usuário o direito à inviolabilidade da intimidade e da vida privada, com proteção e indenização pelo dano material ou moral decorrente de sua violação. [6]",
+      "grounded": true,
+      "cited_documents": [
+        "mci-014.md",
+        "mci-004.md"
+      ],
+      "context_documents": [
+        "lai-016.md",
+        "mci-014.md",
+        "lai-017.md",
+        "lai-004.md",
+        "lai-002.md",
+        "mci-004.md",
+        "lai-004.md",
+        "lai-020.md"
+      ],
+      "scores": {
+        "faithfulness": 1.0,
+        "answer_relevancy": 0.5308878609540838,
+        "context_precision": 0.4166666666458333,
+        "context_recall": 1.0
+      },
+      "seconds": 56.112
+    },
+    {
+      "question": "O que é a neutralidade de rede?",
+      "expected_answer": "O dever do responsável pela transmissão, comutação ou roteamento de tratar de forma isonômica quaisquer pacotes de dados, sem distinção por conteúdo, origem e destino, serviço, terminal ou aplicação.",
+      "answer": "A neutralidade de rede é um dos princípios da disciplina do uso da internet no Brasil [2].\n\nNa Seção “Da Neutralidade de Rede”, o Marco Civil estabelece o dever de o responsável pela transmissão, comutação ou roteamento tratar de forma isonômica quaisquer pacotes de dados, sem distinção por conteúdo, origem e destino, serviço, terminal ou aplicação [1].\n\nA discriminação ou degradação do tráfego somente poderá decorrer de requisitos técnicos indispensáveis à prestação adequada dos serviços e aplicações ou de priorização de serviços de emergência [1].\n\nNessas hipóteses, o responsável deve agir com proporcionalidade, transparência e isonomia, informar previamente os usuários sobre as práticas de gerenciamento e mitigação de tráfego e oferecer serviços em condições comerciais não discriminatórias [1].\n\nTambém é vedado bloquear, monitorar, filtrar ou analisar o conteúdo dos pacotes de dados na provisão de conexão à internet, onerosa ou gratuita, bem como na transmissão, comutação ou roteamento, respeitado o disposto no art. 9º [1].",
+      "grounded": true,
+      "cited_documents": [
+        "mci-002.md",
+        "mci-005.md"
+      ],
+      "context_documents": [
+        "mci-005.md",
+        "mci-002.md",
+        "mci-017.md",
+        "mci-001.md",
+        "mci-003.md",
+        "mci-004.md",
+        "lai-004.md",
+        "mci-004.md"
+      ],
+      "scores": {
+        "faithfulness": 1.0,
+        "answer_relevancy": 0.8513782657055518,
+        "context_precision": 0.9999999999,
+        "context_recall": 1.0
+      },
+      "seconds": 52.691
+    },
+    {
+      "question": "A operadora que me vende a internet pode guardar quais sites e aplicativos eu acesso?",
+      "expected_answer": "Não. Na provisão de conexão é vedado guardar os registros de acesso a aplicações de internet.",
+      "answer": "Não. Na provisão de conexão, onerosa ou gratuita, é vedado guardar registros de acesso a aplicações de internet [1]. Esses registros são as informações de data e hora de uso de uma determinada aplicação a partir de um determinado endereço IP [4]. O administrador de sistema autônomo respectivo deve manter os registros de conexão, sob sigilo, em ambiente controlado e de segurança, pelo prazo de 1 ano [1]; esses registros compreendem data e hora de início e término da conexão, sua duração e o endereço IP utilizado [4]. Em regra, a guarda dos registros de acesso a aplicações é do provedor de aplicações constituído como pessoa jurídica e que exerça a atividade de forma organizada, profissionalmente e com fins econômicos, pelo prazo de 6 meses [2].",
+      "grounded": true,
+      "cited_documents": [
+        "mci-007.md",
+        "mci-003.md",
+        "mci-008.md"
+      ],
+      "context_documents": [
+        "mci-007.md",
+        "mci-008.md",
+        "mci-004.md",
+        "mci-003.md",
+        "mci-006.md",
+        "mci-004.md",
+        "mci-017.md",
+        "mci-005.md"
+      ],
+      "scores": {
+        "faithfulness": 1.0,
+        "answer_relevancy": 0.6931204146078022,
+        "context_precision": 0.7999999999866666,
+        "context_recall": 1.0
+      },
+      "seconds": 75.784
+    },
+    {
+      "question": "O provedor de conexão à internet responde por danos causados por conteúdo de terceiros?",
+      "expected_answer": "Não. O provedor de conexão não será responsabilizado civilmente por danos decorrentes de conteúdo gerado por terceiros.",
+      "answer": "Não: o provedor de conexão à internet não será responsabilizado civilmente por danos decorrentes de conteúdo gerado por terceiros [2].",
+      "grounded": true,
+      "cited_documents": [
+        "mci-011.md"
+      ],
+      "context_documents": [
+        "mci-012.md",
+        "mci-011.md",
+        "mci-013.md",
+        "mci-004.md",
+        "mci-005.md",
+        "mci-014.md",
+        "mci-007.md",
+        "mci-004.md"
+      ],
+      "scores": {
+        "faithfulness": 1.0,
+        "answer_relevancy": 0.9355285375890809,
+        "context_precision": 0.49999999995,
+        "context_recall": 1.0
+      },
+      "seconds": 52.815
+    },
+    {
+      "question": "Quando eu parar de usar um aplicativo, posso pedir que apaguem meus dados de lá?",
+      "expected_answer": "Sim. O usuário tem direito à exclusão definitiva dos dados pessoais que forneceu a determinada aplicação, a seu requerimento, ao término da relação, ressalvada a guarda obrigatória de registros.",
+      "answer": "Sim: você pode pedir ao controlador, a qualquer momento e mediante requisição, a eliminação dos seus dados pessoais tratados com o seu consentimento, exceto nas hipóteses previstas no art. 16 da LGPD [5]. O término do tratamento pode ocorrer por comunicação do titular, inclusive no exercício do direito de revogação do consentimento, resguardado o interesse público [1]. Após o término, os dados pessoais serão eliminados, no âmbito e nos limites técnicos das atividades, mas a lei autoriza conservação para cumprimento de obrigação legal ou regulatória, estudo por órgão de pesquisa com anonimização sempre que possível, transferência a terceiro respeitando os requisitos legais, ou uso exclusivo do controlador, sem acesso por terceiros e com anonimização [1]. Você também pode pedir anonimização, bloqueio ou eliminação de dados desnecessários, excessivos ou tratados em desconformidade com a LGPD [5]. Na lei, eliminação é a exclusão de dado ou de conjunto de dados armazenados em banco de dados, independentemente do procedimento empregado [3]. O pedido deve ser feito por requerimento expresso do titular ou de representante legalmente constituído ao agente de tratamento, e deve ser atendido sem custos para o titular, nos prazos e termos previstos em regulamento [5][4].",
+      "grounded": true,
+      "cited_documents": [
+        "lgpd-009.md",
+        "lgpd-008.md",
+        "lgpd-003.md",
+        "lgpd-009.md"
+      ],
+      "context_documents": [
+        "lgpd-008.md",
+        "lgpd-006.md",
+        "lgpd-003.md",
+        "lgpd-009.md",
+        "lgpd-009.md",
+        "lgpd-010.md",
+        "lgpd-003.md",
+        "lgpd-013.md"
+      ],
+      "scores": {
+        "faithfulness": 1.0,
+        "answer_relevancy": 0.5266418359487577,
+        "context_precision": 0.8041666666465626,
+        "context_recall": 1.0
+      },
+      "seconds": 52.662
+    },
+    {
+      "question": "A lei brasileira se aplica a uma empresa sediada no exterior que coleta dados no Brasil?",
+      "expected_answer": "Sim, desde que ofereça serviço ao público brasileiro ou que uma integrante do mesmo grupo econômico tenha estabelecimento no Brasil.",
+      "answer": "Sim: a coleta é uma operação de tratamento de dados pessoais [8]. A LGPD se aplica a qualquer operação de tratamento realizada por pessoa jurídica de direito privado, independentemente do país de sua sede ou do país onde estejam localizados os dados, se os dados pessoais objeto do tratamento tiverem sido coletados no território nacional [1]. Além disso, consideram-se coletados no território nacional os dados pessoais cujo titular nele se encontre no momento da coleta [1]. No Marco Civil da Internet, a legislação brasileira deve ser respeitada em operações de coleta, armazenamento, guarda ou tratamento em que pelo menos um desses atos ocorra em território nacional [2]. Para pessoa jurídica sediada no exterior, o Marco Civil prevê a aplicação quando ela ofertar serviço ao público brasileiro ou quando pelo menos uma integrante do mesmo grupo econômico possuir estabelecimento no Brasil [2].",
+      "grounded": true,
+      "cited_documents": [
+        "lgpd-003.md",
+        "lgpd-002.md",
+        "mci-006.md"
+      ],
+      "context_documents": [
+        "lgpd-002.md",
+        "mci-006.md",
+        "lgpd-018.md",
+        "lgpd-006.md",
+        "lgpd-012.md",
+        "lgpd-004.md",
+        "lgpd-003.md",
+        "lgpd-003.md"
+      ],
+      "scores": {
+        "faithfulness": 1.0,
+        "answer_relevancy": 0.5369082588247743,
+        "context_precision": 0.99999999995,
+        "context_recall": 1.0
+      },
+      "seconds": 50.786
+    },
+    {
+      "question": "Posso instalar um programa para controlar o que meus filhos veem na internet?",
+      "expected_answer": "Sim. O usuário tem a opção de livre escolha de programa de computador para exercer o controle parental de conteúdo impróprio a seus filhos menores.",
+      "answer": "Sim: o usuário tem a opção de livre escolha na utilização de programa de computador em seu terminal para exercer o controle parental de conteúdo que entende como impróprio para seus filhos menores, desde que respeitados os princípios da Lei e do Estatuto da Criança e do Adolescente [2]. O poder público, em conjunto com os provedores de conexão e de aplicações de internet e a sociedade civil, deve promover educação e fornecer informações sobre o uso desses programas e sobre boas práticas para a inclusão digital de crianças e adolescentes [2].",
+      "grounded": true,
+      "cited_documents": [
+        "mci-022.md"
+      ],
+      "context_documents": [
+        "mci-008.md",
+        "mci-022.md",
+        "mci-004.md",
+        "mci-007.md",
+        "mci-003.md",
+        "mci-004.md",
+        "mci-017.md",
+        "lgpd-007.md"
+      ],
+      "scores": {
+        "faithfulness": 1.0,
+        "answer_relevancy": 0.7567335009193493,
+        "context_precision": 0.49999999995,
+        "context_recall": 1.0
+      },
+      "seconds": 71.899
+    },
+    {
+      "question": "Quando o Marco Civil da Internet entra em vigor?",
+      "expected_answer": "Após decorridos 60 dias de sua publicação oficial.",
+      "answer": "O Marco Civil da Internet entra em vigor após decorridos 60 (sessenta) dias de sua publicação oficial [7].",
+      "grounded": true,
+      "cited_documents": [
+        "mci-025.md"
+      ],
+      "context_documents": [
+        "mci-003.md",
+        "mci-004.md",
+        "mci-002.md",
+        "mci-017.md",
+        "mci-001.md",
+        "mci-024.md",
+        "mci-025.md",
+        "mci-005.md"
+      ],
+      "scores": {
+        "faithfulness": 1.0,
+        "answer_relevancy": 0.9999996151428275,
+        "context_precision": 0.14285714284285714,
+        "context_recall": 1.0
+      },
+      "seconds": 48.798
+    },
+    {
+      "question": "Que requisitos o pedido de fornecimento de registros ao juiz deve cumprir?",
+      "expected_answer": "Fundados indícios da ocorrência do ilícito, justificativa motivada da utilidade dos registros para investigação ou instrução probatória e o período a que se referem os registros.",
+      "answer": "O requerimento deve conter, sem prejuízo dos demais requisitos legais e sob pena de inadmissibilidade: [1]\n\n- fundados indícios da ocorrência do ilícito; [1]\n- justificativa motivada da utilidade dos registros solicitados para fins de investigação ou instrução probatória; [1]\n- período ao qual se referem os registros. [1]",
+      "grounded": true,
+      "cited_documents": [
+        "mci-015.md"
+      ],
+      "context_documents": [
+        "mci-015.md",
+        "mci-008.md",
+        "lai-006.md",
+        "mci-007.md",
+        "lai-004.md",
+        "cdc-015.md",
+        "lgpd-010.md",
+        "mci-016.md"
+      ],
+      "scores": {
+        "faithfulness": 1.0,
+        "answer_relevancy": 0.6649248913218416,
+        "context_precision": 0.9999999999,
+        "context_recall": 1.0
+      },
+      "seconds": 68.045
+    },
+    {
+      "question": "O que é registro de conexão?",
+      "expected_answer": "O conjunto de informações sobre a data e a hora de início e término de uma conexão à internet, sua duração e o endereço IP usado pelo terminal.",
+      "answer": "Registro de conexão é o conjunto de informações referentes à data e hora de início e término de uma conexão à internet, sua duração e o endereço IP utilizado pelo terminal para o envio e recebimento de pacotes de dados [8].",
+      "grounded": true,
+      "cited_documents": [
+        "mci-003.md"
+      ],
+      "context_documents": [
+        "mci-007.md",
+        "mci-015.md",
+        "mci-008.md",
+        "mci-004.md",
+        "mci-005.md",
+        "mci-010.md",
+        "mci-009.md",
+        "mci-003.md"
+      ],
+      "scores": {
+        "faithfulness": 1.0,
+        "answer_relevancy": 0.9999997533786485,
+        "context_precision": 0.1249999999875,
+        "context_recall": 1.0
+      },
+      "seconds": 48.615
+    },
+    {
+      "question": "A operadora pode cortar minha internet se eu atrasar a conta?",
+      "expected_answer": "Sim, mas só por débito diretamente decorrente da utilização do serviço. A conexão não pode ser suspensa por outro motivo.",
+      "answer": "Em regra, não: o usuário tem direito à não suspensão da conexão à internet [3]. A exceção é quando há débito diretamente decorrente da utilização da internet [3]. Portanto, se a conta atrasada for desse débito, a suspensão está prevista na regra [3].",
+      "grounded": true,
+      "cited_documents": [
+        "mci-004.md"
+      ],
+      "context_documents": [
+        "mci-007.md",
+        "mci-008.md",
+        "mci-004.md",
+        "mci-004.md",
+        "mci-012.md",
+        "mci-005.md",
+        "mci-006.md",
+        "mci-003.md"
+      ],
+      "scores": {
+        "faithfulness": 1.0,
+        "answer_relevancy": 0.635728757529689,
+        "context_precision": 0.3333333333,
+        "context_recall": 1.0
+      },
+      "seconds": 46.805
+    },
+    {
+      "question": "Em quanto tempo a autoridade que pediu a guarda de registros por prazo maior deve pedir a autorização judicial de acesso?",
+      "expected_answer": "No prazo de 60 dias, contados a partir do requerimento.",
+      "answer": "Em 60 (sessenta) dias, contados a partir do requerimento, a autoridade requerente deve ingressar com o pedido de autorização judicial de acesso aos registros. [3]\n\nQuando se trata de registros de acesso a aplicações de internet, o requerimento cautelar de guarda, inclusive por prazo superior, observa os §§ 3º e 4º do art. 13. [5]",
+      "grounded": true,
+      "cited_documents": [
+        "mci-007.md",
+        "mci-008.md"
+      ],
+      "context_documents": [
+        "lai-006.md",
+        "lai-008.md",
+        "mci-007.md",
+        "lai-004.md",
+        "mci-008.md",
+        "lai-020.md",
+        "lai-012.md",
+        "lai-015.md"
+      ],
+      "scores": {
+        "faithfulness": 1.0,
+        "answer_relevancy": 0.8512008859683878,
+        "context_precision": 0.3333333333,
+        "context_recall": 1.0
+      },
+      "seconds": 53.46
+    },
+    {
+      "question": "Quando a plataforma derruba um conteúdo meu, ela precisa me explicar o motivo?",
+      "expected_answer": "Sim. Se tiver os dados de contato do usuário responsável, o provedor deve comunicar-lhe os motivos e informações da indisponibilização, que permitam o contraditório e a ampla defesa.",
+      "answer": "Sim, em regra: se o provedor de aplicações de internet tiver informações de contato do usuário diretamente responsável pelo conteúdo, deve comunicar os motivos e as informações relativas à indisponibilização, com informações que permitam o contraditório e a ampla defesa em juízo [1].\n\nIsso vale salvo expressa previsão legal ou expressa determinação judicial fundamentada em contrário [1].\n\nSe você solicitar, o provedor que exerce a atividade de forma organizada, profissionalmente e com fins econômicos deve substituir o conteúdo tornado indisponível pela motivação ou pela ordem judicial que deu fundamento à indisponibilização [1].",
+      "grounded": true,
+      "cited_documents": [
+        "mci-013.md"
+      ],
+      "context_documents": [
+        "mci-013.md",
+        "mci-012.md",
+        "mci-014.md",
+        "mci-011.md",
+        "cdc-007.md",
+        "cdc-010.md",
+        "mci-005.md",
+        "mci-006.md"
+      ],
+      "scores": {
+        "faithfulness": 1.0,
+        "answer_relevancy": 0.5546656376119726,
+        "context_precision": 0.9999999999,
+        "context_recall": 1.0
+      },
+      "seconds": 51.072
+    },
+    {
+      "question": "As autoridades administrativas podem acessar dados cadastrais sem ordem judicial?",
+      "expected_answer": "Sim, quanto aos dados cadastrais que informem qualificação pessoal, filiação e endereço, na forma da lei, pelas autoridades com competência legal para a sua requisição.",
+      "answer": "Não encontrei essa informação nas fontes disponíveis.",
+      "grounded": false,
+      "cited_documents": [],
+      "context_documents": [
+        "cdc-015.md",
+        "lgpd-012.md",
+        "lgpd-010.md",
+        "lgpd-006.md",
+        "lgpd-013.md",
+        "lai-011.md",
+        "lgpd-004.md",
+        "lai-008.md"
+      ],
+      "scores": {
+        "faithfulness": 0.0,
+        "answer_relevancy": 0.0,
+        "context_precision": 0.0,
+        "context_recall": 0.0
+      },
+      "seconds": 112.014
+    },
+    {
+      "question": "Em quanto tempo o órgão público deve responder a um pedido de acesso à informação que não pode atender de imediato?",
+      "expected_answer": "Em prazo não superior a 20 dias.",
+      "answer": "Quando não for possível o acesso imediato, o órgão deve responder em prazo não superior a 20 dias [1]. Esse prazo pode ser prorrogado por mais 10 dias, mediante justificativa expressa, da qual o requerente deve ser cientificado [1].",
+      "grounded": true,
+      "cited_documents": [
+        "lai-006.md"
+      ],
+      "context_documents": [
+        "lai-006.md",
+        "lai-008.md",
+        "lai-005.md",
+        "lai-004.md",
+        "lai-004.md",
+        "lai-002.md",
+        "lai-020.md",
+        "lai-012.md"
+      ],
+      "scores": {
+        "faithfulness": 1.0,
+        "answer_relevancy": 0.8904642639568694,
+        "context_precision": 0.9999999999,
+        "context_recall": 1.0
+      },
+      "seconds": 48.258
+    },
+    {
+      "question": "O órgão pode pedir mais tempo para responder meu pedido de informação?",
+      "expected_answer": "Sim. O prazo pode ser prorrogado por mais 10 dias, mediante justificativa expressa, da qual o requerente é cientificado.",
+      "answer": "Sim. O prazo normal é de até 20 dias para responder ao pedido [1]. Ele pode ser prorrogado por mais 10 dias, desde que haja justificativa expressa [1]. O requerente deve ser cientificado dessa prorrogação [1].",
+      "grounded": true,
+      "cited_documents": [
+        "lai-006.md"
+      ],
+      "context_documents": [
+        "lai-006.md",
+        "lai-008.md",
+        "lai-009.md",
+        "lai-004.md",
+        "lai-004.md",
+        "lai-005.md",
+        "lai-006.md",
+        "lai-015.md"
+      ],
+      "scores": {
+        "faithfulness": 1.0,
+        "answer_relevancy": 0.686431176240213,
+        "context_precision": 0.9999999999,
+        "context_recall": 1.0
+      },
+      "seconds": 56.431
+    },
+    {
+      "question": "Qual é o prazo para recorrer quando o acesso à informação é negado?",
+      "expected_answer": "10 dias, a contar da ciência da decisão.",
+      "answer": "O prazo para interpor recurso contra a decisão que nega o acesso à informação é de 10 (dez) dias, contados da ciência da decisão. [1]",
+      "grounded": true,
+      "cited_documents": [
+        "lai-008.md"
+      ],
+      "context_documents": [
+        "lai-008.md",
+        "lai-006.md",
+        "lai-004.md",
+        "lai-002.md",
+        "lai-012.md",
+        "lai-020.md",
+        "lai-007.md",
+        "lai-015.md"
+      ],
+      "scores": {
+        "faithfulness": 1.0,
+        "answer_relevancy": 0.9245920344267945,
+        "context_precision": 0.9999999999,
+        "context_recall": 1.0
+      },
+      "seconds": 77.62
+    },
+    {
+      "question": "Por quantos anos uma informação ultrassecreta pode ficar com acesso restrito?",
+      "expected_answer": "Pelo prazo máximo de 25 anos, contados da data de sua produção.",
+      "answer": "Uma informação ultrassecreta pode ficar com acesso restrito por no máximo 25 anos, contados da data de sua produção [1].",
+      "grounded": true,
+      "cited_documents": [
+        "lai-012.md"
+      ],
+      "context_documents": [
+        "lai-012.md",
+        "lai-004.md",
+        "lai-014.md",
+        "lai-012.md",
+        "lai-018.md",
+        "lai-002.md",
+        "lai-013.md",
+        "lai-020.md"
+      ],
+      "scores": {
+        "faithfulness": 1.0,
+        "answer_relevancy": 0.9275409677300037,
+        "context_precision": 0.7499999999625,
+        "context_recall": 1.0
+      },
+      "seconds": 50.159
+    },
+    {
+      "question": "Preciso explicar por que quero uma informação pública quando faço o pedido?",
+      "expected_answer": "Não. São vedadas quaisquer exigências relativas aos motivos determinantes da solicitação de informações de interesse público.",
+      "answer": "Não: são vedadas quaisquer exigências relativas aos motivos determinantes da solicitação de informações de interesse público [1]. O pedido deve conter a identificação do requerente e a especificação da informação requerida [1].",
+      "grounded": true,
+      "cited_documents": [
+        "lai-005.md"
+      ],
+      "context_documents": [
+        "lai-005.md",
+        "lai-004.md",
+        "lai-002.md",
+        "lai-006.md",
+        "lai-004.md",
+        "lai-001.md",
+        "lai-014.md",
+        "lai-015.md"
+      ],
+      "scores": {
+        "faithfulness": 1.0,
+        "answer_relevancy": 0.7566766527525971,
+        "context_precision": 0.91666666664375,
+        "context_recall": 1.0
+      },
+      "seconds": 42.391
+    },
+    {
+      "question": "Tenho que pagar para o governo me entregar uma informação?",
+      "expected_answer": "A busca e o fornecimento da informação são gratuitos. Só pode ser cobrado o custo da reprodução de documentos, e quem não pode pagar sem prejudicar o próprio sustento fica isento.",
+      "answer": "Em regra, não: o serviço de busca e fornecimento da informação é gratuito [4].\n\nA exceção é a reprodução de documentos pelo órgão ou entidade pública consultada, quando poderá ser cobrado apenas o valor necessário ao ressarcimento do custo dos serviços e dos materiais utilizados [4].\n\nQuem não puder pagar esse custo sem prejuízo do sustento próprio ou da família está isento, mediante declaração nos termos da Lei nº 7.115, de 29 de agosto de 1983 [4].",
+      "grounded": true,
+      "cited_documents": [
+        "lai-006.md"
+      ],
+      "context_documents": [
+        "lai-012.md",
+        "lai-003.md",
+        "lai-004.md",
+        "lai-006.md",
+        "lai-002.md",
+        "lai-006.md",
+        "lai-014.md",
+        "lai-016.md"
+      ],
+      "scores": {
+        "faithfulness": 1.0,
+        "answer_relevancy": 0.5284728361022366,
+        "context_precision": 0.249999999975,
+        "context_recall": 1.0
+      },
+      "seconds": 50.704
+    },
+    {
+      "question": "A quem recorrer quando o Poder Executivo Federal nega o acesso a uma informação?",
+      "expected_answer": "À Controladoria-Geral da União, depois de o recurso passar por pelo menos uma autoridade hierarquicamente superior. Da negativa da CGU, cabe recurso à Comissão Mista de Reavaliação de Informações.",
+      "answer": "Quando órgãos ou entidades do Poder Executivo Federal negam o acesso, o requerente pode recorrer à Controladoria-Geral da União [1].\n\nEsse recurso só pode ser dirigido à Controladoria-Geral da União depois de submetido à apreciação de pelo menos uma autoridade hierarquicamente superior à que exarou a decisão impugnada [1].\n\nSe a Controladoria-Geral da União também negar o acesso, cabe recurso à Comissão Mista de Reavaliação de Informações [1].",
+      "grounded": true,
+      "cited_documents": [
+        "lai-008.md"
+      ],
+      "context_documents": [
+        "lai-008.md",
+        "lai-006.md",
+        "lai-009.md",
+        "lai-004.md",
+        "lai-005.md",
+        "lai-003.md",
+        "lai-014.md",
+        "lai-011.md"
+      ],
+      "scores": {
+        "faithfulness": 1.0,
+        "answer_relevancy": 0.877487971829007,
+        "context_precision": 0.9999999999,
+        "context_recall": 1.0
+      },
+      "seconds": 50.577
+    },
+    {
+      "question": "Por quanto tempo as informações pessoais ligadas à intimidade e à vida privada têm acesso restrito?",
+      "expected_answer": "Pelo prazo máximo de 100 anos a contar da data de produção, independentemente de classificação de sigilo.",
+      "answer": "Pelo prazo máximo de 100 (cem) anos, contado da data de sua produção, independentemente de classificação de sigilo. [1]",
+      "grounded": true,
+      "cited_documents": [
+        "lai-016.md"
+      ],
+      "context_documents": [
+        "lai-016.md",
+        "lai-017.md",
+        "lai-013.md",
+        "lai-004.md",
+        "mci-005.md",
+        "lai-012.md",
+        "lai-018.md",
+        "lai-015.md"
+      ],
+      "scores": {
+        "faithfulness": 1.0,
+        "answer_relevancy": 0.5803227022436014,
+        "context_precision": 0.9999999999,
+        "context_recall": 1.0
+      },
+      "seconds": 45.94
+    },
+    {
+      "question": "O que acontece com o servidor público que se recusa a me dar uma informação que tenho direito de receber?",
+      "expected_answer": "A recusa de fornecer informação requerida, o atraso deliberado ou o fornecimento incorreto são condutas ilícitas que geram responsabilidade do agente público.",
+      "answer": "Se a informação estiver disponível, o órgão ou entidade pública deverá autorizar ou conceder o acesso imediato [3].\n\nA recusa em fornecer informação requerida nos termos da Lei é conduta ilícita que enseja responsabilidade do agente público ou militar [1].\n\nNo caso de agente público, atendidos o contraditório, a ampla defesa e o devido processo legal, a conduta é considerada infração administrativa para fins da Lei nº 8.112, devendo ser apenada, no mínimo, com suspensão, segundo os critérios nela estabelecidos [1].\n\nAlém disso, o agente público poderá responder também por improbidade administrativa, conforme as Leis nºs 1.079, de 10 de abril de 1950, e 8.429, de 2 de junho de 1992 [1].",
+      "grounded": true,
+      "cited_documents": [
+        "lai-006.md",
+        "lai-016.md"
+      ],
+      "context_documents": [
+        "lai-016.md",
+        "lai-017.md",
+        "lai-006.md",
+        "lai-016.md",
+        "lai-002.md",
+        "lai-011.md",
+        "lai-008.md",
+        "lai-004.md"
+      ],
+      "scores": {
+        "faithfulness": 1.0,
+        "answer_relevancy": 0.7732285586054459,
+        "context_precision": 0.64999999998375,
+        "context_recall": 1.0
+      },
+      "seconds": 96.818
+    },
+    {
+      "question": "Que informações os órgãos públicos devem divulgar, no mínimo, independentemente de requerimento?",
+      "expected_answer": "Competências e estrutura organizacional, endereços e telefones, repasses de recursos, despesas, licitações e contratos, dados para acompanhar programas e obras e respostas a perguntas frequentes.",
+      "answer": "Os órgãos e entidades públicas devem divulgar, independentemente de requerimentos, em local de fácil acesso, no âmbito de suas competências, informações de interesse coletivo ou geral por eles produzidas ou custodiadas [1]. No mínimo, devem constar [1]:\n\n- registro das competências e estrutura organizacional, endereços e telefones das respectivas unidades e horários de atendimento ao público [1];\n- registros de quaisquer repasses ou transferências de recursos financeiros [1];\n- registros das despesas [1];\n- informações concernentes a procedimentos licitatórios, inclusive os respectivos editais e resultados, bem como a todos os contratos celebrados [1];\n- dados gerais para o acompanhamento de programas, ações, projetos e obras de órgãos e entidades [1];\n- respostas a perguntas mais frequentes da sociedade [1].",
+      "grounded": true,
+      "cited_documents": [
+        "lai-004.md"
+      ],
+      "context_documents": [
+        "lai-004.md",
+        "lai-005.md",
+        "lai-015.md",
+        "lai-004.md",
+        "lai-002.md",
+        "lai-006.md",
+        "lai-001.md",
+        "lai-014.md"
+      ],
+      "scores": {
+        "faithfulness": 1.0,
+        "answer_relevancy": 0.8494665232668024,
+        "context_precision": 0.9999999999,
+        "context_recall": 1.0
+      },
+      "seconds": 57.802
+    },
+    {
+      "question": "Prefeitura de cidade pequena também precisa divulgar tudo na internet?",
+      "expected_answer": "Os Municípios com até 10.000 habitantes ficam dispensados da divulgação obrigatória na internet, mas mantêm a divulgação em tempo real da execução orçamentária e financeira.",
+      "answer": "Se a cidade tiver até 10.000 habitantes, a prefeitura fica dispensada da divulgação obrigatória na internet prevista para os sítios oficiais [2].\n\nMesmo assim, continua obrigada a divulgar, em tempo real, informações relativas à execução orçamentária e financeira, nos critérios e prazos previstos no art. 73-B da Lei Complementar nº 101, de 4 de maio de 2000 [2].\n\nA regra geral, sem considerar essa dispensa, é que os órgãos e entidades públicas devem divulgar em sítios oficiais da internet [5]. As fontes tratam da divulgação de informações de interesse coletivo ou geral produzidas ou custodiadas, com conteúdo mínimo previsto, e não de uma obrigação genérica de divulgar “tudo” [5].",
+      "grounded": true,
+      "cited_documents": [
+        "lai-004.md",
+        "lai-004.md"
+      ],
+      "context_documents": [
+        "mci-017.md",
+        "lai-004.md",
+        "mci-018.md",
+        "mci-002.md",
+        "lai-004.md",
+        "mci-004.md",
+        "mci-003.md",
+        "mci-021.md"
+      ],
+      "scores": {
+        "faithfulness": 1.0,
+        "answer_relevancy": 0.780382346914093,
+        "context_precision": 0.49999999995,
+        "context_recall": 1.0
+      },
+      "seconds": 62.286
+    },
+    {
+      "question": "Que informações podem ser classificadas como sigilosas por serem imprescindíveis à segurança da sociedade ou do Estado?",
+      "expected_answer": "As que, se divulgadas, puderem pôr em risco a defesa e a soberania nacionais, as relações internacionais, a vida, a segurança ou a saúde da população, a estabilidade financeira do País, entre outros casos.",
+      "answer": "São consideradas imprescindíveis à segurança da sociedade ou do Estado e, portanto, passíveis de classificação as informações cuja divulgação ou acesso irrestrito possam [2]:\n\nI - pôr em risco a defesa e a soberania nacionais ou a integridade do território nacional [2].\n\nII - prejudicar ou pôr em risco a condução de negociações ou as relações internacionais do País, ou as que tenham sido fornecidas em caráter sigiloso por outros Estados e organismos internacionais [2].\n\nIII - pôr em risco a vida, a segurança ou a saúde da população [2].\n\nIV - oferecer elevado risco à estabilidade financeira, econômica ou monetária do País [2].\n\nV - prejudicar ou causar risco a planos ou operações estratégicos das Forças Armadas [2].\n\nVI - prejudicar ou causar risco a projetos de pesquisa e desenvolvimento científico ou tecnológico, assim como a sistemas, bens, instalações ou áreas de interesse estratégico nacional [2].\n\nVII - pôr em risco a segurança de instituições ou de altas autoridades nacionais ou estrangeiras e seus familiares [2].\n\nVIII - comprometer atividades de inteligência, bem como de investigação ou fiscalização em andamento, relacionadas com a prevenção ou repressão de infrações [2].",
+      "grounded": true,
+      "cited_documents": [
+        "lai-012.md"
+      ],
+      "context_documents": [
+        "lai-013.md",
+        "lai-012.md",
+        "lai-014.md",
+        "lai-015.md",
+        "lai-012.md",
+        "lai-018.md",
+        "lai-004.md",
+        "lai-016.md"
+      ],
+      "scores": {
+        "faithfulness": 1.0,
+        "answer_relevancy": 0.8793117066518521,
+        "context_precision": 0.49999999995,
+        "context_recall": 1.0
+      },
+      "seconds": 60.886
+    },
+    {
+      "question": "Quem pode classificar uma informação no grau ultrassecreto na administração pública federal?",
+      "expected_answer": "O Presidente da República, o Vice-Presidente, os Ministros de Estado, os Comandantes das Forças Armadas e os Chefes de Missões Diplomáticas e Consulares permanentes no exterior.",
+      "answer": "As autoridades competentes são as previstas no art. 27, inciso I, da Lei [1]:\n\n- Presidente da República [1].\n- Vice-Presidente da República [1].\n- Ministros de Estado e autoridades com as mesmas prerrogativas [1].\n- Comandantes da Marinha, do Exército e da Aeronáutica [1].\n- Chefes de Missões Diplomáticas e Consulares permanentes no exterior [1].\n\nA competência para classificar como ultrassecreta pode ser delegada pela autoridade responsável a agente público, inclusive em missão no exterior, vedada a subdelegação [1].\n\nNo caso dos Comandantes da Marinha, do Exército e da Aeronáutica e dos Chefes de Missões Diplomáticas e Consulares permanentes no exterior, a classificação como ultrassecreta deverá ser ratificada pelos respectivos Ministros de Estado, no prazo previsto em regulamento [1].",
+      "grounded": true,
+      "cited_documents": [
+        "lai-014.md"
+      ],
+      "context_documents": [
+        "lai-014.md",
+        "lai-002.md",
+        "lai-020.md",
+        "lai-018.md",
+        "lai-015.md",
+        "lai-012.md",
+        "lai-008.md",
+        "lai-004.md"
+      ],
+      "scores": {
+        "faithfulness": 1.0,
+        "answer_relevancy": 0.743250628511057,
+        "context_precision": 0.9999999999,
+        "context_recall": 1.0
+      },
+      "seconds": 56.995
+    },
+    {
+      "question": "O governo pode esconder documentos sobre violação de direitos humanos?",
+      "expected_answer": "Não. As informações ou documentos sobre violação dos direitos humanos praticada por agentes públicos ou a mando de autoridades não podem ser objeto de restrição de acesso.",
+      "answer": "Não: as informações ou documentos que versem sobre condutas que impliquem violação de direitos humanos praticada por agentes públicos ou a mando de autoridades públicas não poderão ser objeto de restrição de acesso [1].\n\nTambém não poderá ser negado acesso à informação necessária à tutela judicial ou administrativa de direitos fundamentais [1].\n\nAlém disso, destruir ou subtrair, por qualquer meio, documentos concernentes a possíveis violações de direitos humanos por parte de agentes do Estado é conduta ilícita que enseja responsabilidade do agente público ou militar [3].\n\nA restrição de acesso relativa à vida privada, honra e imagem não pode ser invocada para prejudicar processo de apuração de irregularidades nem ações voltadas à recuperação de fatos históricos de maior relevância [5].",
+      "grounded": true,
+      "cited_documents": [
+        "lai-011.md",
+        "lai-016.md",
+        "lai-016.md"
+      ],
+      "context_documents": [
+        "lai-011.md",
+        "lai-004.md",
+        "lai-016.md",
+        "lai-009.md",
+        "lai-016.md",
+        "lgpd-012.md",
+        "lai-008.md",
+        "lai-018.md"
+      ],
+      "scores": {
+        "faithfulness": 1.0,
+        "answer_relevancy": 0.7361128646784071,
+        "context_precision": 0.7555555555303703,
+        "context_recall": 1.0
+      },
+      "seconds": 74.222
+    },
+    {
+      "question": "Onde posso ir pedir informações pessoalmente em um órgão público?",
+      "expected_answer": "No serviço de informações ao cidadão, que cada órgão ou entidade deve criar em local com condições apropriadas para atender, orientar o público e protocolizar requerimentos.",
+      "answer": "Você pode ir ao serviço de informações ao cidadão do órgão ou entidade pública, em local com condições apropriadas [1]. Nesse serviço, o público é atendido e orientado quanto ao acesso à informação, e os documentos e requerimentos de acesso são protocolizados [1]. O órgão ou entidade deve divulgar os endereços das respectivas unidades e os horários de atendimento ao público [2].",
+      "grounded": true,
+      "cited_documents": [
+        "lai-005.md",
+        "lai-004.md"
+      ],
+      "context_documents": [
+        "lai-005.md",
+        "lai-004.md",
+        "lai-006.md",
+        "lai-016.md",
+        "lai-015.md",
+        "lai-004.md",
+        "lai-017.md",
+        "lai-009.md"
+      ],
+      "scores": {
+        "faithfulness": 1.0,
+        "answer_relevancy": 0.8081578308575557,
+        "context_precision": 0.8333333333055556,
+        "context_recall": 1.0
+      },
+      "seconds": 64.263
+    },
+    {
+      "question": "O que acontece quando só parte de um documento é sigilosa?",
+      "expected_answer": "É assegurado o acesso à parte não sigilosa, por meio de certidão, extrato ou cópia com ocultação da parte sob sigilo.",
+      "answer": "Quando não é autorizado o acesso integral porque a informação é parcialmente sigilosa, é assegurado o acesso à parte não sigilosa por meio de certidão, extrato ou cópia com ocultação da parte sob sigilo [2].",
+      "grounded": true,
+      "cited_documents": [
+        "lai-004.md"
+      ],
+      "context_documents": [
+        "lai-013.md",
+        "lai-004.md",
+        "lai-018.md",
+        "lai-015.md",
+        "lai-012.md",
+        "lai-004.md",
+        "lai-014.md",
+        "lai-014.md"
+      ],
+      "scores": {
+        "faithfulness": 1.0,
+        "answer_relevancy": 0.7025178749344279,
+        "context_precision": 0.4166666666458333,
+        "context_recall": 1.0
+      },
+      "seconds": 42.598
+    },
+    {
+      "question": "A Lei de Acesso à Informação vale para entidades privadas?",
+      "expected_answer": "Aplica-se, no que couber, às entidades privadas sem fins lucrativos que recebam recursos públicos para ações de interesse público. A publicidade se refere à parcela dos recursos públicos recebidos e à sua destinação.",
+      "answer": "Sim — a Lei se aplica, no que couber, às entidades privadas sem fins lucrativos que recebam recursos públicos para ações de interesse público, diretamente do orçamento ou por subvenções sociais, contrato de gestão, termo de parceria, convênios, acordo, ajustes ou instrumentos congêneres [6].\n\nNesses casos, a publicidade exigida refere-se à parcela dos recursos públicos recebidos e à sua destinação, sem prejuízo das prestações de contas legalmente obrigadas [6].\n\nTambém se subordinam ao regime da Lei as demais entidades controladas direta ou indiretamente pela União, Estados, Distrito Federal e Municípios [6].",
+      "grounded": true,
+      "cited_documents": [
+        "lai-001.md"
+      ],
+      "context_documents": [
+        "lai-004.md",
+        "lai-002.md",
+        "lai-006.md",
+        "lai-008.md",
+        "lai-020.md",
+        "lai-001.md",
+        "lai-005.md",
+        "lai-003.md"
+      ],
+      "scores": {
+        "faithfulness": 1.0,
+        "answer_relevancy": 0.8518487317829911,
+        "context_precision": 0.6666666666333333,
+        "context_recall": 1.0
+      },
+      "seconds": 53.074
+    },
+    {
+      "question": "Que punição uma empresa que trabalha para o governo recebe se esconder informações?",
+      "expected_answer": "Advertência, multa, rescisão do vínculo, suspensão temporária de licitar e impedimento de contratar por até 2 anos, e declaração de inidoneidade para licitar ou contratar com a administração pública.",
+      "answer": "Uma empresa que detém informações por vínculo com o poder público e deixa de observar a Lei fica sujeita a: [5]\n\n- advertência; [5]\n- multa; [5]\n- rescisão do vínculo com o poder público; [5]\n- suspensão temporária de participar em licitação e impedimento de contratar com a administração pública por prazo não superior a 2 anos; [5]\n- declaração de inidoneidade para licitar ou contratar com a administração pública, até que seja promovida a reabilitação perante a autoridade que aplicou a penalidade. [5]\n\nAs sanções de advertência, rescisão do vínculo e suspensão temporária podem ser aplicadas juntamente com a multa, assegurado o direito de defesa no prazo de 10 dias. [5]",
+      "grounded": true,
+      "cited_documents": [
+        "lai-017.md"
+      ],
+      "context_documents": [
+        "lai-016.md",
+        "lai-013.md",
+        "lai-018.md",
+        "lai-004.md",
+        "lai-017.md",
+        "lai-015.md",
+        "lai-014.md",
+        "lai-020.md"
+      ],
+      "scores": {
+        "faithfulness": 1.0,
+        "answer_relevancy": 0.7540045874953281,
+        "context_precision": 0.19999999998,
+        "context_recall": 1.0
+      },
+      "seconds": 48.844
+    },
+    {
+      "question": "Qual é o mandato dos integrantes da Comissão Mista de Reavaliação de Informações?",
+      "expected_answer": "Mandato de 2 anos.",
+      "answer": "O mandato dos integrantes da Comissão Mista de Reavaliação de Informações é de 2 (dois) anos. [1]",
+      "grounded": true,
+      "cited_documents": [
+        "lai-018.md"
+      ],
+      "context_documents": [
+        "lai-018.md",
+        "lai-020.md",
+        "lai-015.md",
+        "lai-009.md",
+        "lai-014.md",
+        "lai-008.md",
+        "lai-002.md",
+        "lai-016.md"
+      ],
+      "scores": {
+        "faithfulness": 1.0,
+        "answer_relevancy": 0.9740425209048428,
+        "context_precision": 0.9999999999,
+        "context_recall": 1.0
+      },
+      "seconds": 53.001
+    },
+    {
+      "question": "Se o órgão negar meu pedido, posso receber a decisão por escrito?",
+      "expected_answer": "Sim. É direito do requerente obter o inteiro teor da decisão de negativa de acesso, por certidão ou cópia.",
+      "answer": "Sim: é direito do requerente obter o inteiro teor da decisão de negativa de acesso, por certidão ou cópia [5]. Se a negativa for por informação total ou parcialmente sigilosa, o requerente também deve ser informado sobre a possibilidade de recurso, os prazos e condições para interposição e a autoridade competente para apreciação [2].",
+      "grounded": true,
+      "cited_documents": [
+        "lai-007.md",
+        "lai-006.md"
+      ],
+      "context_documents": [
+        "lai-008.md",
+        "lai-006.md",
+        "lai-009.md",
+        "lai-004.md",
+        "lai-007.md",
+        "cdc-038.md",
+        "lai-006.md",
+        "lai-015.md"
+      ],
+      "scores": {
+        "faithfulness": 1.0,
+        "answer_relevancy": 0.6316681035154962,
+        "context_precision": 0.4499999999775,
+        "context_recall": 1.0
+      },
+      "seconds": 63.58
+    },
+    {
+      "question": "Qual é a diferença entre o prazo de guarda dos registros de conexão e o dos registros de acesso a aplicações de internet?",
+      "expected_answer": "Os registros de conexão ficam guardados por 1 ano, pelo administrador de sistema autônomo. Os registros de acesso a aplicações ficam guardados por 6 meses, pelo provedor de aplicações.",
+      "answer": "Os registros de conexão devem ser mantidos pelo prazo de 1 (um) ano, sob sigilo, em ambiente controlado e de segurança, nos termos do regulamento [1].\n\nOs registros de acesso a aplicações de internet, na provisão de aplicações por provedor constituído como pessoa jurídica e que exerce a atividade de forma organizada, profissional e com fins econômicos, devem ser mantidos pelo prazo de 6 (seis) meses, sob sigilo, em ambiente controlado e de segurança, nos termos do regulamento [2].\n\nAssim, a diferença é de 6 (seis) meses: o prazo dos registros de conexão é maior do que o dos registros de acesso a aplicações [1][2].\n\nNa provisão de conexão, é vedado guardar registros de acesso a aplicações de internet [1].\n\nA autoridade policial ou administrativa ou o Ministério Público pode requerer cautelarmente guarda por prazo superior tanto para registros de conexão quanto para registros de acesso a aplicações [1][2].",
+      "grounded": true,
+      "cited_documents": [
+        "mci-007.md",
+        "mci-008.md"
+      ],
+      "context_documents": [
+        "mci-007.md",
+        "mci-008.md",
+        "mci-004.md",
+        "mci-009.md",
+        "mci-015.md",
+        "mci-003.md",
+        "mci-005.md",
+        "mci-006.md"
+      ],
+      "scores": {
+        "faithfulness": 0.9473684210526315,
+        "answer_relevancy": 0.9986626385003325,
+        "context_precision": 0.0,
+        "context_recall": 1.0
+      },
+      "seconds": 53.068
+    },
+    {
+      "question": "Em quantos dias o órgão público tem que me responder e em quantos dias eu posso recorrer se ele negar?",
+      "expected_answer": "O órgão tem prazo não superior a 20 dias, prorrogável por mais 10. O interessado pode recorrer em 10 dias a contar da ciência da negativa.",
+      "answer": "Resposta: o órgão deve autorizar ou conceder o acesso imediato à informação disponível [2]. Se não for possível, ele tem prazo não superior a 20 dias para responder [2]. Esse prazo pode ser prorrogado por mais 10 dias, mediante justificativa expressa, com ciência ao requerente [2].\n\nSe o acesso for negado, você pode recorrer em até 10 dias, contados da ciência da decisão [1]. O recurso deve ser dirigido à autoridade hierarquicamente superior à que exarou a decisão impugnada, que deve se manifestar em 5 dias [1].",
+      "grounded": true,
+      "cited_documents": [
+        "lai-006.md",
+        "lai-008.md"
+      ],
+      "context_documents": [
+        "lai-008.md",
+        "lai-006.md",
+        "lai-017.md",
+        "lai-004.md",
+        "lai-005.md",
+        "lai-001.md",
+        "lai-020.md",
+        "lai-021.md"
+      ],
+      "scores": {
+        "faithfulness": 1.0,
+        "answer_relevancy": 0.7635755336028179,
+        "context_precision": 0.9999999999,
+        "context_recall": 1.0
+      },
+      "seconds": 51.715
+    },
+    {
+      "question": "Quem é o encarregado pelo tratamento de dados pessoais e quais são as atividades dele?",
+      "expected_answer": "É a pessoa indicada pelo controlador que atua como canal de comunicação entre o controlador, os titulares e a autoridade nacional. Ele aceita reclamações dos titulares, recebe comunicações da autoridade, orienta funcionários e contratados e executa as demais atribuições determinadas.",
+      "answer": "O encarregado é a pessoa natural indicada pelo controlador, que atua como canal de comunicação entre o controlador e os titulares e a autoridade nacional [4]. O controlador deverá indicar encarregado pelo tratamento de dados pessoais [3].\n\nAs atividades do encarregado consistem em [3]:\n\n- aceitar reclamações e comunicações dos titulares, prestar esclarecimentos e adotar providências [3];\n- receber comunicações da autoridade nacional e adotar providências [3];\n- orientar os funcionários e os contratados da entidade a respeito das práticas a serem tomadas em relação à proteção de dados pessoais [3];\n- executar as demais atribuições determinadas pelo controlador ou estabelecidas em normas complementares [3].",
+      "grounded": true,
+      "cited_documents": [
+        "lgpd-003.md",
+        "lgpd-026.md"
+      ],
+      "context_documents": [
+        "lgpd-003.md",
+        "lgpd-003.md",
+        "lgpd-026.md",
+        "lgpd-003.md",
+        "lgpd-006.md",
+        "lgpd-012.md",
+        "lgpd-009.md",
+        "lgpd-007.md"
+      ],
+      "scores": {
+        "faithfulness": 1.0,
+        "answer_relevancy": 0.8142400216053067,
+        "context_precision": 0.4166666666458333,
+        "context_recall": 1.0
+      },
+      "seconds": 80.272
+    },
+    {
+      "question": "Quanto tempo tenho para reclamar de um defeito e quanto tempo a loja tem para consertar?",
+      "expected_answer": "O prazo para reclamar de vício aparente é de 90 dias para produtos duráveis e de 30 dias para não duráveis. O fornecedor tem o prazo máximo de 30 dias para sanar o vício.",
+      "answer": "- Para reclamar de vício aparente ou de fácil constatação, você tem 30 dias se for serviço ou produto não durável e 90 dias se for serviço ou produto durável [1].\n- Esse prazo começa na entrega efetiva do produto ou no término da execução dos serviços [1].\n- Se o vício for oculto, o prazo começa quando o defeito ficar evidenciado [1].\n- A reclamação comprovada que você fizer ao fornecedor obsta a decadência até a resposta negativa correspondente, que deve ser transmitida de forma inequívoca [1].\n- O fornecedor tem o prazo máximo de 30 dias para sanar o vício [5].\n- Se o vício não for sanado nesse prazo, você pode exigir, alternativamente e à sua escolha, a substituição do produto por outro da mesma espécie em perfeitas condições de uso, a restituição imediata da quantia paga, monetariamente atualizada, ou o abatimento proporcional do preço [5].\n- As partes podem convencionar a redução ou a ampliação desse prazo, não podendo ser inferior a 7 dias nem superior a 180 dias; em contrato de adesão, a cláusula de prazo deve ser convencionada em separado, por manifestação expressa do consumidor [5].\n- Se o caso for reparação por danos causados por fato do produto ou do serviço, e não apenas vício, a pretensão prescreve em 5 anos, contados do conhecimento do dano e de sua autoria [1].",
+      "grounded": true,
+      "cited_documents": [
+        "cdc-009.md",
+        "cdc-006.md"
+      ],
+      "context_documents": [
+        "cdc-009.md",
+        "cdc-005.md",
+        "cdc-007.md",
+        "cdc-004.md",
+        "cdc-006.md",
+        "cdc-008.md",
+        "cdc-014.md"
+      ],
+      "scores": {
+        "faithfulness": 1.0,
+        "answer_relevancy": 0.7095887308700112,
+        "context_precision": 0.9999999999,
+        "context_recall": 1.0
+      },
+      "seconds": 72.498
+    },
+    {
+      "question": "Qual é a multa máxima da LGPD e qual é a do Marco Civil da Internet?",
+      "expected_answer": "A LGPD prevê multa simples de até 2% do faturamento no Brasil, limitada a R$ 50 milhões por infração. O Marco Civil prevê multa de até 10% do faturamento do grupo econômico no Brasil.",
+      "answer": "LGPD: Não encontrei essa informação nas fontes disponíveis.\n\nMarco Civil da Internet: a multa é de até 10% (dez por cento) do faturamento do grupo econômico no Brasil no seu último exercício, excluídos os tributos, considerados a condição econômica do infrator e o princípio da proporcionalidade entre a gravidade da falta e a intensidade da sanção [1].",
+      "grounded": true,
+      "cited_documents": [
+        "mci-006.md"
+      ],
+      "context_documents": [
+        "mci-006.md",
+        "mci-004.md",
+        "mci-007.md",
+        "mci-008.md",
+        "mci-002.md",
+        "mci-003.md",
+        "mci-001.md",
+        "mci-005.md"
+      ],
+      "scores": {
+        "faithfulness": 0.8,
+        "answer_relevancy": 0.7798995728097835,
+        "context_precision": 0.0,
+        "context_recall": 0.5
+      },
+      "seconds": 63.186
+    },
+    {
+      "question": "Que direitos eu tenho sobre meus dados pessoais, pela lei de proteção de dados e pelo Marco Civil?",
+      "expected_answer": "Pela LGPD: confirmação do tratamento, acesso, correção, portabilidade, eliminação e revogação do consentimento, entre outros. Pelo Marco Civil: informações claras sobre a coleta, consentimento expresso e exclusão definitiva dos dados ao fim da relação.",
+      "answer": "Não encontrei essa informação nas fontes disponíveis.",
+      "grounded": false,
+      "cited_documents": [],
+      "context_documents": [
+        "mci-004.md",
+        "lgpd-009.md",
+        "mci-006.md",
+        "lgpd-003.md",
+        "mci-009.md",
+        "lgpd-012.md",
+        "lgpd-010.md",
+        "lgpd-004.md"
+      ],
+      "scores": {
+        "faithfulness": 0.0,
+        "answer_relevancy": 0.0,
+        "context_precision": 0.8095238094968253,
+        "context_recall": 1.0
+      },
+      "seconds": 60.854
+    },
+    {
+      "question": "Quem pode classificar uma informação como ultrassecreta e por quantos anos ela fica em sigilo?",
+      "expected_answer": "O Presidente da República, o Vice-Presidente, os Ministros de Estado e outras autoridades podem classificar. O sigilo vai até 25 anos.",
+      "answer": "No âmbito da administração pública federal, podem classificar informação como ultrassecreta: o Presidente da República, o Vice-Presidente da República, os Ministros de Estado e autoridades com as mesmas prerrogativas, os Comandantes da Marinha, do Exército e da Aeronáutica, e os Chefes de Missões Diplomáticas e Consulares permanentes no exterior. [3]\n\nEssa competência pode ser delegada pela autoridade responsável a agente público, inclusive em missão no exterior, vedada a subdelegação. [3]\n\nA classificação como ultrassecreta feita pelos Comandantes da Marinha, do Exército e da Aeronáutica ou pelos Chefes de Missões Diplomáticas e Consulares permanentes no exterior deve ser ratificada pelos respectivos Ministros de Estado. [3]\n\nO prazo máximo de sigilo da informação ultrassecreta é de 25 anos, contado da data de sua produção. [1]",
+      "grounded": true,
+      "cited_documents": [
+        "lai-014.md",
+        "lai-012.md"
+      ],
+      "context_documents": [
+        "lai-012.md",
+        "lai-018.md",
+        "lai-014.md",
+        "lai-012.md",
+        "lai-013.md",
+        "lai-015.md",
+        "lai-004.md",
+        "lai-002.md"
+      ],
+      "scores": {
+        "faithfulness": 1.0,
+        "answer_relevancy": 0.7668693393235154,
+        "context_precision": 0.8333333332916666,
+        "context_recall": 1.0
+      },
+      "seconds": 48.292
+    },
+    {
+      "question": "O que é registro de conexão e por quanto tempo ele deve ser guardado?",
+      "expected_answer": "É o conjunto de informações sobre data e hora de início e término da conexão, duração e endereço IP. Deve ser guardado por 1 ano pelo administrador de sistema autônomo.",
+      "answer": "Na provisão de conexão à internet, os registros de conexão devem ser mantidos pelo administrador de sistema autônomo respectivo, sob sigilo, em ambiente controlado e de segurança [1]. O prazo de guarda é de 1 (um) ano, nos termos do regulamento [1].",
+      "grounded": true,
+      "cited_documents": [
+        "mci-007.md"
+      ],
+      "context_documents": [
+        "mci-007.md",
+        "mci-008.md",
+        "mci-015.md",
+        "mci-004.md",
+        "mci-006.md",
+        "mci-005.md",
+        "mci-005.md",
+        "cdc-015.md"
+      ],
+      "scores": {
+        "faithfulness": 1.0,
+        "answer_relevancy": 0.7357224564727294,
+        "context_precision": 0.9999999999,
+        "context_recall": 0.5
+      },
+      "seconds": 58.825
+    },
+    {
+      "question": "Como a LGPD e a Lei de Acesso à Informação tratam o consentimento para dados pessoais?",
+      "expected_answer": "A LGPD define consentimento como a manifestação livre, informada e inequívoca do titular. A LAI permite divulgar informações pessoais a terceiros diante de previsão legal ou consentimento expresso da pessoa.",
+      "answer": "Não encontrei essa informação nas fontes disponíveis.",
+      "grounded": false,
+      "cited_documents": [],
+      "context_documents": [
+        "lgpd-012.md",
+        "lgpd-003.md",
+        "lgpd-009.md",
+        "lgpd-006.md",
+        "lgpd-004.md",
+        "lgpd-005.md",
+        "lgpd-004.md",
+        "lgpd-007.md"
+      ],
+      "scores": {
+        "faithfulness": 0.0,
+        "answer_relevancy": 0.0,
+        "context_precision": 0.4499999999775,
+        "context_recall": 0.5
+      },
+      "seconds": 59.46
+    },
+    {
+      "question": "Que consequências sofrem o servidor que esconde informação e a empresa contratada que descumpre a lei de acesso?",
+      "expected_answer": "O agente público que se recusa a informar, retarda ou informa de forma incorreta comete conduta ilícita, apenada no mínimo com suspensão. A empresa que detém informações por vínculo com o poder público sofre advertência, multa, rescisão, impedimento de contratar ou declaração de inidoneidade.",
+      "answer": "Não encontrei essa informação nas fontes disponíveis.",
+      "grounded": false,
+      "cited_documents": [],
+      "context_documents": [
+        "lai-016.md",
+        "lai-013.md",
+        "lai-004.md",
+        "lai-016.md",
+        "lai-020.md",
+        "lai-002.md",
+        "lai-012.md",
+        "lai-008.md"
+      ],
+      "scores": {
+        "faithfulness": 0.0,
+        "answer_relevancy": 0.0,
+        "context_precision": 0.249999999975,
+        "context_recall": 0.5
+      },
+      "seconds": 64.939
+    },
+    {
+      "question": "Segundo a Lei de Acesso à Informação, o que é informação pessoal?",
+      "expected_answer": "A informação relacionada à pessoa natural identificada ou identificável.",
+      "answer": "Informação pessoal é aquela relacionada à pessoa natural identificada ou identificável [2].",
+      "grounded": true,
+      "cited_documents": [
+        "lai-002.md"
+      ],
+      "context_documents": [
+        "lai-004.md",
+        "lai-002.md",
+        "lai-016.md",
+        "lai-003.md",
+        "lai-005.md",
+        "lai-006.md",
+        "lai-013.md",
+        "lai-011.md"
+      ],
+      "scores": {
+        "faithfulness": 1.0,
+        "answer_relevancy": 0.8338111213827267,
+        "context_precision": 0.49999999995,
+        "context_recall": 1.0
+      },
+      "seconds": 65.616
+    },
+    {
+      "question": "O que significa eliminação de dados segundo a LGPD?",
+      "expected_answer": "A exclusão de dado ou de conjunto de dados armazenados em banco de dados, independentemente do procedimento empregado.",
+      "answer": "Eliminação de dados, segundo a LGPD, é a exclusão de dado ou de conjunto de dados armazenados em banco de dados, independentemente do procedimento empregado. [6]",
+      "grounded": true,
+      "cited_documents": [
+        "lgpd-003.md"
+      ],
+      "context_documents": [
+        "lgpd-003.md",
+        "lgpd-008.md",
+        "lgpd-006.md",
+        "lgpd-006.md",
+        "lgpd-003.md",
+        "lgpd-003.md",
+        "lgpd-004.md",
+        "lgpd-013.md"
+      ],
+      "scores": {
+        "faithfulness": 1.0,
+        "answer_relevancy": 0.9722531045697331,
+        "context_precision": 0.4166666666458333,
+        "context_recall": 1.0
+      },
+      "seconds": 57.755
+    },
+    {
+      "question": "Segundo o Marco Civil da Internet, o que é um endereço IP?",
+      "expected_answer": "O código atribuído a um terminal de uma rede para permitir sua identificação, definido segundo parâmetros internacionais.",
+      "answer": "O endereço de protocolo de internet (endereço IP) é o código atribuído a um terminal de uma rede para permitir sua identificação, definido segundo parâmetros internacionais [1].",
+      "grounded": true,
+      "cited_documents": [
+        "mci-003.md"
+      ],
+      "context_documents": [
+        "mci-003.md",
+        "mci-004.md",
+        "mci-005.md",
+        "mci-002.md",
+        "mci-001.md",
+        "mci-017.md",
+        "mci-008.md",
+        "mci-009.md"
+      ],
+      "scores": {
+        "faithfulness": 1.0,
+        "answer_relevancy": 0.8253269612109806,
+        "context_precision": 0.9999999999,
+        "context_recall": 1.0
+      },
+      "seconds": 55.423
+    },
+    {
+      "question": "Segundo o Código de Defesa do Consumidor, o que é considerado produto?",
+      "expected_answer": "Qualquer bem, móvel ou imóvel, material ou imaterial.",
+      "answer": "Considera-se produto qualquer bem, móvel ou imóvel, material ou imaterial. [4]",
+      "grounded": true,
+      "cited_documents": [
+        "cdc-001.md"
+      ],
+      "context_documents": [
+        "cdc-004.md",
+        "cdc-005.md",
+        "cdc-006.md",
+        "cdc-001.md",
+        "cdc-019.md",
+        "cdc-003.md",
+        "cdc-013.md",
+        "cdc-010.md"
+      ],
+      "scores": {
+        "faithfulness": 1.0,
+        "answer_relevancy": 0.816742354154253,
+        "context_precision": 0.249999999975,
+        "context_recall": 1.0
+      },
+      "seconds": 47.659
+    },
+    {
+      "question": "Quais são os princípios que regem o uso da internet no Brasil?",
+      "expected_answer": "Liberdade de expressão, proteção da privacidade, proteção dos dados pessoais, neutralidade de rede, estabilidade, segurança e funcionalidade da rede, responsabilização dos agentes, natureza participativa da rede e liberdade dos modelos de negócios.",
+      "answer": "Os princípios que regem o uso da internet no Brasil são:[1]\n\n1. Garantia da liberdade de expressão, comunicação e manifestação de pensamento, nos termos da Constituição Federal.[1]\n\n2. Proteção da privacidade.[1]\n\n3. Proteção dos dados pessoais, na forma da lei.[1]\n\n4. Preservação e garantia da neutralidade de rede.[1]\n\n5. Preservação da estabilidade, segurança e funcionalidade da rede, por meio de medidas técnicas compatíveis com os padrões internacionais e pelo estímulo ao uso de boas práticas.[1]\n\n6. Responsabilização dos agentes de acordo com suas atividades, nos termos da lei.[1]\n\n7. Preservação da natureza participativa da rede.[1]\n\n8. Liberdade dos modelos de negócios promovidos na internet, desde que não conflitem com os demais princípios estabelecidos nesta Lei.[1]\n\nOs princípios expressos na Lei não excluem outros previstos no ordenamento jurídico pátrio relacionados à matéria ou em tratados internacionais em que a República Federativa do Brasil seja parte.[1]",
+      "grounded": true,
+      "cited_documents": [
+        "mci-002.md"
+      ],
+      "context_documents": [
+        "mci-002.md",
+        "mci-004.md",
+        "mci-001.md",
+        "mci-017.md",
+        "mci-003.md",
+        "mci-004.md",
+        "mci-005.md",
+        "mci-006.md"
+      ],
+      "scores": {
+        "faithfulness": 1.0,
+        "answer_relevancy": 0.9999979867803189,
+        "context_precision": 0.5873015872820105,
+        "context_recall": 1.0
+      },
+      "seconds": 60.513
+    },
+    {
+      "question": "Quais são os princípios que as atividades de tratamento de dados pessoais devem observar?",
+      "expected_answer": "A boa-fé e os princípios da finalidade, adequação, necessidade, livre acesso, qualidade dos dados, transparência, segurança, prevenção, não discriminação e responsabilização.",
+      "answer": "As atividades de tratamento de dados pessoais devem observar a boa-fé e os seguintes princípios [1]:\n\n- **Finalidade:** realização do tratamento para propósitos legítimos, específicos, explícitos e informados ao titular, sem possibilidade de tratamento posterior de forma incompatível com essas finalidades [1].\n- **Adequação:** compatibilidade do tratamento com as finalidades informadas ao titular, de acordo com o contexto do tratamento [1].\n- **Necessidade:** limitação do tratamento ao mínimo necessário para a realização de suas finalidades, com abrangência dos dados pertinentes, proporcionais e não excessivos em relação às finalidades do tratamento de dados [2].\n- **Livre acesso:** garantia, aos titulares, de consulta facilitada e gratuita sobre a forma e a duração do tratamento, bem como sobre a integralidade de seus dados pessoais [2].\n- **Qualidade dos dados:** garantia, aos titulares, de exatidão, clareza, relevância e atualização dos dados, de acordo com a necessidade e para o cumprimento da finalidade de seu tratamento [2].\n- **Transparência:** garantia, aos titulares, de informações claras, precisas e facilmente acessíveis sobre a realização do tratamento e os respectivos agentes de tratamento, observados os segredos comercial e industrial [2].\n- **Segurança:** utilização de medidas técnicas e administrativas aptas a proteger os dados pessoais de acessos não autorizados e de situações acidentais ou ilícitas de destruição, perda, alteração, comunicação ou difusão [2].\n- **Prevenção:** adoção de medidas para prevenir a ocorrência de danos em virtude do tratamento de dados pessoais [2].\n- **Não discriminação:** impossibilidade de realização do tratamento para fins discriminatórios ilícitos ou abusivos [2].\n- **Responsabilização e prestação de contas:** demonstração, pelo agente, da adoção de medidas eficazes e capazes de comprovar a observância e o cumprimento das normas de proteção de dados pessoais e, inclusive, da eficácia dessas medidas [2].",
+      "grounded": true,
+      "cited_documents": [
+        "lgpd-003.md",
+        "lgpd-003.md"
+      ],
+      "context_documents": [
+        "lgpd-003.md",
+        "lgpd-003.md",
+        "lgpd-003.md",
+        "lgpd-007.md",
+        "lgpd-035.md",
+        "lgpd-002.md",
+        "lgpd-005.md",
+        "lgpd-004.md"
+      ],
+      "scores": {
+        "faithfulness": 1.0,
+        "answer_relevancy": 0.9884010303679318,
+        "context_precision": 0.99999999995,
+        "context_recall": 1.0
+      },
+      "seconds": 52.882
+    },
+    {
+      "question": "Quais diretrizes a Lei de Acesso à Informação estabelece para os procedimentos de acesso?",
+      "expected_answer": "Publicidade como preceito geral e sigilo como exceção, divulgação de informações de interesse público independentemente de solicitações, uso da tecnologia da informação, cultura de transparência e controle social da administração pública.",
+      "answer": "A Lei estabelece que os procedimentos devem assegurar o direito fundamental de acesso à informação e ser executados conforme os princípios básicos da administração pública e as seguintes diretrizes [1]:\n\n- observância da publicidade como preceito geral e do sigilo como exceção [1];\n- divulgação de informações de interesse público, independentemente de solicitações [1];\n- utilização de meios de comunicação viabilizados pela tecnologia da informação [1];\n- fomento ao desenvolvimento da cultura de transparência na administração pública [1];\n- desenvolvimento do controle social da administração pública [1].",
+      "grounded": true,
+      "cited_documents": [
+        "lai-002.md"
+      ],
+      "context_documents": [
+        "lai-002.md",
+        "lai-004.md",
+        "lai-003.md",
+        "lai-006.md",
+        "lai-008.md",
+        "lai-020.md",
+        "lai-005.md",
+        "lai-001.md"
+      ],
+      "scores": {
+        "faithfulness": 1.0,
+        "answer_relevancy": 0.8087591426470535,
+        "context_precision": 0.9999999999,
+        "context_recall": 1.0
+      },
+      "seconds": 53.926
+    },
+    {
+      "question": "Na lei de proteção de dados, o que quer dizer consentimento?",
+      "expected_answer": "A manifestação livre, informada e inequívoca pela qual o titular concorda com o tratamento de seus dados pessoais para uma finalidade determinada.",
+      "answer": "Consentimento é a manifestação livre, informada e inequívoca pela qual o titular concorda com o tratamento de seus dados pessoais para uma finalidade determinada [5].\n\nEle deve ser fornecido por escrito ou por outro meio que demonstre a manifestação de vontade do titular [1]. Se for fornecido por escrito, deve constar de cláusula destacada das demais cláusulas contratuais [1]. O consentimento deve se referir a finalidades determinadas, e autorizações genéricas para o tratamento de dados pessoais serão nulas [1]. Ele pode ser revogado a qualquer momento, mediante manifestação expressa do titular, por procedimento gratuito e facilitado [1].",
+      "grounded": true,
+      "cited_documents": [
+        "lgpd-003.md",
+        "lgpd-004.md"
+      ],
+      "context_documents": [
+        "lgpd-004.md",
+        "lgpd-006.md",
+        "lgpd-004.md",
+        "lgpd-009.md",
+        "lgpd-003.md",
+        "lgpd-003.md",
+        "lgpd-006.md",
+        "lgpd-005.md"
+      ],
+      "scores": {
+        "faithfulness": 1.0,
+        "answer_relevancy": 0.857409580385752,
+        "context_precision": 0.6333333333122222,
+        "context_recall": 1.0
+      },
+      "seconds": 59.596
+    },
+    {
+      "question": "Quando uma informação pessoal em poder do governo pode ser divulgada a terceiros segundo a Lei de Acesso à Informação?",
+      "expected_answer": "Diante de previsão legal ou de consentimento expresso da pessoa a que a informação se refere. O consentimento é dispensado em casos como tratamento médico, pesquisas de interesse público e cumprimento de ordem judicial.",
+      "answer": "Informações pessoais relativas à intimidade, vida privada, honra e imagem podem ter divulgação ou acesso por terceiros autorizados quando houver previsão legal ou consentimento expresso da pessoa a que se referem [3].\n\nO consentimento expresso não é exigido quando as informações forem necessárias para [3]:\n\n- prevenção e diagnóstico médico, se a pessoa estiver física ou legalmente incapaz, e para utilização única e exclusivamente no tratamento médico [3];\n- realização de estatísticas e pesquisas científicas de evidente interesse público ou geral, previstas em lei, sendo vedada a identificação da pessoa [3];\n- cumprimento de ordem judicial [3];\n- defesa de direitos humanos [3]; ou\n- proteção do interesse público e geral preponderante [3].",
+      "grounded": true,
+      "cited_documents": [
+        "lai-016.md"
+      ],
+      "context_documents": [
+        "lai-004.md",
+        "lai-002.md",
+        "lai-016.md",
+        "lai-012.md",
+        "lai-006.md",
+        "lai-011.md",
+        "lai-003.md",
+        "lai-005.md"
+      ],
+      "scores": {
+        "faithfulness": 1.0,
+        "answer_relevancy": 0.6542462028553842,
+        "context_precision": 0.3333333333,
+        "context_recall": 1.0
+      },
+      "seconds": 46.529
+    },
+    {
+      "question": "Em que situação o provedor de internet é obrigado a entregar registros que identificam um usuário?",
+      "expected_answer": "Somente mediante ordem judicial, nos termos da Seção IV do capítulo do Marco Civil, respeitado o direito do usuário à inviolabilidade de sua intimidade e vida privada.",
+      "answer": "O provedor responsável pela guarda somente é obrigado a disponibilizar registros que possam contribuir para identificar o usuário ou o terminal mediante ordem judicial, na forma da Seção IV do Marco Civil da Internet e respeitado o art. 7º [7].\n\nA parte interessada pode requerer ao juiz essa ordem para formar conjunto probatório em processo judicial cível ou penal, devendo o requerimento indicar fundados indícios do ilícito, justificativa motivada da utilidade dos registros para investigação ou instrução probatória e o período a que se referem os registros [6].",
+      "grounded": true,
+      "cited_documents": [
+        "mci-005.md",
+        "mci-015.md"
+      ],
+      "context_documents": [
+        "mci-008.md",
+        "mci-007.md",
+        "mci-004.md",
+        "mci-004.md",
+        "mci-005.md",
+        "mci-015.md",
+        "mci-005.md",
+        "mci-006.md"
+      ],
+      "scores": {
+        "faithfulness": 1.0,
+        "answer_relevancy": 0.7324276160600851,
+        "context_precision": 0.8761904761729523,
+        "context_recall": 1.0
+      },
+      "seconds": 37.608
+    }
+  ]
+}

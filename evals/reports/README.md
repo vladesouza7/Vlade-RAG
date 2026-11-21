@@ -108,6 +108,10 @@ A pasta [`fase3-benchmark/`](fase3-benchmark/) guarda 36 relatórios do `scripts
 | `busca/` | Latência da busca na base real, sem reranker e com dois rerankers |
 | `escala/` | Busca em uma base sintética de 6 mil a 104 mil chunks, a ingestão que a cresceu e o primeiro token |
 
+## Critério de aceite da fase 3 (tarefas 3.7 e 3.8)
+
+A pasta [`fase3-ragas/`](fase3-ragas/) compara a configuração da fase 1 com a da fase 3, com as métricas de recuperação e as quatro métricas do RAGAS. O [README](fase3-ragas/README.md) tem as tabelas, o juiz usado e os limites da medida.
+
 ## Retriever bm25 (tarefa 3.4)
 
 A pasta [`fase3-bm25/`](fase3-bm25/) guarda 13 relatórios e o [README](fase3-bm25/README.md). Os arquivos `qualidade.*` comparam os retrievers `lexical` e `bm25` em três conjuntos de perguntas. Os arquivos `busca.*` e `ingestao.*` medem a latência e a ingestão em uma base sintética de 102 mil chunks.

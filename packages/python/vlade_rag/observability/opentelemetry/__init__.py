@@ -68,6 +68,7 @@ def setup_telemetry(settings: Settings) -> Tracer:
             "service.name": settings.otel.service_name,
             "service.version": __version__,
             "deployment.environment": settings.environment,
+            "openinference.project.name": settings.otel.project,
         }
     )
     endpoint = settings.otel.endpoint
@@ -76,9 +77,22 @@ def setup_telemetry(settings: Settings) -> Tracer:
     provider = TracerProvider(resource=resource)
     provider.add_span_processor(BatchSpanProcessor(OTLPSpanExporter(endpoint=traces_url)))
     trace.set_tracer_provider(provider)
-    reader = PeriodicExportingMetricReader(OTLPMetricExporter(endpoint=metrics_url))
-    metrics.set_meter_provider(MeterProvider(resource=resource, metric_readers=[reader]))
+    if settings.otel.metrics:
+        reader = PeriodicExportingMetricReader(OTLPMetricExporter(endpoint=metrics_url))
+        metrics.set_meter_provider(MeterProvider(resource=resource, metric_readers=[reader]))
     return OtelTracer()
 
 
-__all__ = ["OtelTracer", "setup_telemetry"]
+def flush_telemetry(timeout_millis: int = 5000) -> None:
+    """Send the spans that wait in the batch. A short process (the CLI) calls it before it ends:
+    without it, the process can end before the batch leaves."""
+    try:
+        from opentelemetry import trace
+    except ImportError:
+        return
+    flush = getattr(trace.get_tracer_provider(), "force_flush", None)
+    if flush is not None:
+        flush(timeout_millis)
+
+
+__all__ = ["OtelTracer", "flush_telemetry", "setup_telemetry"]

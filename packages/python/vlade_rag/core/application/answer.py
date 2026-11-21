@@ -16,6 +16,7 @@ from dataclasses import dataclass
 from html import escape
 from typing import Protocol
 
+from vlade_rag.core.application import semconv as sc
 from vlade_rag.core.application.deps import Dependencies
 from vlade_rag.core.application.search import Search
 from vlade_rag.core.domain import (
@@ -34,7 +35,7 @@ from vlade_rag.core.domain import (
     parse_filter,
 )
 from vlade_rag.core.domain.models import JsonValue
-from vlade_rag.core.ports import PromptTemplate
+from vlade_rag.core.ports import AttrValue, PromptTemplate, Span
 
 _CITATION = re.compile(r"\[(\d{1,3})\]")
 
@@ -218,11 +219,23 @@ class AnswerQuery:
         language: str | None = None,
     ) -> Answer:
         final: Answer | None = None
-        async for event in self._run(
-            ctx, knowledge_base, question, top_k, filters, language, False
-        ):
-            if isinstance(event, AnswerFinal):
-                final = event.answer
+        attributes: dict[str, AttrValue] = {
+            sc.SPAN_KIND: sc.CHAIN,
+            "vlade.knowledge_base": knowledge_base,
+        }
+        content = self.deps.limits.store_query_text
+        if content:
+            attributes[sc.INPUT_VALUE] = question
+        with self.deps.tracer.span("query", attributes) as span:
+            async for event in self._run(
+                ctx, knowledge_base, question, top_k, filters, language, False
+            ):
+                if isinstance(event, AnswerFinal):
+                    final = event.answer
+            if final is not None:
+                span.set_attribute("vlade.grounded", final.grounded)
+                if content:
+                    span.set_attribute(sc.OUTPUT_VALUE, final.text)
         if final is None:  # pragma: no cover - _run always ends with AnswerFinal
             raise RuntimeError("The answer pipeline ended without a final answer.")
         return final
@@ -264,11 +277,20 @@ class AnswerQuery:
         self, ctx: TenantContext, kb: KnowledgeBase, query: Query, top_k: int
     ) -> list[ScoredChunk]:
         language = query.language or kb.config.language
-        with self.deps.tracer.span("query_analysis", {"vlade.language": language}):
-            return await self.search.run(ctx, kb, query, top_k)
+        content = self.deps.limits.store_query_text
+        attributes: dict[str, AttrValue] = {sc.SPAN_KIND: sc.RETRIEVER, "vlade.language": language}
+        if content:
+            attributes[sc.INPUT_VALUE] = query.text
+        with self.deps.tracer.span("query_analysis", attributes) as span:
+            results = await self.search.run(ctx, kb, query, top_k)
+            for key, value in sc.documents(results, content).items():
+                span.set_attribute(key, value)
+        return results
 
     def assemble(self, kb: KnowledgeBase, results: Sequence[ScoredChunk]) -> list[ScoredChunk]:
-        with self.deps.tracer.span("context_assembly", {"vlade.candidates": len(results)}):
+        with self.deps.tracer.span(
+            "context_assembly", {sc.SPAN_KIND: sc.CHAIN, "vlade.candidates": len(results)}
+        ):
             return assemble_context(results, kb.config.generation.max_context_tokens)
 
     async def generate(
@@ -300,9 +322,15 @@ class AnswerQuery:
             max_output_tokens=gen_cfg.max_output_tokens,
         )
         llm = self.deps.llms(gen_cfg)
-        with self.deps.tracer.span(
-            "llm_generation", {"gen_ai.request.model": gen_cfg.model, "vlade.adapter": llm.name}
-        ):
+        attributes: dict[str, AttrValue] = {
+            sc.SPAN_KIND: sc.LLM,
+            sc.LLM_MODEL_NAME: gen_cfg.model,
+            "gen_ai.request.model": gen_cfg.model,
+            "vlade.adapter": llm.name,
+        }
+        if self.deps.limits.store_query_text:
+            attributes[sc.INPUT_VALUE] = prepared.query.text
+        with self.deps.tracer.span("llm_generation", attributes) as span:
             if streaming:
                 usage = TokenUsage()
                 parts: list[str] = []
@@ -312,15 +340,17 @@ class AnswerQuery:
                         yield AnswerDelta(delta.text)
                     if delta.usage is not None:
                         usage = delta.usage
-                yield Generated("".join(parts), usage, gen_cfg.model)
+                result = Generated("".join(parts), usage, gen_cfg.model)
             else:
                 generation = await llm.generate(messages, params)
-                yield Generated(generation.text, generation.usage, generation.model)
+                result = Generated(generation.text, generation.usage, generation.model)
+            _record_generation(span, result, self.deps.limits.store_query_text)
+        yield result
 
     def validate(
         self, prepared: PreparedQuery, text: str, context: Sequence[ScoredChunk]
     ) -> ValidatedAnswer:
-        with self.deps.tracer.span("response_validation") as span:
+        with self.deps.tracer.span("response_validation", {sc.SPAN_KIND: sc.CHAIN}) as span:
             validated = validate_answer(
                 text,
                 context,
@@ -397,6 +427,15 @@ class AnswerQuery:
         # The streamed text is what the client already shows. Without streaming, it is the raw text.
         shown = "".join(streamed) if streaming else draft.generated.text
         yield AnswerFinal(answer, replaced=validated.text != shown)
+
+
+def _record_generation(span: Span, generated: Generated, with_content: bool) -> None:
+    usage = generated.usage
+    span.set_attribute(sc.LLM_TOKENS_PROMPT, usage.input_tokens)
+    span.set_attribute(sc.LLM_TOKENS_COMPLETION, usage.output_tokens)
+    span.set_attribute(sc.LLM_TOKENS_TOTAL, usage.input_tokens + usage.output_tokens)
+    if with_content:
+        span.set_attribute(sc.OUTPUT_VALUE, generated.text)
 
 
 _PIPELINE = PipelineEngine()

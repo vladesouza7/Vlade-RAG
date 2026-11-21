@@ -57,9 +57,10 @@ Extras de `vlade-rag` disponíveis na fase 1:
 | `s3` | boto3 (fase 2). Traz o armazenamento de objetos pela API S3 |
 | `local-models` | `sentence-transformers` (fase 3). Traz o reranker local. Puxa o PyTorch e, no Linux, bibliotecas NVIDIA CUDA com licença proprietária. Fica fora do extra `server` e da verificação de licenças (ADR-0001, item 4) |
 | `langgraph` | `langgraph` (fase 3, MIT). Motor de consulta opcional (ADR-0023). Fica fora do extra `server` |
+| `eval` | `ragas` (fase 3, Apache-2.0). Métricas de resposta do RF-71 (ADR-0025). Traz pandas, pyarrow e scipy. Fica fora do extra `server` |
 | `server` | `native`, `api`, `cli`, `postgres`, `ollama`, `openai`, `otel`, `cache`, `mcp`, `s3` |
 
-O Gemini usa o endpoint compatível com a API da OpenAI e não precisa de extra. Extras previstos para as fases seguintes: `qdrant`, `eval` (RAGAS), `langfuse` e `all`.
+O Gemini usa o endpoint compatível com a API da OpenAI e não precisa de extra. Extras previstos para as fases seguintes: `qdrant` e `all`.
 
 Os parsers de texto, Markdown e HTML não precisam de extra. Eles usam só a biblioteca padrão.
 
@@ -87,7 +88,7 @@ packages/python/vlade_rag/
 ├── api/                 # FastAPI
 ├── mcp/                 # server/, tools/, resources/, prompts/, auth/, policies/
 ├── cli/                 # Typer
-├── observability/       # opentelemetry/, langfuse/
+├── observability/       # opentelemetry/ (atributos OpenInference para o Arize Phoenix)
 ├── ops/                 # health, auditoria, manutenção (vlade-rag-ops)
 ├── integrations/        # kestra/, grafana/, external/
 └── testing/             # suítes de contrato dos ports, públicas para plugins
@@ -1124,7 +1125,17 @@ A CLI fala com o banco diretamente pelos casos de uso. A CLI lê a chave de `VLA
 
 Cada requisição cria um trace OpenTelemetry. Os spans seguem os nomes da seção 11.1. Atributos obrigatórios: `vlade.tenant_id`, `vlade.knowledge_base_id`, `vlade.interface`, `vlade.adapter`. As chamadas a LLM seguem as convenções semânticas `gen_ai.*` do OpenTelemetry.
 
-O Langfuse recebe os mesmos spans pelo SDK Langfuse, que usa OpenTelemetry. O span `llm_generation` envia ao Langfuse o prompt com nome e versão, o modelo, os tokens e o custo.
+O Arize Phoenix recebe os mesmos spans por OTLP (ADR-0026). Os spans de IA têm os atributos das convenções OpenInference, que o Phoenix lê:
+
+| Span | `openinference.span.kind` | Outros atributos |
+|---|---|---|
+| `query`, `search` (raiz, sem streaming) | `CHAIN` e `RETRIEVER` | `vlade.knowledge_base`, `vlade.grounded` |
+| `query_analysis`, `retrieval.*` | `RETRIEVER` | `retrieval.documents.N.document.id` e `.score` (até 20) |
+| `rerank` | `RERANKER` | `reranker.model_name`, `reranker.top_k` |
+| `llm_generation` | `LLM` | `llm.model_name`, `llm.token_count.prompt`, `.completion` e `.total` |
+| `fusion`, `context_assembly`, `response_validation`, `query_transform`, `query_retry` | `CHAIN` | — |
+
+O texto da pergunta (`input.value`), da resposta (`output.value`) e dos chunks (`retrieval.documents.N.document.content`) entra nos spans só com `VLADE_LIMITS__STORE_QUERY_TEXT=true`. Para o Phoenix, use `VLADE_OTEL__METRICS=false`: ele não recebe métricas. `VLADE_OTEL__PROJECT` define o projeto dos traces.
 
 ### 16.2. Métricas
 
@@ -1160,7 +1171,7 @@ Logs JSON em `stdout`, com `structlog`. Campos obrigatórios: `timestamp`, `leve
 | `valkey` | sim | sim | sim | BSD-3-Clause |
 | `rustfs` (S3) | não (sistema de arquivos). O perfil `s3` liga o serviço | sim | sim | Apache-2.0 (ADR-0021) |
 | `kestra` | não | sim | sim | Apache-2.0 |
-| `langfuse` | não (Cloud ou desligado) | sim | sim | MIT |
+| `phoenix` | perfil `phoenix` | perfil `phoenix` | perfil `phoenix` | Elastic License 2.0, serviço separado (ADR-0026) |
 | `alloy` | não | sim | sim | Apache-2.0 |
 | `prometheus` | não | não | sim | Apache-2.0 |
 | `loki`, `tempo`, `grafana` | não | não | sim | AGPL-3.0 |

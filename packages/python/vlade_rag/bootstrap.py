@@ -390,6 +390,8 @@ async def build_runtime(
         tenants=tenants,
         **ports,
     )
+    if tracer is not None:
+        deps.tracer = tracer  # without it, the use cases record no span
     return Runtime(
         settings=settings,
         deps=deps,

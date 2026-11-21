@@ -148,7 +148,7 @@ O Vlade-RAG separa cinco responsabilidades de domínio e três responsabilidades
 │ DOMÍNIO           Entidades, objetos de valor, ports         │
 ├──────────────────────────────────────────────────────────────┤
 │ ADAPTERS          Postgres, Qdrant, Ollama, OpenAI, Gemini,  │
-│                   OpenRouter, BGE, RustFS, Redis, Langfuse   │
+│                   OpenRouter, BGE, RustFS, Redis, Phoenix    │
 ├──────────────────────────────────────────────────────────────┤
 │ MOTOR RUST        vlade_rag_core (PyO3): funções de CPU      │
 └──────────────────────────────────────────────────────────────┘
@@ -233,11 +233,11 @@ Cada port é uma classe abstrata Python (`typing.Protocol` ou `abc.ABC`) em `vla
 | `Reranker` | Reordena candidatos | BGE Reranker, cross-encoder genérico, nenhum |
 | `QueryTransformer` | Reescreve ou expande a consulta | Nenhum, reescrita por LLM, multi-query, HyDE |
 | `LLMProvider` | Gera texto | Ollama, OpenAI, Gemini, OpenRouter |
-| `PromptRegistry` | Fornece templates de prompt versionados | Arquivos locais, Langfuse |
+| `PromptRegistry` | Fornece templates de prompt versionados | Arquivos locais |
 | `ObjectStorage` | Guarda os arquivos originais | API S3 (RustFS ou compatível), sistema de arquivos |
 | `Cache` | Guarda resultados reutilizáveis | Redis, memória, nenhum |
 | `Evaluator` | Mede a qualidade | Métricas de recuperação, RAGAS |
-| `Tracer` | Registra spans e eventos de IA | OpenTelemetry, Langfuse |
+| `Tracer` | Registra spans e eventos de IA | OpenTelemetry (o Arize Phoenix recebe os traces) |
 
 Proposta de assinatura para três ports centrais:
 
@@ -416,7 +416,7 @@ Integrações MCP de terceiros, para uso dos agentes que operam o sistema:
 | Componente | Integração MCP |
 |---|---|
 | Kestra | Servidor MCP que expõe workflows como ferramentas |
-| Langfuse | Servidor MCP que expõe traces e avaliações |
+| Arize Phoenix | Servidor MCP que expõe traces e avaliações |
 | Grafana | Servidor MCP que consulta Prometheus, Loki e Tempo |
 | LangGraph | `langchain-mcp-adapters` para consumir ferramentas MCP |
 
@@ -462,7 +462,7 @@ Três domínios:
 
 | Domínio | Ferramenta | O que monitora |
 |---|---|---|
-| IA | Langfuse | Prompts, modelo, tokens, custo, documentos recuperados, avaliações |
+| IA | Arize Phoenix | Modelo, tokens, documentos recuperados, avaliações |
 | Aplicação | OpenTelemetry | Traces, métricas e logs, com correlação entre serviços |
 | Infraestrutura | Prometheus, Loki, Tempo, Grafana (stack LGTM) com Grafana Alloy | CPU, memória, latência, disponibilidade, logs |
 
@@ -475,7 +475,7 @@ Kestra (OTel + /metrics) ─┘                 ├─→ Loki (logs)
                                             └─→ Tempo (traces)
                                                       ↓
                                                    Grafana
-Python (Langfuse SDK, baseado em OTel) ──────────→ Langfuse
+Python (OTel SDK, atributos OpenInference) ──────→ Arize Phoenix
 ```
 
 Requisitos:
@@ -484,7 +484,7 @@ Requisitos:
 2. Cada consulta cria um trace com estes spans: `query_analysis`, `query_transform`, `retrieval.dense`, `retrieval.lexical`, `retrieval.fuzzy`, `fusion`, `rerank`, `context_assembly`, `llm_generation`, `response_validation`.
 3. Cada span grava `tenant_id`, `knowledge_base_id` e o nome do adapter.
 4. Cada log é JSON estruturado e contém `trace_id`.
-5. Se o Langfuse não está configurado, o sistema continua a funcionar. Só o envio ao Langfuse para.
+5. Se o Phoenix não está configurado, o sistema continua a funcionar. Só o envio ao Phoenix para.
 
 Dashboards:
 
@@ -515,7 +515,7 @@ Alertas:
 2. Métricas de recuperação, calculadas sem LLM: Recall@K, Precision@K, MRR, NDCG.
 3. Métricas de resposta, calculadas com RAGAS: faithfulness, answer relevancy, context precision, context recall.
 4. A CI roda a avaliação de recuperação em cada pull request. Se uma métrica cai mais que o limite configurado, a CI falha.
-5. O Kestra roda a avaliação completa com RAGAS por agenda. O Langfuse guarda os resultados como experimentos.
+5. O Kestra roda a avaliação completa com RAGAS por agenda. O Arize Phoenix guarda os resultados como experimentos.
 6. O resultado de cada avaliação registra a configuração usada: modelos, chunking, retrievers, `k` do RRF, reranker e versão dos prompts.
 
 ---
@@ -543,7 +543,7 @@ Alertas:
 | Reranking | BGE Reranker, cross-encoder | 3 |
 | Orquestração de IA | LangGraph | 3 |
 | Avaliação | RAGAS e métricas próprias | 3 |
-| Observabilidade de IA | Langfuse | 3 |
+| Observabilidade de IA | Arize Phoenix (decisão D10, ADR-0026) | 3 |
 | Telemetria | OpenTelemetry | 1 |
 | Workflows | Kestra | 4 |
 | Coletor | Grafana Alloy | 4 |
@@ -580,11 +580,11 @@ O ambiente de desenvolvimento é um notebook com 8 GB de RAM. Não rode a stack 
 
 | Perfil | Serviços | Uso |
 |---|---|---|
-| `dev` | API, PostgreSQL com pgvector, Redis. Ollama externo ou provedor remoto. Langfuse Cloud ou desativado | Desenvolvimento no notebook |
-| `staging` | `dev` mais Kestra, RustFS, Langfuse, coletor OpenTelemetry | Testes de integração no HomeLab |
+| `dev` | API, PostgreSQL com pgvector, Redis. Ollama externo ou provedor remoto. Arize Phoenix opcional (perfil `phoenix`) | Desenvolvimento no notebook |
+| `staging` | `dev` mais Kestra, RustFS, Arize Phoenix, coletor OpenTelemetry | Testes de integração no HomeLab |
 | `prod` | Todos os serviços, inclusive Prometheus, Loki, Tempo, Grafana, Alloy e workers Kestra dimensionados | Produção |
 
-Observação: o Kestra roda na JVM. O Langfuse auto-hospedado precisa de ClickHouse, Redis, PostgreSQL e armazenamento S3. Os dois juntos consomem a maior parte de 8 GB de RAM. Por isso os dois ficam fora do perfil `dev`.
+Observação: o Kestra roda na JVM e consome boa parte de 8 GB de RAM. Por isso ele fica fora do perfil `dev`. O Langfuse auto-hospedado precisa de ClickHouse, Redis, PostgreSQL e armazenamento S3 e não cabe no notebook. O Arize Phoenix substitui o Langfuse por enquanto: é um container só, com cerca de 500 MB de memória (ADR-0026).
 
 ---
 
@@ -647,8 +647,7 @@ vlade-rag/
 │   │       │   └── policies/
 │   │       ├── cli/
 │   │       ├── observability/
-│   │       │   ├── opentelemetry/
-│   │       │   └── langfuse/
+│   │       │   └── opentelemetry/   # spans com atributos OpenInference para o Arize Phoenix
 │   │       ├── ops/                 # health, auditoria, manutenção (vlade-rag-ops)
 │   │       └── integrations/
 │   │           ├── kestra/
@@ -751,7 +750,7 @@ Os números abaixo são metas iniciais propostas. Confirme ou ajuste os números
 - Fluxo de consulta em LangGraph.
 - BM25 com `pg_search`, se a decisão D1 confirmar.
 - Datasets de referência, métricas de recuperação e RAGAS.
-- Langfuse.
+- Arize Phoenix (no lugar do Langfuse, ADR-0026).
 - Gate de qualidade na CI.
 
 **Aceite:** um relatório compara a configuração da fase 1 com a configuração da fase 3 no mesmo dataset. O relatório mostra Recall@10 e faithfulness das duas configurações.
@@ -791,6 +790,7 @@ Todas as decisões abaixo têm o status `Aceito` desde 2026-11-19. O índice com
 | D7 | O Vlade-RAG é open source, com licença MIT. A política de licenças da seção 16.1 vale para todas as dependências | ADR-0001 |
 | D8 | O Vlade-RAG atende qualquer cliente MCP. O Hermes Agent (Nous Research) e o Claude Code são exemplos. O projeto publica uma Agent Skill no padrão aberto (seção 12.1) | ADR-0013 |
 | D9 | O fluxo de consulta da versão 1 não tem human-in-the-loop | ADR-0014 |
+| D10 | O Arize Phoenix substitui o Langfuse por enquanto, como observabilidade de IA e registro de experimentos. O Langfuse auto-hospedado não cabe no notebook de 8 GB. O Phoenix usa a Elastic License 2.0 e roda como serviço separado (seção 16.1, item 4) | ADR-0026 |
 
 ---
 
@@ -836,8 +836,9 @@ Formato de cada ADR:
 
 ## 24. Referências
 
-- Langfuse: https://langfuse.com/docs
-- Langfuse MCP Server: https://langfuse.com/docs/api-and-data-platform/features/mcp-server
+- Arize Phoenix: https://arize.com/docs/phoenix
+- OpenInference: https://github.com/Arize-ai/openinference
+- Langfuse (fora por enquanto, ADR-0026): https://langfuse.com/docs
 - OpenTelemetry: https://opentelemetry.io/docs/
 - Grafana Tempo: https://grafana.com/docs/tempo/latest/
 - Grafana Alloy: https://grafana.com/docs/alloy/latest/

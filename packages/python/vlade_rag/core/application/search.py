@@ -10,6 +10,7 @@ from collections.abc import Mapping
 from dataclasses import dataclass
 from uuid import UUID
 
+from vlade_rag.core.application import semconv as sc
 from vlade_rag.core.application.deps import Dependencies
 from vlade_rag.core.domain import (
     ChunkHit,
@@ -23,7 +24,7 @@ from vlade_rag.core.domain import (
     parse_filter,
 )
 from vlade_rag.core.domain.models import JsonValue
-from vlade_rag.core.ports import LexicalIndex
+from vlade_rag.core.ports import AttrValue, LexicalIndex
 
 EMBEDDING_CACHE_TTL = 7 * 24 * 3600
 SEARCH_CACHE_TTL = 10 * 60
@@ -50,7 +51,9 @@ class DenseRetriever:
     ) -> list[ScoredChunk]:
         space = await self.deps.repository.get_embedding_space(ctx, kb.active_embedding_space_id)
         vector = await self._embed_query(ctx, kb, space.id, query.text)
-        with self.deps.tracer.span("retrieval.dense", {"vlade.top_k": top_k}):
+        with self.deps.tracer.span(
+            "retrieval.dense", {sc.SPAN_KIND: sc.RETRIEVER, "vlade.top_k": top_k}
+        ):
             hits = await self.deps.vector_index.search(
                 ctx,
                 space,
@@ -86,7 +89,9 @@ class LexicalRetriever:
     async def retrieve(
         self, ctx: TenantContext, kb: KnowledgeBase, query: Query, top_k: int
     ) -> list[ScoredChunk]:
-        with self.deps.tracer.span(f"retrieval.{self.name}", {"vlade.top_k": top_k}):
+        with self.deps.tracer.span(
+            f"retrieval.{self.name}", {sc.SPAN_KIND: sc.RETRIEVER, "vlade.top_k": top_k}
+        ):
             hits = await self.index.search(
                 ctx, kb.id, query.text, top_k, query.filters, query.language or kb.language
             )
@@ -129,11 +134,22 @@ class Search:
     ) -> SearchResult:
         ctx.require(Role.READER)
         started = time.perf_counter()
-        kb = await self.deps.repository.get_knowledge_base(ctx, knowledge_base)
-        query = Query(self.validate_text(text), kb.id, parse_filter(filters))
-        results = await self.run(ctx, kb, query, self.validate_top_k(top_k), rerank)
-        await self._log(ctx, kb, query.text, len(results), started)
-        return SearchResult(kb, results, self.deps.tracer.current_trace_id())
+        attributes: dict[str, AttrValue] = {
+            sc.SPAN_KIND: sc.RETRIEVER,
+            "vlade.knowledge_base": knowledge_base,
+        }
+        content = self.deps.limits.store_query_text
+        if content:
+            attributes[sc.INPUT_VALUE] = text
+        with self.deps.tracer.span("search", attributes) as span:
+            kb = await self.deps.repository.get_knowledge_base(ctx, knowledge_base)
+            query = Query(self.validate_text(text), kb.id, parse_filter(filters))
+            results = await self.run(ctx, kb, query, self.validate_top_k(top_k), rerank)
+            for key, value in sc.documents(results, content).items():
+                span.set_attribute(key, value)
+            await self._log(ctx, kb, query.text, len(results), started)
+            trace_id = self.deps.tracer.current_trace_id()
+        return SearchResult(kb, results, trace_id)
 
     def validate_text(self, text: str) -> str:
         text = text.strip()
@@ -182,15 +198,24 @@ class Search:
             *(r.retrieve(ctx, kb, q, cfg.top_k_per_retriever) for _, r, q in jobs)
         )
         candidates = max(top_k, cfg.rerank.candidates) if use_rerank else top_k
-        with self.deps.tracer.span("fusion", {"vlade.lists": len(jobs)}):
+        with self.deps.tracer.span("fusion", {sc.SPAN_KIND: sc.CHAIN, "vlade.lists": len(jobs)}):
             fused = self.deps.fusion.fuse(
                 {name: results for (name, _, _), results in zip(jobs, lists, strict=True)},
                 candidates,
             )
         if use_rerank and self.deps.rerankers is not None and fused:
-            with self.deps.tracer.span("rerank", {"vlade.candidates": len(fused)}):
+            top_n = min(top_k, cfg.rerank.top_n)
+            with self.deps.tracer.span(
+                "rerank",
+                {
+                    sc.SPAN_KIND: sc.RERANKER,
+                    sc.RERANKER_MODEL_NAME: cfg.rerank.model,
+                    sc.RERANKER_TOP_K: top_n,
+                    "vlade.candidates": len(fused),
+                },
+            ):
                 reranker = self.deps.rerankers(cfg.rerank)
-                fused = await reranker.rerank(query.text, fused, min(top_k, cfg.rerank.top_n))
+                fused = await reranker.rerank(query.text, fused, top_n)
         results = fused[:top_k]
         await self._cache_put(ctx, cache_key, results)
         return results
@@ -203,7 +228,9 @@ class Search:
         transformer = self.deps.query_transformers.get(mode)
         if transformer is None:
             raise InvalidArgument(f"Query transform '{mode}' is not configured on this server.")
-        with self.deps.tracer.span("query_transform", {"vlade.transform": mode}) as span:
+        with self.deps.tracer.span(
+            "query_transform", {sc.SPAN_KIND: sc.CHAIN, "vlade.transform": mode}
+        ) as span:
             queries = await transformer.transform(ctx, kb, query)
             span.set_attribute("vlade.queries", len(queries))
         # A transformer must keep the original query first. Enforce it here, so a faulty plugin
