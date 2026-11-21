@@ -1,0 +1,13 @@
+# LGPD (Lei 13.709/2018) — Art. 44
+
+_CAPÍTULO VI — DOS AGENTES DE TRATAMENTO DE DADOS PESSOAIS / Seção III — Da Responsabilidade e do Ressarcimento de Danos_
+
+Art. 44. O tratamento de dados pessoais será irregular quando deixar de observar a legislação ou quando não fornecer a segurança que o titular dele pode esperar, consideradas as circunstâncias relevantes, entre as quais:
+
+I - o modo pelo qual é realizado;
+
+II - o resultado e os riscos que razoavelmente dele se esperam;
+
+III - as técnicas de tratamento de dados pessoais disponíveis à época em que foi realizado.
+
+Parágrafo único. Responde pelos danos decorrentes da violação da segurança dos dados o controlador ou o operador que, ao deixar de adotar as medidas de segurança previstas no art. 46 desta Lei, der causa ao dano.

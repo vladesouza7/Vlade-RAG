@@ -1,0 +1,2172 @@
+{
+  "metrics": {
+    "recall@1": 0.866972,
+    "precision@1": 0.917431,
+    "ndcg@1": 0.917431,
+    "recall@3": 0.98318,
+    "precision@3": 0.366972,
+    "ndcg@3": 0.959106,
+    "recall@5": 0.987768,
+    "precision@5": 0.222018,
+    "ndcg@5": 0.961282,
+    "recall@10": 0.990826,
+    "precision@10": 0.111927,
+    "ndcg@10": 0.962816,
+    "mrr": 0.952599
+  },
+  "config": {
+    "evaluator": "retrieval",
+    "vlade_rag_version": "0.0.1",
+    "date": "2026-11-21T02:19:15+00:00",
+    "knowledge_base": {
+      "slug": "legal-ptbr-v2",
+      "id": "01a1fbc9-e014-734c-bdc3-b661d2430126",
+      "epoch": 150
+    },
+    "knowledge_base_config": {
+      "language": "pt",
+      "chunking": {
+        "strategy": "markdown",
+        "max_tokens": 400,
+        "overlap_tokens": 40,
+        "tokenizer": "BAAI/bge-m3"
+      },
+      "embeddings": {
+        "provider": "openrouter",
+        "model": "openai/text-embedding-3-small",
+        "dimension": 1536,
+        "batch_size": 64
+      },
+      "retrieval": {
+        "retrievers": [
+          "dense",
+          "lexical"
+        ],
+        "top_k_per_retriever": 50,
+        "fusion": {
+          "strategy": "rrf",
+          "k": 60.0,
+          "weights": {}
+        },
+        "rerank": {
+          "enabled": true,
+          "provider": "openrouter",
+          "model": "mongodb/rerank-2.5",
+          "candidates": 50,
+          "top_n": 50
+        },
+        "query_transform": "none",
+        "hnsw_ef_search": 100
+      },
+      "generation": {
+        "provider": "openrouter",
+        "model": "tencent/hy4-flash",
+        "temperature": 0.1,
+        "max_context_tokens": 6000,
+        "max_output_tokens": 4000,
+        "prompt": "answer_with_citations",
+        "require_citations": true
+      }
+    },
+    "questions": {
+      "scored": 109,
+      "in_dataset": 109
+    },
+    "cutoffs": [
+      1,
+      3,
+      5,
+      10
+    ],
+    "chunks_fetched_per_question": 50,
+    "unit": "document (each document counts once, at the rank of its best chunk)"
+  },
+  "items": 109,
+  "details": [
+    {
+      "question": "O que é dado pesosal sensvíel segundo a LGPD?",
+      "relevant_documents": [
+        "lgpd-003.md"
+      ],
+      "retrieved_documents": [
+        "lgpd-003.md",
+        "lgpd-006.md",
+        "lgpd-007.md",
+        "lgpd-031.md",
+        "lgpd-023.md",
+        "lgpd-001.md",
+        "lgpd-004.md",
+        "lgpd-010.md",
+        "lgpd-035.md",
+        "lgpd-009.md"
+      ],
+      "first_relevant_rank": 1
+    },
+    {
+      "question": "Quando a LGPD entra em vigor?",
+      "relevant_documents": [
+        "lgpd-050.md"
+      ],
+      "retrieved_documents": [
+        "lgpd-050.md",
+        "lai-025.md",
+        "lgpd-048.md",
+        "lgpd-002.md",
+        "lgpd-045.md",
+        "lgpd-001.md",
+        "lgpd-003.md",
+        "lgpd-010.md",
+        "lgpd-009.md",
+        "lgpd-004.md"
+      ],
+      "first_relevant_rank": 1
+    },
+    {
+      "question": "Qual é o valor máximo da multa simlpes prevsita na LGPD?",
+      "relevant_documents": [
+        "lgpd-037.md"
+      ],
+      "retrieved_documents": [
+        "lgpd-037.md",
+        "cdc-019.md",
+        "lgpd-039.md",
+        "lgpd-038.md",
+        "cdc-030.md",
+        "mci-006.md",
+        "cdc-029.md",
+        "lai-017.md",
+        "cdc-033.md",
+        "cdc-024.md"
+      ],
+      "first_relevant_rank": 1
+    },
+    {
+      "question": "Como deve ser feito o trataemnto de dados pessoais de criaçnas?",
+      "relevant_documents": [
+        "lgpd-007.md"
+      ],
+      "retrieved_documents": [
+        "lgpd-007.md",
+        "lgpd-003.md",
+        "lgpd-004.md",
+        "lai-016.md",
+        "lgpd-006.md",
+        "lgpd-005.md",
+        "mci-004.md",
+        "lgpd-002.md",
+        "mci-005.md",
+        "lgpd-009.md"
+      ],
+      "first_relevant_rank": 1
+    },
+    {
+      "question": "Quem é o encarergado pelo trataemnto de dados pessoais?",
+      "relevant_documents": [
+        "lgpd-003.md"
+      ],
+      "retrieved_documents": [
+        "lgpd-026.md",
+        "lgpd-003.md",
+        "lgpd-027.md",
+        "lgpd-024.md",
+        "lgpd-029.md",
+        "lgpd-028.md",
+        "lgpd-012.md",
+        "lgpd-004.md",
+        "lai-016.md",
+        "lgpd-022.md"
+      ],
+      "first_relevant_rank": 2
+    },
+    {
+      "question": "Em quais hipóetses o trataemnto de dados pessoais pode ser realizado?",
+      "relevant_documents": [
+        "lgpd-004.md"
+      ],
+      "retrieved_documents": [
+        "lgpd-004.md",
+        "lgpd-006.md",
+        "lgpd-002.md",
+        "lgpd-005.md",
+        "lai-016.md",
+        "lgpd-012.md",
+        "lgpd-008.md",
+        "lgpd-018.md",
+        "lgpd-007.md",
+        "lgpd-003.md"
+      ],
+      "first_relevant_rank": 1
+    },
+    {
+      "question": "Em quanto tempo o contrloador deve fornecer a declaarção completa pedida pelo titular?",
+      "relevant_documents": [
+        "lgpd-010.md"
+      ],
+      "retrieved_documents": [
+        "lgpd-010.md",
+        "lai-006.md",
+        "lgpd-009.md",
+        "lgpd-033.md",
+        "lgpd-005.md",
+        "lai-008.md",
+        "cdc-014.md",
+        "lgpd-004.md",
+        "lgpd-003.md",
+        "lai-004.md"
+      ],
+      "first_relevant_rank": 1
+    },
+    {
+      "question": "O que o contrloador deve fazer quando ocorre um inciednte de segurança?",
+      "relevant_documents": [
+        "lgpd-033.md"
+      ],
+      "retrieved_documents": [
+        "lgpd-033.md",
+        "lgpd-029.md",
+        "cdc-004.md",
+        "lgpd-027.md",
+        "cdc-003.md",
+        "lgpd-035.md",
+        "cdc-005.md",
+        "lgpd-031.md",
+        "cdc-008.md",
+        "lgpd-026.md"
+      ],
+      "first_relevant_rank": 1
+    },
+    {
+      "question": "Quais são os fundaemntos da discilpina da proteção de dados pessoais?",
+      "relevant_documents": [
+        "lgpd-001.md"
+      ],
+      "retrieved_documents": [
+        "lgpd-001.md",
+        "lgpd-003.md",
+        "lgpd-005.md",
+        "lgpd-004.md",
+        "lai-016.md",
+        "mci-004.md",
+        "lgpd-035.md",
+        "lgpd-009.md",
+        "lgpd-006.md",
+        "mci-006.md"
+      ],
+      "first_relevant_rank": 1
+    },
+    {
+      "question": "A LGPD se aplica ao tratamento de dados feito para fins exclusiavmente jornalsíticos?",
+      "relevant_documents": [
+        "lgpd-002.md"
+      ],
+      "retrieved_documents": [
+        "lgpd-002.md",
+        "lgpd-004.md",
+        "lgpd-001.md",
+        "lgpd-007.md",
+        "lgpd-013.md",
+        "lgpd-006.md",
+        "lgpd-005.md",
+        "lgpd-003.md",
+        "lgpd-008.md",
+        "lgpd-012.md"
+      ],
+      "first_relevant_rank": 1
+    },
+    {
+      "question": "Qual é o prazo para desistir de uma compra feita fora do estabelceimento comecrial?",
+      "relevant_documents": [
+        "cdc-017.md"
+      ],
+      "retrieved_documents": [
+        "cdc-017.md",
+        "cdc-006.md",
+        "cdc-009.md",
+        "cdc-012.md",
+        "cdc-011.md",
+        "cdc-007.md",
+        "cdc-018.md",
+        "cdc-014.md",
+        "cdc-016.md",
+        "cdc-050.md"
+      ],
+      "first_relevant_rank": 1
+    },
+    {
+      "question": "Qual é o prazo para reclamar de vícios aparnetes em produtos duráevis?",
+      "relevant_documents": [
+        "cdc-009.md"
+      ],
+      "retrieved_documents": [
+        "cdc-009.md",
+        "cdc-006.md",
+        "cdc-017.md",
+        "cdc-007.md",
+        "cdc-041.md",
+        "cdc-008.md",
+        "cdc-011.md",
+        "cdc-004.md",
+        "cdc-044.md",
+        "cdc-036.md"
+      ],
+      "first_relevant_rank": 1
+    },
+    {
+      "question": "Quem é consiedrado consuimdor pelo CDC?",
+      "relevant_documents": [
+        "cdc-001.md"
+      ],
+      "retrieved_documents": [
+        "cdc-001.md",
+        "cdc-010.md",
+        "cdc-006.md",
+        "cdc-002.md",
+        "cdc-044.md",
+        "cdc-032.md",
+        "cdc-016.md",
+        "cdc-003.md",
+        "cdc-005.md",
+        "cdc-046.md"
+      ],
+      "first_relevant_rank": 1
+    },
+    {
+      "question": "Em quanto tempo o forneecdor deve sanar o vício de um proudto?",
+      "relevant_documents": [
+        "cdc-006.md"
+      ],
+      "retrieved_documents": [
+        "cdc-006.md",
+        "cdc-009.md",
+        "cdc-007.md",
+        "cdc-017.md",
+        "cdc-008.md",
+        "cdc-004.md",
+        "cdc-020.md",
+        "cdc-023.md",
+        "cdc-033.md",
+        "cdc-005.md"
+      ],
+      "first_relevant_rank": 1
+    },
+    {
+      "question": "O que aconetce quando o consuimdor é cobrado em quantia indevida?",
+      "relevant_documents": [
+        "cdc-014.md"
+      ],
+      "retrieved_documents": [
+        "cdc-014.md",
+        "cdc-026.md",
+        "cdc-007.md",
+        "cdc-017.md",
+        "cdc-012.md",
+        "cdc-018.md",
+        "cdc-016.md",
+        "cdc-013.md",
+        "cdc-015.md",
+        "cdc-019.md"
+      ],
+      "first_relevant_rank": 1
+    },
+    {
+      "question": "Por quanto tempo inforamções negativas podem ficar em cadastros de consumdiores?",
+      "relevant_documents": [
+        "cdc-015.md"
+      ],
+      "retrieved_documents": [
+        "cdc-015.md",
+        "cdc-027.md",
+        "lai-012.md",
+        "lgpd-009.md",
+        "lgpd-010.md",
+        "cdc-009.md",
+        "lgpd-004.md",
+        "lgpd-005.md",
+        "mci-005.md",
+        "cdc-019.md"
+      ],
+      "first_relevant_rank": 1
+    },
+    {
+      "question": "Qual é o prazo de prescirção para pedir repaarção de danos causados por fato do produto?",
+      "relevant_documents": [
+        "cdc-009.md"
+      ],
+      "retrieved_documents": [
+        "cdc-009.md",
+        "cdc-006.md",
+        "cdc-041.md",
+        "cdc-004.md",
+        "cdc-008.md",
+        "cdc-007.md",
+        "cdc-005.md",
+        "cdc-017.md",
+        "cdc-036.md",
+        "cdc-042.md"
+      ],
+      "first_relevant_rank": 1
+    },
+    {
+      "question": "Quais são os diretios básicos do consuimdor?",
+      "relevant_documents": [
+        "cdc-002.md"
+      ],
+      "retrieved_documents": [
+        "cdc-002.md",
+        "cdc-003.md",
+        "cdc-001.md",
+        "cdc-016.md",
+        "cdc-017.md",
+        "cdc-044.md",
+        "cdc-007.md",
+        "cdc-013.md",
+        "cdc-014.md",
+        "cdc-004.md"
+      ],
+      "first_relevant_rank": 1
+    },
+    {
+      "question": "O forneecdor pode condiiconar a venda de um produto à compra de outro?",
+      "relevant_documents": [
+        "cdc-013.md"
+      ],
+      "retrieved_documents": [
+        "cdc-013.md",
+        "cdc-012.md",
+        "cdc-017.md",
+        "cdc-006.md",
+        "lgpd-005.md",
+        "cdc-044.md",
+        "cdc-016.md",
+        "cdc-018.md",
+        "cdc-045.md",
+        "cdc-007.md"
+      ],
+      "first_relevant_rank": 1
+    },
+    {
+      "question": "O que é forneecdor segnudo o CDC?",
+      "relevant_documents": [
+        "cdc-001.md"
+      ],
+      "retrieved_documents": [
+        "cdc-001.md",
+        "cdc-004.md",
+        "cdc-012.md",
+        "cdc-007.md",
+        "cdc-006.md",
+        "cdc-005.md",
+        "cdc-003.md",
+        "cdc-008.md",
+        "cdc-019.md",
+        "cdc-002.md"
+      ],
+      "first_relevant_rank": 1
+    },
+    {
+      "question": "A LGPD vale para uma empersa estragneira que trata dados de pessoas que estão no Brasil?",
+      "relevant_documents": [
+        "lgpd-002.md"
+      ],
+      "retrieved_documents": [
+        "lgpd-002.md",
+        "lgpd-046.md",
+        "mci-006.md",
+        "lgpd-018.md",
+        "lgpd-019.md",
+        "lgpd-004.md",
+        "lgpd-009.md",
+        "lgpd-001.md",
+        "lgpd-003.md",
+        "lgpd-021.md"
+      ],
+      "first_relevant_rank": 1
+    },
+    {
+      "question": "Se eu der meu consenitmento para uma empresa usar meus dados, posso desitsir depois?",
+      "relevant_documents": [
+        "lgpd-004.md"
+      ],
+      "retrieved_documents": [
+        "lgpd-009.md",
+        "lgpd-004.md",
+        "lgpd-005.md",
+        "lgpd-008.md",
+        "mci-004.md",
+        "cdc-017.md",
+        "lgpd-045.md",
+        "lgpd-010.md",
+        "lgpd-006.md",
+        "lgpd-003.md"
+      ],
+      "first_relevant_rank": 2
+    },
+    {
+      "question": "Uma autorziação genérica para o trataemnto de dados pessoais é válida?",
+      "relevant_documents": [
+        "lgpd-004.md"
+      ],
+      "retrieved_documents": [
+        "lgpd-004.md",
+        "lgpd-005.md",
+        "lgpd-006.md",
+        "lai-016.md",
+        "mci-004.md",
+        "lgpd-003.md",
+        "lgpd-002.md",
+        "lgpd-009.md",
+        "lgpd-035.md",
+        "lgpd-012.md"
+      ],
+      "first_relevant_rank": 1
+    },
+    {
+      "question": "Em que situações dados pessoais sensvíeis podem ser tratados sem o consenitmento do titular?",
+      "relevant_documents": [
+        "lgpd-006.md"
+      ],
+      "retrieved_documents": [
+        "lgpd-006.md",
+        "lgpd-004.md",
+        "lai-016.md",
+        "lgpd-003.md",
+        "lgpd-007.md",
+        "lgpd-014.md",
+        "lgpd-005.md",
+        "lgpd-002.md",
+        "mci-009.md",
+        "lgpd-009.md"
+      ],
+      "first_relevant_rank": 1
+    },
+    {
+      "question": "Dados anonimziados ainda contam como dados pessaois?",
+      "relevant_documents": [
+        "lgpd-006.md"
+      ],
+      "retrieved_documents": [
+        "lgpd-003.md",
+        "lgpd-006.md",
+        "lgpd-007.md",
+        "lgpd-004.md",
+        "lgpd-008.md",
+        "lgpd-009.md",
+        "lai-016.md",
+        "lgpd-002.md",
+        "mci-005.md",
+        "lgpd-001.md"
+      ],
+      "first_relevant_rank": 2
+    },
+    {
+      "question": "O que aconetce com os dados pessoais depois que o trataemnto termina?",
+      "relevant_documents": [
+        "lgpd-008.md"
+      ],
+      "retrieved_documents": [
+        "lgpd-008.md",
+        "lgpd-032.md",
+        "lgpd-045.md",
+        "mci-004.md",
+        "lgpd-009.md",
+        "lai-016.md",
+        "lgpd-037.md",
+        "lgpd-010.md",
+        "lgpd-013.md",
+        "lgpd-025.md"
+      ],
+      "first_relevant_rank": 1
+    },
+    {
+      "question": "Posso levar meus dados de um serivço para outro concrorente?",
+      "relevant_documents": [
+        "lgpd-009.md"
+      ],
+      "retrieved_documents": [
+        "lgpd-009.md",
+        "lgpd-025.md",
+        "lgpd-018.md",
+        "lgpd-010.md",
+        "mci-004.md",
+        "lgpd-008.md",
+        "lgpd-006.md",
+        "mci-005.md",
+        "lgpd-004.md",
+        "lgpd-013.md"
+      ],
+      "first_relevant_rank": 1
+    },
+    {
+      "question": "Quais são os diretios do titular dos dados pessoais perante o contrloador?",
+      "relevant_documents": [
+        "lgpd-009.md"
+      ],
+      "retrieved_documents": [
+        "lgpd-009.md",
+        "lgpd-010.md",
+        "lgpd-005.md",
+        "lgpd-027.md",
+        "lgpd-003.md",
+        "lgpd-004.md",
+        "lgpd-011.md",
+        "mci-004.md",
+        "lgpd-026.md",
+        "lgpd-007.md"
+      ],
+      "first_relevant_rank": 1
+    },
+    {
+      "question": "Preicso pagar para pedir à empresa acesso aos meus dados pessaois?",
+      "relevant_documents": [
+        "lgpd-009.md"
+      ],
+      "retrieved_documents": [
+        "lgpd-010.md",
+        "lgpd-009.md",
+        "cdc-015.md",
+        "lai-006.md",
+        "lgpd-003.md",
+        "lai-016.md",
+        "lgpd-004.md",
+        "lgpd-005.md",
+        "mci-005.md",
+        "lai-007.md"
+      ],
+      "first_relevant_rank": 2
+    },
+    {
+      "question": "Em que casos a transfreência interncaional de dados pessoais é permitida?",
+      "relevant_documents": [
+        "lgpd-018.md"
+      ],
+      "retrieved_documents": [
+        "lgpd-018.md",
+        "lgpd-019.md",
+        "lgpd-003.md",
+        "lgpd-020.md",
+        "lgpd-002.md",
+        "lgpd-004.md",
+        "lgpd-021.md",
+        "lgpd-013.md",
+        "lgpd-008.md",
+        "lgpd-006.md"
+      ],
+      "first_relevant_rank": 1
+    },
+    {
+      "question": "Se uma empresa vazar meus dados e eu tiver prejíuzo, quem tem que me indeinzar?",
+      "relevant_documents": [
+        "lgpd-027.md"
+      ],
+      "retrieved_documents": [
+        "lgpd-027.md",
+        "lgpd-029.md",
+        "lgpd-030.md",
+        "lgpd-028.md",
+        "lai-017.md",
+        "lgpd-033.md",
+        "cdc-005.md",
+        "lgpd-009.md",
+        "cdc-010.md",
+        "lgpd-011.md"
+      ],
+      "first_relevant_rank": 1
+    },
+    {
+      "question": "O juiz pode invetrer o ônus da prova a favor do titular dos dados em uma ação de repaarção?",
+      "relevant_documents": [
+        "lgpd-027.md"
+      ],
+      "retrieved_documents": [
+        "lgpd-027.md",
+        "lgpd-028.md",
+        "cdc-002.md",
+        "lgpd-011.md",
+        "lgpd-009.md",
+        "cdc-017.md",
+        "mci-012.md",
+        "lgpd-004.md",
+        "lgpd-030.md",
+        "lgpd-029.md"
+      ],
+      "first_relevant_rank": 1
+    },
+    {
+      "question": "Que medidas de seguarnça os agentes de trataemnto devem adotar?",
+      "relevant_documents": [
+        "lgpd-031.md"
+      ],
+      "retrieved_documents": [
+        "lgpd-031.md",
+        "lgpd-032.md",
+        "lgpd-035.md",
+        "lgpd-003.md",
+        "lgpd-022.md",
+        "lgpd-023.md",
+        "lgpd-029.md",
+        "lai-013.md",
+        "lgpd-024.md",
+        "lgpd-034.md"
+      ],
+      "first_relevant_rank": 1
+    },
+    {
+      "question": "Além da multa, que outras punições uma empresa pode receber por descupmrir a lei de protçeão de dados?",
+      "relevant_documents": [
+        "lgpd-037.md"
+      ],
+      "retrieved_documents": [
+        "lgpd-037.md",
+        "mci-006.md",
+        "lai-017.md",
+        "cdc-019.md",
+        "cdc-030.md",
+        "cdc-027.md",
+        "lgpd-027.md",
+        "lgpd-029.md",
+        "cdc-020.md",
+        "cdc-025.md"
+      ],
+      "first_relevant_rank": 1
+    },
+    {
+      "question": "Preciso do consenitmento de alguém para usar dados que essa própria pessoa tornou públcios?",
+      "relevant_documents": [
+        "lgpd-004.md"
+      ],
+      "retrieved_documents": [
+        "lgpd-004.md",
+        "lai-016.md",
+        "lgpd-014.md",
+        "lgpd-006.md",
+        "mci-004.md",
+        "mci-009.md",
+        "lgpd-003.md",
+        "lgpd-009.md",
+        "lgpd-005.md",
+        "lgpd-013.md"
+      ],
+      "first_relevant_rank": 1
+    },
+    {
+      "question": "O fabriacnte responde pelos danos causdaos por um defeito do produto mesmo sem culpa?",
+      "relevant_documents": [
+        "cdc-004.md"
+      ],
+      "retrieved_documents": [
+        "cdc-004.md",
+        "cdc-005.md",
+        "cdc-009.md",
+        "cdc-006.md",
+        "cdc-008.md",
+        "cdc-007.md",
+        "cdc-003.md",
+        "cdc-017.md",
+        "cdc-038.md",
+        "cdc-010.md"
+      ],
+      "first_relevant_rank": 1
+    },
+    {
+      "question": "Em que situações o fabriacnte não é responsaiblizado pelo defeito do produto?",
+      "relevant_documents": [
+        "cdc-004.md"
+      ],
+      "retrieved_documents": [
+        "cdc-004.md",
+        "cdc-005.md",
+        "cdc-009.md",
+        "cdc-008.md",
+        "cdc-017.md",
+        "cdc-006.md",
+        "cdc-007.md",
+        "cdc-010.md",
+        "cdc-003.md",
+        "lgpd-028.md"
+      ],
+      "first_relevant_rank": 1
+    },
+    {
+      "question": "Se a empresa descborir depois da venda que um produto é periogso, o que ela tem que fazer?",
+      "relevant_documents": [
+        "cdc-004.md"
+      ],
+      "retrieved_documents": [
+        "cdc-004.md",
+        "cdc-023.md",
+        "cdc-006.md",
+        "cdc-003.md",
+        "cdc-007.md",
+        "cdc-008.md",
+        "cdc-009.md",
+        "cdc-017.md",
+        "cdc-042.md",
+        "cdc-022.md"
+      ],
+      "first_relevant_rank": 1
+    },
+    {
+      "question": "O que o consuimdor pode exigir quando um serviço é prestado com vício de qualdiade?",
+      "relevant_documents": [
+        "cdc-007.md"
+      ],
+      "retrieved_documents": [
+        "cdc-007.md",
+        "cdc-006.md",
+        "cdc-008.md",
+        "cdc-005.md",
+        "cdc-009.md",
+        "cdc-012.md",
+        "cdc-017.md",
+        "cdc-004.md",
+        "cdc-003.md",
+        "cdc-002.md"
+      ],
+      "first_relevant_rank": 1
+    },
+    {
+      "question": "A oficina pode usar peça usada ou paralela no consreto do meu aparleho?",
+      "relevant_documents": [
+        "cdc-007.md",
+        "cdc-026.md"
+      ],
+      "retrieved_documents": [
+        "cdc-026.md",
+        "cdc-007.md",
+        "cdc-006.md",
+        "cdc-009.md",
+        "cdc-005.md",
+        "cdc-008.md",
+        "cdc-011.md",
+        "cdc-013.md",
+        "cdc-045.md",
+        "cdc-014.md"
+      ],
+      "first_relevant_rank": 1
+    },
+    {
+      "question": "A garatnia legal de adeqaução do produto depende de um termo escrito?",
+      "relevant_documents": [
+        "cdc-008.md"
+      ],
+      "retrieved_documents": [
+        "cdc-008.md",
+        "cdc-017.md",
+        "cdc-028.md",
+        "cdc-016.md",
+        "cdc-044.md",
+        "cdc-006.md",
+        "cdc-018.md",
+        "cdc-007.md",
+        "cdc-011.md",
+        "cdc-003.md"
+      ],
+      "first_relevant_rank": 1
+    },
+    {
+      "question": "Que inforamções a oferta e a apresetnação de um produto devem trazer?",
+      "relevant_documents": [
+        "cdc-011.md"
+      ],
+      "retrieved_documents": [
+        "cdc-011.md",
+        "cdc-024.md",
+        "cdc-012.md",
+        "cdc-003.md",
+        "cdc-013.md",
+        "cdc-018.md",
+        "cdc-010.md",
+        "cdc-002.md",
+        "cdc-007.md",
+        "cdc-004.md"
+      ],
+      "first_relevant_rank": 1
+    },
+    {
+      "question": "Até quando o fabriacnte precisa vender peças de repoisção do produto que fez?",
+      "relevant_documents": [
+        "cdc-011.md"
+      ],
+      "retrieved_documents": [
+        "cdc-011.md",
+        "cdc-007.md",
+        "cdc-006.md",
+        "cdc-009.md",
+        "cdc-026.md",
+        "cdc-004.md",
+        "cdc-008.md",
+        "cdc-033.md",
+        "cdc-017.md",
+        "cdc-005.md"
+      ],
+      "first_relevant_rank": 1
+    },
+    {
+      "question": "O que é publiicdade engaonsa?",
+      "relevant_documents": [
+        "cdc-013.md"
+      ],
+      "retrieved_documents": [
+        "cdc-013.md",
+        "cdc-024.md",
+        "cdc-021.md",
+        "cdc-025.md",
+        "lai-002.md",
+        "lai-004.md",
+        "cdc-026.md",
+        "mci-004.md",
+        "lai-003.md",
+        "cdc-022.md"
+      ],
+      "first_relevant_rank": 1
+    },
+    {
+      "question": "Numa propaagnda, quem preicsa provar que o que ela diz é verdade?",
+      "relevant_documents": [
+        "cdc-013.md"
+      ],
+      "retrieved_documents": [
+        "cdc-013.md",
+        "cdc-024.md",
+        "cdc-012.md",
+        "cdc-004.md",
+        "cdc-021.md",
+        "cdc-002.md",
+        "lgpd-027.md",
+        "cdc-025.md",
+        "lgpd-028.md",
+        "cdc-017.md"
+      ],
+      "first_relevant_rank": 1
+    },
+    {
+      "question": "Recebi em casa um proudto que eu não pedi. Preicso pagar por ele?",
+      "relevant_documents": [
+        "cdc-013.md"
+      ],
+      "retrieved_documents": [
+        "cdc-013.md",
+        "cdc-017.md",
+        "cdc-016.md",
+        "cdc-007.md",
+        "cdc-006.md",
+        "cdc-014.md",
+        "cdc-005.md",
+        "cdc-012.md",
+        "cdc-008.md",
+        "cdc-004.md"
+      ],
+      "first_relevant_rank": 1
+    },
+    {
+      "question": "Como as cláuuslas de um contrato de consumo são interpertadas?",
+      "relevant_documents": [
+        "cdc-016.md"
+      ],
+      "retrieved_documents": [
+        "cdc-016.md",
+        "cdc-018.md",
+        "cdc-017.md",
+        "mci-004.md",
+        "cdc-009.md",
+        "cdc-002.md",
+        "cdc-014.md",
+        "cdc-013.md",
+        "cdc-006.md",
+        "cdc-012.md"
+      ],
+      "first_relevant_rank": 1
+    },
+    {
+      "question": "Que cláuuslas contrtauais são nulas de pleno direito nas relações de consumo?",
+      "relevant_documents": [
+        "cdc-017.md"
+      ],
+      "retrieved_documents": [
+        "cdc-017.md",
+        "cdc-018.md",
+        "mci-004.md",
+        "cdc-013.md",
+        "cdc-016.md",
+        "cdc-009.md",
+        "cdc-014.md",
+        "cdc-045.md",
+        "cdc-002.md",
+        "cdc-024.md"
+      ],
+      "first_relevant_rank": 1
+    },
+    {
+      "question": "O que a loja precisa me infomrar antes de eu fechar um financaimento?",
+      "relevant_documents": [
+        "cdc-018.md"
+      ],
+      "retrieved_documents": [
+        "cdc-018.md",
+        "cdc-011.md",
+        "cdc-014.md",
+        "lgpd-005.md",
+        "cdc-016.md",
+        "cdc-003.md",
+        "cdc-017.md",
+        "cdc-013.md",
+        "cdc-015.md",
+        "cdc-024.md"
+      ],
+      "first_relevant_rank": 1
+    },
+    {
+      "question": "Como devem ser rediigdos os contartos de adesão escritos?",
+      "relevant_documents": [
+        "cdc-018.md"
+      ],
+      "retrieved_documents": [
+        "cdc-018.md",
+        "cdc-016.md",
+        "cdc-017.md",
+        "cdc-044.md",
+        "lgpd-004.md",
+        "cdc-006.md",
+        "mci-004.md",
+        "lgpd-005.md",
+        "cdc-015.md",
+        "cdc-011.md"
+      ],
+      "first_relevant_rank": 1
+    },
+    {
+      "question": "Em que caso o sigilo das comuniacções privadas pela intenret pode ser quebrado?",
+      "relevant_documents": [
+        "mci-004.md"
+      ],
+      "retrieved_documents": [
+        "mci-004.md",
+        "mci-005.md",
+        "mci-016.md",
+        "mci-006.md",
+        "mci-007.md",
+        "mci-008.md",
+        "lai-011.md",
+        "lai-016.md",
+        "lgpd-004.md",
+        "lai-012.md"
+      ],
+      "first_relevant_rank": 1
+    },
+    {
+      "question": "Por quanto tempo a empresa que me dá acesso à intenret precisa guardar meus regitsros de conexão?",
+      "relevant_documents": [
+        "mci-007.md"
+      ],
+      "retrieved_documents": [
+        "mci-007.md",
+        "mci-008.md",
+        "mci-004.md",
+        "mci-009.md",
+        "mci-005.md",
+        "mci-006.md",
+        "mci-010.md",
+        "mci-015.md",
+        "lgpd-025.md",
+        "lgpd-008.md"
+      ],
+      "first_relevant_rank": 1
+    },
+    {
+      "question": "Por quanto tempo o provedor de aplicçaões de internet deve guardar os regitsros de acesso a aplicçaões?",
+      "relevant_documents": [
+        "mci-008.md"
+      ],
+      "retrieved_documents": [
+        "mci-008.md",
+        "mci-007.md",
+        "mci-009.md",
+        "mci-005.md",
+        "mci-004.md",
+        "mci-010.md",
+        "mci-015.md",
+        "mci-006.md",
+        "lgpd-025.md",
+        "lgpd-008.md"
+      ],
+      "first_relevant_rank": 1
+    },
+    {
+      "question": "Qual é a multa máxima por violar as regras de privaicdade e de guarda de dados do Marco Civil da Intenret?",
+      "relevant_documents": [
+        "mci-006.md"
+      ],
+      "retrieved_documents": [
+        "mci-006.md",
+        "lgpd-037.md",
+        "mci-008.md",
+        "mci-007.md",
+        "lai-017.md",
+        "cdc-019.md",
+        "mci-005.md",
+        "mci-004.md",
+        "mci-009.md",
+        "mci-014.md"
+      ],
+      "first_relevant_rank": 1
+    },
+    {
+      "question": "Quando um provedor de aplicçaões pode ser responsaiblizado por conteúdo gerado por terceiros?",
+      "relevant_documents": [
+        "mci-012.md"
+      ],
+      "retrieved_documents": [
+        "mci-012.md",
+        "mci-014.md",
+        "mci-011.md",
+        "mci-024.md",
+        "mci-013.md",
+        "mci-010.md",
+        "mci-005.md",
+        "lgpd-028.md",
+        "mci-006.md",
+        "lgpd-027.md"
+      ],
+      "first_relevant_rank": 1
+    },
+    {
+      "question": "Alguém publciou um vídeo íntimo meu sem eu deixar. A plataofrma precisa tirar do ar?",
+      "relevant_documents": [
+        "mci-014.md"
+      ],
+      "retrieved_documents": [
+        "mci-014.md",
+        "mci-012.md",
+        "mci-013.md",
+        "mci-004.md",
+        "lai-016.md",
+        "mci-016.md",
+        "lgpd-001.md",
+        "mci-006.md",
+        "lgpd-006.md",
+        "mci-009.md"
+      ],
+      "first_relevant_rank": 1
+    },
+    {
+      "question": "O que é a neutraildade de rede?",
+      "relevant_documents": [
+        "mci-005.md"
+      ],
+      "retrieved_documents": [
+        "mci-005.md",
+        "mci-002.md",
+        "mci-017.md",
+        "mci-011.md",
+        "mci-004.md",
+        "mci-001.md",
+        "lai-004.md",
+        "mci-020.md",
+        "mci-003.md",
+        "mci-012.md"
+      ],
+      "first_relevant_rank": 1
+    },
+    {
+      "question": "A operdaora que me vende a internet pode guardar quais sites e aplictaivos eu acesso?",
+      "relevant_documents": [
+        "mci-007.md"
+      ],
+      "retrieved_documents": [
+        "mci-009.md",
+        "mci-007.md",
+        "mci-005.md",
+        "mci-004.md",
+        "mci-008.md",
+        "mci-010.md",
+        "mci-006.md",
+        "mci-015.md",
+        "mci-003.md",
+        "lgpd-005.md"
+      ],
+      "first_relevant_rank": 2
+    },
+    {
+      "question": "O provedor de conexão à internet responde por danos causdaos por conteúdo de tercieros?",
+      "relevant_documents": [
+        "mci-011.md"
+      ],
+      "retrieved_documents": [
+        "mci-011.md",
+        "mci-012.md",
+        "mci-014.md",
+        "mci-024.md",
+        "mci-010.md",
+        "mci-013.md",
+        "mci-005.md",
+        "cdc-005.md",
+        "mci-004.md",
+        "cdc-008.md"
+      ],
+      "first_relevant_rank": 1
+    },
+    {
+      "question": "Quando eu parar de usar um aplictaivo, posso pedir que apaugem meus dados de lá?",
+      "relevant_documents": [
+        "lgpd-045.md",
+        "mci-004.md"
+      ],
+      "retrieved_documents": [
+        "lgpd-045.md",
+        "mci-004.md",
+        "lgpd-009.md",
+        "lgpd-008.md",
+        "lgpd-010.md",
+        "mci-009.md",
+        "cdc-015.md",
+        "mci-008.md",
+        "lgpd-005.md",
+        "lgpd-025.md"
+      ],
+      "first_relevant_rank": 1
+    },
+    {
+      "question": "A lei brasielira se aplica a uma empresa sediada no exteiror que coleta dados no Brasil?",
+      "relevant_documents": [
+        "mci-006.md"
+      ],
+      "retrieved_documents": [
+        "mci-006.md",
+        "lgpd-002.md",
+        "lgpd-046.md",
+        "lgpd-018.md",
+        "lgpd-019.md",
+        "lgpd-020.md",
+        "lgpd-003.md",
+        "lai-001.md",
+        "lgpd-021.md",
+        "lai-019.md"
+      ],
+      "first_relevant_rank": 1
+    },
+    {
+      "question": "Posso instlaar um programa para contorlar o que meus filhos veem na internet?",
+      "relevant_documents": [
+        "mci-022.md"
+      ],
+      "retrieved_documents": [
+        "mci-022.md",
+        "mci-005.md",
+        "lgpd-007.md",
+        "mci-004.md",
+        "mci-009.md",
+        "mci-008.md",
+        "mci-012.md",
+        "mci-015.md",
+        "mci-007.md",
+        "mci-014.md"
+      ],
+      "first_relevant_rank": 1
+    },
+    {
+      "question": "Quando o Marco Civil da Intenret entra em vigor?",
+      "relevant_documents": [
+        "mci-025.md"
+      ],
+      "retrieved_documents": [
+        "mci-025.md",
+        "lgpd-045.md",
+        "mci-024.md",
+        "mci-001.md",
+        "mci-002.md",
+        "mci-003.md",
+        "mci-006.md",
+        "mci-005.md",
+        "mci-004.md",
+        "mci-023.md"
+      ],
+      "first_relevant_rank": 1
+    },
+    {
+      "question": "Que requiistos o pedido de fornecmiento de registros ao juiz deve cumprir?",
+      "relevant_documents": [
+        "mci-015.md"
+      ],
+      "retrieved_documents": [
+        "mci-015.md",
+        "mci-005.md",
+        "mci-016.md",
+        "mci-008.md",
+        "mci-007.md",
+        "lai-005.md",
+        "lai-006.md",
+        "lgpd-010.md",
+        "lai-007.md",
+        "lai-004.md"
+      ],
+      "first_relevant_rank": 1
+    },
+    {
+      "question": "O que é regitsro de conxeão?",
+      "relevant_documents": [
+        "mci-003.md"
+      ],
+      "retrieved_documents": [
+        "mci-003.md",
+        "mci-007.md",
+        "mci-015.md",
+        "mci-005.md",
+        "mci-004.md",
+        "mci-008.md",
+        "mci-009.md",
+        "mci-006.md",
+        "mci-010.md",
+        "mci-016.md"
+      ],
+      "first_relevant_rank": 1
+    },
+    {
+      "question": "A operdaora pode cortar minha intenret se eu atrasar a conta?",
+      "relevant_documents": [
+        "mci-004.md"
+      ],
+      "retrieved_documents": [
+        "cdc-014.md",
+        "cdc-026.md",
+        "cdc-020.md",
+        "cdc-018.md",
+        "cdc-033.md",
+        "cdc-019.md",
+        "cdc-016.md",
+        "mci-006.md",
+        "cdc-017.md",
+        "cdc-005.md"
+      ],
+      "first_relevant_rank": null
+    },
+    {
+      "question": "Em quanto tempo a autordiade que pediu a guarda de registros por prazo maior deve pedir a autorziação judicial de acesso?",
+      "relevant_documents": [
+        "mci-007.md"
+      ],
+      "retrieved_documents": [
+        "mci-007.md",
+        "mci-008.md",
+        "mci-005.md",
+        "lai-006.md",
+        "mci-015.md",
+        "lai-008.md",
+        "lai-016.md",
+        "lgpd-010.md",
+        "lgpd-025.md",
+        "mci-016.md"
+      ],
+      "first_relevant_rank": 1
+    },
+    {
+      "question": "Quando a plataofrma derruba um contúedo meu, ela precisa me explicar o motivo?",
+      "relevant_documents": [
+        "mci-013.md"
+      ],
+      "retrieved_documents": [
+        "mci-013.md",
+        "mci-012.md",
+        "lgpd-009.md",
+        "lgpd-033.md",
+        "mci-004.md",
+        "mci-014.md",
+        "lgpd-003.md",
+        "cdc-012.md",
+        "cdc-003.md",
+        "cdc-008.md"
+      ],
+      "first_relevant_rank": 1
+    },
+    {
+      "question": "As autordiades adminisrtativas podem acessar dados cadastrais sem ordem judicial?",
+      "relevant_documents": [
+        "mci-005.md"
+      ],
+      "retrieved_documents": [
+        "mci-005.md",
+        "lai-016.md",
+        "lgpd-004.md",
+        "lgpd-006.md",
+        "lgpd-002.md",
+        "lgpd-010.md",
+        "mci-007.md",
+        "lai-011.md",
+        "cdc-015.md",
+        "lgpd-009.md"
+      ],
+      "first_relevant_rank": 1
+    },
+    {
+      "question": "Em quanto tempo o órgão público deve respnoder a um pedido de acesso à inforamção que não pode atender de imediato?",
+      "relevant_documents": [
+        "lai-006.md"
+      ],
+      "retrieved_documents": [
+        "lai-006.md",
+        "lai-008.md",
+        "lgpd-010.md",
+        "lai-004.md",
+        "lai-005.md",
+        "lgpd-009.md",
+        "lai-007.md",
+        "lai-020.md",
+        "lai-025.md",
+        "lai-003.md"
+      ],
+      "first_relevant_rank": 1
+    },
+    {
+      "question": "O órgão pode pedir mais tempo para respnoder meu pedido de inforamção?",
+      "relevant_documents": [
+        "lai-006.md"
+      ],
+      "retrieved_documents": [
+        "lai-006.md",
+        "lgpd-010.md",
+        "lai-008.md",
+        "lai-018.md",
+        "lai-005.md",
+        "lgpd-009.md",
+        "lai-020.md",
+        "lai-015.md",
+        "lai-009.md",
+        "lai-003.md"
+      ],
+      "first_relevant_rank": 1
+    },
+    {
+      "question": "Qual é o prazo para recrorer quando o acesso à inforamção é negado?",
+      "relevant_documents": [
+        "lai-008.md"
+      ],
+      "retrieved_documents": [
+        "lai-008.md",
+        "lai-006.md",
+        "lai-009.md",
+        "lai-010.md",
+        "lgpd-010.md",
+        "lai-004.md",
+        "lai-007.md",
+        "lai-017.md",
+        "lai-012.md",
+        "lai-018.md"
+      ],
+      "first_relevant_rank": 1
+    },
+    {
+      "question": "Por quantos anos uma inforamção ultrasescreta pode ficar com acesso restrito?",
+      "relevant_documents": [
+        "lai-012.md"
+      ],
+      "retrieved_documents": [
+        "lai-012.md",
+        "lai-020.md",
+        "lai-016.md",
+        "lai-018.md",
+        "lai-015.md",
+        "lai-014.md",
+        "lai-013.md",
+        "lai-009.md",
+        "lai-004.md",
+        "lai-011.md"
+      ],
+      "first_relevant_rank": 1
+    },
+    {
+      "question": "Preciso explciar por que quero uma inforamção pública quando faço o pedido?",
+      "relevant_documents": [
+        "lai-005.md"
+      ],
+      "retrieved_documents": [
+        "lai-005.md",
+        "lai-006.md",
+        "lai-004.md",
+        "lai-002.md",
+        "lai-003.md",
+        "lgpd-012.md",
+        "lai-011.md",
+        "lai-001.md",
+        "lai-016.md",
+        "cdc-015.md"
+      ],
+      "first_relevant_rank": 1
+    },
+    {
+      "question": "Tenho que pagar para o governo me entrgear uma inforamção?",
+      "relevant_documents": [
+        "lai-006.md"
+      ],
+      "retrieved_documents": [
+        "lai-006.md",
+        "lai-005.md",
+        "lai-007.md",
+        "lai-004.md",
+        "lai-003.md",
+        "lai-001.md",
+        "lai-008.md",
+        "lai-011.md",
+        "lai-002.md",
+        "lai-017.md"
+      ],
+      "first_relevant_rank": 1
+    },
+    {
+      "question": "A quem recorrer quando o Poder Exectuivo Federal nega o acesso a uma inforamção?",
+      "relevant_documents": [
+        "lai-008.md"
+      ],
+      "retrieved_documents": [
+        "lai-008.md",
+        "lai-009.md",
+        "lai-006.md",
+        "lai-010.md",
+        "lai-011.md",
+        "lai-004.md",
+        "lai-001.md",
+        "lai-007.md",
+        "lai-005.md",
+        "lai-014.md"
+      ],
+      "first_relevant_rank": 1
+    },
+    {
+      "question": "Por quanto tempo as inforamções pessoais ligadas à intimdiade e à vida privada têm acesso restrito?",
+      "relevant_documents": [
+        "lai-016.md"
+      ],
+      "retrieved_documents": [
+        "lai-016.md",
+        "lai-012.md",
+        "mci-005.md",
+        "lai-013.md",
+        "mci-004.md",
+        "lgpd-006.md",
+        "lai-020.md",
+        "lai-003.md",
+        "lgpd-010.md",
+        "mci-008.md"
+      ],
+      "first_relevant_rank": 1
+    },
+    {
+      "question": "O que aconetce com o servidor público que se recusa a me dar uma inforamção que tenho direito de receber?",
+      "relevant_documents": [
+        "lai-004.md",
+        "lai-016.md"
+      ],
+      "retrieved_documents": [
+        "lai-006.md",
+        "lai-008.md",
+        "lai-016.md",
+        "lai-011.md",
+        "lai-004.md",
+        "lai-007.md",
+        "lai-009.md",
+        "lai-017.md",
+        "lai-005.md",
+        "lai-003.md"
+      ],
+      "first_relevant_rank": 3
+    },
+    {
+      "question": "Que informações os órgãos públicos devem divulgar, no mínimo, independnetemente de requermiento?",
+      "relevant_documents": [
+        "lai-004.md"
+      ],
+      "retrieved_documents": [
+        "lai-004.md",
+        "lai-002.md",
+        "lai-003.md",
+        "lai-001.md",
+        "lai-005.md",
+        "cdc-015.md",
+        "lgpd-012.md",
+        "lai-015.md",
+        "lai-006.md",
+        "lgpd-005.md"
+      ],
+      "first_relevant_rank": 1
+    },
+    {
+      "question": "Prefetiura de cidade pequena também precisa divuglar tudo na internet?",
+      "relevant_documents": [
+        "lai-004.md"
+      ],
+      "retrieved_documents": [
+        "lai-004.md",
+        "lai-001.md",
+        "lai-005.md",
+        "lai-003.md",
+        "lai-002.md",
+        "mci-017.md",
+        "lai-015.md",
+        "lgpd-012.md",
+        "mci-018.md",
+        "lai-023.md"
+      ],
+      "first_relevant_rank": 1
+    },
+    {
+      "question": "Que informações podem ser classiifcadas como sigilosas por serem imprescnidíveis à segurança da sociedade ou do Estado?",
+      "relevant_documents": [
+        "lai-012.md"
+      ],
+      "retrieved_documents": [
+        "lai-012.md",
+        "lai-002.md",
+        "lai-004.md",
+        "lai-013.md",
+        "lgpd-006.md",
+        "lai-014.md",
+        "lai-018.md",
+        "lai-011.md",
+        "lgpd-004.md",
+        "lai-019.md"
+      ],
+      "first_relevant_rank": 1
+    },
+    {
+      "question": "Quem pode classificar uma informação no grau ultrasescreto na adminitsração pública federal?",
+      "relevant_documents": [
+        "lai-014.md"
+      ],
+      "retrieved_documents": [
+        "lai-014.md",
+        "lai-018.md",
+        "lai-012.md",
+        "lai-020.md",
+        "lai-009.md",
+        "lai-013.md",
+        "lai-015.md",
+        "lai-019.md",
+        "lai-008.md",
+        "lai-002.md"
+      ],
+      "first_relevant_rank": 1
+    },
+    {
+      "question": "O governo pode esconder documnetos sobre violação de diretios humanos?",
+      "relevant_documents": [
+        "lai-011.md"
+      ],
+      "retrieved_documents": [
+        "lai-011.md",
+        "lai-016.md",
+        "lai-003.md",
+        "lai-012.md",
+        "lai-013.md",
+        "lai-004.md",
+        "lai-014.md",
+        "lai-006.md",
+        "lai-018.md",
+        "lai-015.md"
+      ],
+      "first_relevant_rank": 1
+    },
+    {
+      "question": "Onde posso ir pedir inforamções pessoamlente em um órgão público?",
+      "relevant_documents": [
+        "lai-005.md"
+      ],
+      "retrieved_documents": [
+        "lai-005.md",
+        "lai-006.md",
+        "lai-004.md",
+        "lgpd-010.md",
+        "lai-001.md",
+        "lai-003.md",
+        "lgpd-012.md",
+        "cdc-015.md",
+        "lai-016.md",
+        "lai-002.md"
+      ],
+      "first_relevant_rank": 1
+    },
+    {
+      "question": "O que aconetce quando só parte de um docuemnto é sigilosa?",
+      "relevant_documents": [
+        "lai-004.md"
+      ],
+      "retrieved_documents": [
+        "lai-004.md",
+        "lai-006.md",
+        "lai-008.md",
+        "lai-013.md",
+        "lai-018.md",
+        "lai-002.md",
+        "lai-007.md",
+        "lai-012.md",
+        "lai-003.md",
+        "lai-015.md"
+      ],
+      "first_relevant_rank": 1
+    },
+    {
+      "question": "A Lei de Acesso à Inforamção vale para entiaddes privadas?",
+      "relevant_documents": [
+        "lai-001.md"
+      ],
+      "retrieved_documents": [
+        "lai-001.md",
+        "lai-017.md",
+        "lai-004.md",
+        "lgpd-012.md",
+        "lai-013.md",
+        "lgpd-013.md",
+        "lai-011.md",
+        "lai-016.md",
+        "lai-003.md",
+        "mci-005.md"
+      ],
+      "first_relevant_rank": 1
+    },
+    {
+      "question": "Que punição uma empresa que trabalha para o governo recebe se escodner inforamções?",
+      "relevant_documents": [
+        "lai-017.md"
+      ],
+      "retrieved_documents": [
+        "lai-017.md",
+        "lgpd-037.md",
+        "lai-016.md",
+        "cdc-027.md",
+        "mci-006.md",
+        "cdc-019.md",
+        "cdc-024.md",
+        "lgpd-016.md",
+        "lai-013.md",
+        "cdc-020.md"
+      ],
+      "first_relevant_rank": 1
+    },
+    {
+      "question": "Qual é o mandato dos integrantes da Comissão Mista de Reavailação de Inforamções?",
+      "relevant_documents": [
+        "lai-018.md"
+      ],
+      "retrieved_documents": [
+        "lai-018.md",
+        "lai-020.md",
+        "lai-014.md",
+        "lai-009.md",
+        "lai-008.md",
+        "lai-015.md",
+        "lai-022.md",
+        "lai-021.md",
+        "lai-003.md",
+        "lai-016.md"
+      ],
+      "first_relevant_rank": 1
+    },
+    {
+      "question": "Se o órgão negar meu pedido, posso receber a decsião por escirto?",
+      "relevant_documents": [
+        "lai-007.md"
+      ],
+      "retrieved_documents": [
+        "lai-007.md",
+        "lai-006.md",
+        "lai-008.md",
+        "lai-009.md",
+        "lgpd-009.md",
+        "lai-004.md",
+        "cdc-015.md",
+        "lai-010.md",
+        "lai-005.md",
+        "lai-014.md"
+      ],
+      "first_relevant_rank": 1
+    },
+    {
+      "question": "Qual é a difeernça entre o prazo de guarda dos registros de conexão e o dos registros de acesso a aplicçaões de internet?",
+      "relevant_documents": [
+        "mci-007.md",
+        "mci-008.md"
+      ],
+      "retrieved_documents": [
+        "mci-007.md",
+        "mci-008.md",
+        "mci-003.md",
+        "mci-004.md",
+        "mci-005.md",
+        "mci-009.md",
+        "mci-015.md",
+        "mci-010.md",
+        "mci-006.md",
+        "mci-016.md"
+      ],
+      "first_relevant_rank": 1
+    },
+    {
+      "question": "Em quantos dias o órgão público tem que me respnoder e em quantos dias eu posso recrorer se ele negar?",
+      "relevant_documents": [
+        "lai-006.md",
+        "lai-008.md"
+      ],
+      "retrieved_documents": [
+        "lai-008.md",
+        "lai-006.md",
+        "lgpd-010.md",
+        "lai-009.md",
+        "lai-017.md",
+        "lai-004.md",
+        "cdc-009.md",
+        "cdc-006.md",
+        "lgpd-012.md",
+        "cdc-015.md"
+      ],
+      "first_relevant_rank": 1
+    },
+    {
+      "question": "Quem é o encarergado pelo tratamento de dados pessoais e quais são as ativiaddes dele?",
+      "relevant_documents": [
+        "lgpd-003.md",
+        "lgpd-026.md"
+      ],
+      "retrieved_documents": [
+        "lgpd-026.md",
+        "lgpd-003.md",
+        "lgpd-004.md",
+        "lgpd-027.md",
+        "lgpd-035.md",
+        "lgpd-005.md",
+        "lgpd-012.md",
+        "lgpd-024.md",
+        "lgpd-022.md",
+        "lgpd-023.md"
+      ],
+      "first_relevant_rank": 1
+    },
+    {
+      "question": "Quanto tempo tenho para reclmaar de um defeito e quanto tempo a loja tem para consretar?",
+      "relevant_documents": [
+        "cdc-006.md",
+        "cdc-009.md"
+      ],
+      "retrieved_documents": [
+        "cdc-009.md",
+        "cdc-006.md",
+        "cdc-017.md",
+        "cdc-007.md",
+        "cdc-008.md",
+        "cdc-033.md",
+        "cdc-041.md",
+        "cdc-012.md",
+        "cdc-004.md",
+        "cdc-048.md"
+      ],
+      "first_relevant_rank": 1
+    },
+    {
+      "question": "Qual é a multa máxima da LGPD e qual é a do Marco Civil da Intenret?",
+      "relevant_documents": [
+        "lgpd-037.md",
+        "mci-006.md"
+      ],
+      "retrieved_documents": [
+        "lgpd-037.md",
+        "mci-006.md",
+        "lgpd-039.md",
+        "lgpd-038.md",
+        "cdc-019.md",
+        "mci-008.md",
+        "mci-007.md",
+        "lgpd-045.md",
+        "mci-002.md",
+        "mci-014.md"
+      ],
+      "first_relevant_rank": 1
+    },
+    {
+      "question": "Que diretios eu tenho sobre meus dados pessaois, pela lei de proteção de dados e pelo Marco Civil?",
+      "relevant_documents": [
+        "lgpd-009.md",
+        "mci-004.md"
+      ],
+      "retrieved_documents": [
+        "lgpd-009.md",
+        "mci-004.md",
+        "lgpd-010.md",
+        "lgpd-005.md",
+        "lgpd-003.md",
+        "lgpd-004.md",
+        "lgpd-011.md",
+        "lgpd-001.md",
+        "mci-006.md",
+        "lgpd-006.md"
+      ],
+      "first_relevant_rank": 1
+    },
+    {
+      "question": "Quem pode classfiicar uma informação como ultrasescreta e por quantos anos ela fica em sigilo?",
+      "relevant_documents": [
+        "lai-012.md",
+        "lai-014.md"
+      ],
+      "retrieved_documents": [
+        "lai-012.md",
+        "lai-014.md",
+        "lai-018.md",
+        "lai-020.md",
+        "lai-015.md",
+        "lai-013.md",
+        "lai-016.md",
+        "lai-009.md",
+        "lai-019.md",
+        "lai-002.md"
+      ],
+      "first_relevant_rank": 1
+    },
+    {
+      "question": "O que é regitsro de conexão e por quanto tempo ele deve ser guaraddo?",
+      "relevant_documents": [
+        "mci-003.md",
+        "mci-007.md"
+      ],
+      "retrieved_documents": [
+        "mci-007.md",
+        "mci-008.md",
+        "mci-003.md",
+        "mci-005.md",
+        "mci-004.md",
+        "mci-015.md",
+        "mci-006.md",
+        "mci-009.md",
+        "mci-010.md",
+        "lgpd-025.md"
+      ],
+      "first_relevant_rank": 1
+    },
+    {
+      "question": "Como a LGPD e a Lei de Acesso à Inforamção tratam o consenitmento para dados pessoais?",
+      "relevant_documents": [
+        "lai-016.md",
+        "lgpd-003.md",
+        "lgpd-004.md"
+      ],
+      "retrieved_documents": [
+        "lgpd-005.md",
+        "lgpd-004.md",
+        "lai-016.md",
+        "lgpd-006.md",
+        "lgpd-009.md",
+        "lgpd-003.md",
+        "lgpd-014.md",
+        "lgpd-010.md",
+        "lgpd-018.md",
+        "mci-004.md"
+      ],
+      "first_relevant_rank": 2
+    },
+    {
+      "question": "Que conseqêuncias sofrem o servidor que esconde informação e a empresa contrtaada que descumpre a lei de acesso?",
+      "relevant_documents": [
+        "lai-016.md",
+        "lai-017.md"
+      ],
+      "retrieved_documents": [
+        "lai-017.md",
+        "lai-016.md",
+        "cdc-027.md",
+        "lai-004.md",
+        "lgpd-037.md",
+        "lai-013.md",
+        "lai-022.md",
+        "lai-003.md",
+        "lai-006.md",
+        "lai-008.md"
+      ],
+      "first_relevant_rank": 1
+    },
+    {
+      "question": "Segundo a Lei de Acesso à Inforamção, o que é inforamção pessoal?",
+      "relevant_documents": [
+        "lai-002.md"
+      ],
+      "retrieved_documents": [
+        "lai-002.md",
+        "lai-016.md",
+        "lgpd-003.md",
+        "lai-003.md",
+        "lgpd-010.md",
+        "lgpd-005.md",
+        "lgpd-001.md",
+        "mci-005.md",
+        "mci-004.md",
+        "lai-017.md"
+      ],
+      "first_relevant_rank": 1
+    },
+    {
+      "question": "O que signfiica elimianção de dados segundo a LGPD?",
+      "relevant_documents": [
+        "lgpd-003.md"
+      ],
+      "retrieved_documents": [
+        "lgpd-008.md",
+        "lgpd-003.md",
+        "lgpd-037.md",
+        "lgpd-009.md",
+        "lgpd-045.md",
+        "lgpd-031.md",
+        "lgpd-032.md",
+        "lgpd-033.md",
+        "lgpd-004.md",
+        "lgpd-007.md"
+      ],
+      "first_relevant_rank": 2
+    },
+    {
+      "question": "Segundo o Marco Civil da Intenret, o que é um endeerço IP?",
+      "relevant_documents": [
+        "mci-003.md"
+      ],
+      "retrieved_documents": [
+        "mci-003.md",
+        "mci-001.md",
+        "mci-002.md",
+        "mci-005.md",
+        "mci-004.md",
+        "mci-006.md",
+        "mci-007.md",
+        "mci-025.md",
+        "mci-017.md",
+        "mci-015.md"
+      ],
+      "first_relevant_rank": 1
+    },
+    {
+      "question": "Segundo o Código de Defesa do Consuimdor, o que é consiedrado produto?",
+      "relevant_documents": [
+        "cdc-001.md"
+      ],
+      "retrieved_documents": [
+        "cdc-001.md",
+        "cdc-004.md",
+        "cdc-006.md",
+        "cdc-011.md",
+        "cdc-003.md",
+        "cdc-007.md",
+        "cdc-005.md",
+        "cdc-002.md",
+        "cdc-019.md",
+        "cdc-018.md"
+      ],
+      "first_relevant_rank": 1
+    },
+    {
+      "question": "Quais são os princpíios que regem o uso da intenret no Brasil?",
+      "relevant_documents": [
+        "mci-002.md"
+      ],
+      "retrieved_documents": [
+        "mci-002.md",
+        "mci-001.md",
+        "mci-004.md",
+        "mci-005.md",
+        "mci-017.md",
+        "mci-006.md",
+        "mci-003.md",
+        "mci-018.md",
+        "mci-020.md",
+        "mci-019.md"
+      ],
+      "first_relevant_rank": 1
+    },
+    {
+      "question": "Quais são os princpíios que as ativiaddes de tratamento de dados pessoais devem observar?",
+      "relevant_documents": [
+        "lgpd-003.md"
+      ],
+      "retrieved_documents": [
+        "lgpd-003.md",
+        "lgpd-001.md",
+        "lgpd-004.md",
+        "lgpd-005.md",
+        "lgpd-035.md",
+        "lai-016.md",
+        "lgpd-034.md",
+        "lgpd-031.md",
+        "mci-006.md",
+        "lgpd-006.md"
+      ],
+      "first_relevant_rank": 1
+    },
+    {
+      "question": "Quais diretrizes a Lei de Acesso à Inforamção estabelece para os procedmientos de acesso?",
+      "relevant_documents": [
+        "lai-002.md"
+      ],
+      "retrieved_documents": [
+        "lai-002.md",
+        "lai-006.md",
+        "lai-003.md",
+        "lai-005.md",
+        "lai-004.md",
+        "lai-007.md",
+        "lai-001.md",
+        "lai-011.md",
+        "lai-008.md",
+        "lai-016.md"
+      ],
+      "first_relevant_rank": 1
+    },
+    {
+      "question": "Na lei de protçeão de dados, o que quer dizer consenitmento?",
+      "relevant_documents": [
+        "lgpd-003.md"
+      ],
+      "retrieved_documents": [
+        "lgpd-003.md",
+        "lgpd-004.md",
+        "lgpd-006.md",
+        "lgpd-005.md",
+        "mci-004.md",
+        "mci-009.md",
+        "lgpd-014.md",
+        "lgpd-009.md",
+        "lgpd-007.md",
+        "lgpd-045.md"
+      ],
+      "first_relevant_rank": 1
+    },
+    {
+      "question": "Quando uma inforamção pessoal em poder do governo pode ser divulgada a terceiros segundo a Lei de Acesso à Inforamção?",
+      "relevant_documents": [
+        "lai-016.md"
+      ],
+      "retrieved_documents": [
+        "lai-016.md",
+        "lai-013.md",
+        "lgpd-013.md",
+        "lai-017.md",
+        "lai-003.md",
+        "lai-012.md",
+        "lai-004.md",
+        "lai-002.md",
+        "lgpd-014.md",
+        "lgpd-012.md"
+      ],
+      "first_relevant_rank": 1
+    },
+    {
+      "question": "Em que situação o provedor de internet é obrigado a entregar regitsros que identfiicam um usuário?",
+      "relevant_documents": [
+        "mci-005.md"
+      ],
+      "retrieved_documents": [
+        "mci-005.md",
+        "mci-008.md",
+        "mci-015.md",
+        "mci-007.md",
+        "mci-004.md",
+        "mci-009.md",
+        "mci-006.md",
+        "mci-013.md",
+        "mci-016.md",
+        "lgpd-004.md"
+      ],
+      "first_relevant_rank": 1
+    }
+  ]
+}
