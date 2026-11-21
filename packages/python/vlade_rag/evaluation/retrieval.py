@@ -15,7 +15,7 @@ from typing import Any
 from vlade_rag import __version__
 from vlade_rag.core.application import Dependencies, Search
 from vlade_rag.core.domain import InvalidArgument, KnowledgeBase, Query, Role, TenantContext
-from vlade_rag.core.domain.kb_config import RerankConfig
+from vlade_rag.core.domain.kb_config import QueryTransform, RerankConfig, RetrieverName
 from vlade_rag.core.ports import EvalItem, EvalReport
 from vlade_rag.evaluation import metrics as m
 
@@ -32,13 +32,18 @@ class RetrievalEvaluator:
         deps: Dependencies,
         cutoffs: Sequence[int] = DEFAULT_CUTOFFS,
         rerank: RerankConfig | None = None,
+        retrievers: Sequence[RetrieverName] | None = None,
+        query_transform: QueryTransform | None = None,
     ) -> None:
-        """``rerank`` replaces the reranker of the base for this run. The base is not changed."""
+        """``rerank``, ``retrievers`` and ``query_transform`` replace the same settings of the
+        base for this run. The base is not changed."""
         if not cutoffs or any(c < 1 for c in cutoffs):
             raise InvalidArgument("The cutoffs must be whole numbers of 1 or more.")
         self.deps = deps
         self.cutoffs = tuple(sorted(set(cutoffs)))
         self.rerank = rerank
+        self.retrievers = tuple(retrievers) if retrievers else None
+        self.query_transform = query_transform
 
     async def evaluate(
         self, ctx: TenantContext, kb: KnowledgeBase, items: Sequence[EvalItem], k: int
@@ -52,7 +57,7 @@ class RetrievalEvaluator:
             raise InvalidArgument("No question has a relevant document.")
         cutoffs = tuple(sorted({c for c in self.cutoffs if c <= k} | {k}))
         fetch = min(k * FETCH_FACTOR, self.deps.limits.max_top_k)
-        kb = self._with_rerank(kb, fetch)
+        kb = self._with_overrides(kb, fetch)
         search = Search(self.deps)
 
         per_metric: dict[str, list[float]] = {}
@@ -95,18 +100,25 @@ class RetrievalEvaluator:
 
     # ------------------------------------------------------------ helpers
 
-    def _with_rerank(self, kb: KnowledgeBase, fetch: int) -> KnowledgeBase:
-        """Apply the reranker of this run. The reranker returns ``top_n`` chunks, so ``top_n``
-        rises to the number of chunks fetched. A lower ``top_n`` would cut the ranking short and
-        lower Recall@K for a reason that is not the quality of the reranker."""
+    def _with_overrides(self, kb: KnowledgeBase, fetch: int) -> KnowledgeBase:
+        """Apply the retrieval settings of this run to a copy of the base.
+
+        With a reranker on, the reranker returns ``top_n`` chunks, so ``top_n`` rises to the number
+        of chunks fetched. A lower ``top_n`` would cut the ranking short and lower Recall@K for a
+        reason that is not the quality of the reranker."""
         retrieval = kb.config.retrieval
+        updates: dict[str, Any] = {}
+        if self.retrievers is not None:
+            updates["retrievers"] = self.retrievers
+        if self.query_transform is not None:
+            updates["query_transform"] = self.query_transform
         rerank = self.rerank or retrieval.rerank
-        if not rerank.enabled:
+        if rerank.enabled:
+            top_n = min(max(rerank.top_n, fetch), RERANK_TOP_N_LIMIT)
+            updates["rerank"] = rerank.model_copy(update={"top_n": top_n})
+        if not updates:
             return kb
-        rerank = rerank.model_copy(
-            update={"top_n": min(max(rerank.top_n, fetch), RERANK_TOP_N_LIMIT)}
-        )
-        retrieval = retrieval.model_copy(update={"rerank": rerank})
+        retrieval = retrieval.model_copy(update=updates)
         return replace(kb, config=kb.config.model_copy(update={"retrieval": retrieval}))
 
     @staticmethod

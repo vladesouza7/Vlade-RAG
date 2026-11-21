@@ -306,7 +306,8 @@ class Reranker(Protocol):
 
 class QueryTransformer(Protocol):
     name: str
-    async def transform(self, ctx: TenantContext, query: Query) -> list[Query]: ...
+    async def transform(self, ctx: TenantContext, kb: KnowledgeBase, query: Query) -> list[Query]: ...
+    # O primeiro item da lista é a consulta original. Um item pode limitar os retrievers com Query.retrievers.
 
 class LLMProvider(Protocol):
     name: str
@@ -531,7 +532,8 @@ CREATE INDEX chunks_tsv_idx       ON chunks USING gin (tsv);
 CREATE INDEX chunks_kb_pub_idx    ON chunks (knowledge_base_id) WHERE is_published;
 CREATE INDEX chunks_version_idx   ON chunks (document_version_id);
 CREATE INDEX chunks_metadata_idx  ON chunks USING gin (metadata jsonb_path_ops);
--- Índice trigram: criado só quando a base ativa o retriever fuzzy
+-- Índice trigram (migração 0002): a função vlade_ensure_trigram_index() cria o índice na primeira
+-- busca fuzzy do processo. Nenhuma base paga o índice antes disso (ADR-0019).
 -- CREATE INDEX chunks_trgm_idx ON chunks USING gin (text gin_trgm_ops);
 
 CREATE TABLE chunk_embeddings (
@@ -785,7 +787,7 @@ embeddings:
   dimension: 1024
   batch_size: 32
 retrieval:
-  retrievers: [dense, lexical]   # dense, lexical, fuzzy, bm25
+  retrievers: [dense, lexical]   # dense, lexical, fuzzy, bm25 (bm25 ainda não existe)
   top_k_per_retriever: 50
   fusion:
     strategy: rrf
@@ -796,7 +798,7 @@ retrieval:
     model: BAAI/bge-reranker-v2-m3    # com openrouter: por exemplo cohere/rerank-v3.5
     candidates: 50
     top_n: 8
-  query_transform: none          # none, rewrite, multi_query, hyde
+  query_transform: none          # none, rewrite, multi_query, hyde (usa o LLM da base, ADR-0019)
   hnsw_ef_search: 100
 generation:
   provider: ollama
@@ -889,7 +891,7 @@ AnswerQuery.execute(ctx, query)
  2. QueryTransformer.transform                            span: query_transform
  3. em paralelo, para cada consulta e cada retriever:     span: retrieval.<nome>
       DenseRetriever: EmbeddingProvider.embed_query → VectorIndex.search
-      LexicalRetriever: LexicalIndex.search
+      LexicalRetriever: LexicalIndex.search (índices "lexical" e "fuzzy")
  4. FusionStrategy.fuse (RRF)                             span: fusion
  5. Reranker.rerank, se ativo                             span: rerank
  6. montar o contexto                                     span: context_assembly
@@ -899,6 +901,14 @@ AnswerQuery.execute(ctx, query)
 ```
 
 `Search.execute` faz os passos 1 a 5.
+
+**Consultas derivadas (passo 2).** Com `query_transform` diferente de `none`, o transformador devolve a consulta original e as consultas derivadas. O `Search` roda cada consulta em cada retriever e funde todas as listas com RRF. A lista da consulta original usa o nome do retriever (`dense`). As listas das consultas derivadas usam `dense#1`, `lexical#1` e assim por diante. A consulta original sempre vem primeiro e sempre roda: o `Search` a recoloca na frente se um plugin a esquecer. O reranker usa a consulta original. Se o LLM falha, o transformador devolve só a consulta original e a busca continua.
+
+| `query_transform` | O que o LLM recebe | Consultas derivadas |
+|---|---|---|
+| `rewrite` | A pergunta | Uma consulta curta com os termos prováveis do documento. Roda em todos os retrievers |
+| `multi_query` | A pergunta | Até 3 variações com palavras diferentes. Rodam em todos os retrievers |
+| `hyde` | A pergunta | Um parágrafo hipotético que responderia à pergunta. Roda só no retriever `dense` |
 
 ### 11.2. Fusão RRF
 

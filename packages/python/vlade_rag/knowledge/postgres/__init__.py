@@ -4,7 +4,11 @@ Install with the ``postgres`` extra (asyncpg, pgvector).
 """
 
 from vlade_rag.knowledge.postgres.db import PostgresDatabase
-from vlade_rag.knowledge.postgres.indexes import PgVectorIndex, TsvectorLexicalIndex
+from vlade_rag.knowledge.postgres.indexes import (
+    PgVectorIndex,
+    TrigramLexicalIndex,
+    TsvectorLexicalIndex,
+)
 from vlade_rag.knowledge.postgres.operations import (
     PostgresAuditLog,
     PostgresJobQueue,
@@ -19,5 +23,6 @@ __all__ = [
     "PostgresJobQueue",
     "PostgresKnowledgeRepository",
     "PostgresTenantDirectory",
+    "TrigramLexicalIndex",
     "TsvectorLexicalIndex",
 ]

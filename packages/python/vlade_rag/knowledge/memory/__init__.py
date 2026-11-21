@@ -503,6 +503,73 @@ class MemoryLexicalIndex:
         return hits[:top_k]
 
 
+FUZZY_THRESHOLD = 0.5  # same value as the PostgreSQL adapter
+FUZZY_MAX_WORDS = 16
+_STOPWORD_TEXT = (
+    "a o as os um uma uns umas de do da dos das em no na nos nas por para com sem sob sobre "
+    "e ou mas que se como qual quais quando onde quem ao aos pela pelo pelas pelos entre "
+    "the an of in on at by for with without and or but that is are was were be to from "
+    "it this these those which who whom what when where how"
+)
+_FUZZY_STOPWORDS = frozenset(_STOPWORD_TEXT.split())
+
+
+def _trigrams(word: str) -> frozenset[str]:
+    """The trigrams of a word as ``pg_trgm`` builds them: two spaces before, one after."""
+    padded = f"  {word} "
+    return frozenset(padded[i : i + 3] for i in range(len(padded) - 2))
+
+
+class MemoryFuzzyIndex:
+    """Fuzzy search by trigram similarity of words, like the PostgreSQL ``pg_trgm`` adapter.
+
+    The score of a chunk is the sum, over the query words, of the best similarity with a word of
+    the chunk, counted only from 0.5. The similarity of a query word is the share of its trigrams
+    that the chunk word has (``word_similarity`` of ``pg_trgm``). An approximation for tests and
+    small bases.
+    """
+
+    name = "memory-trigram"
+
+    def __init__(self, store: MemoryStore) -> None:
+        self.store = store
+
+    async def search(
+        self,
+        ctx: TenantContext,
+        knowledge_base_id: UUID,
+        text: str,
+        top_k: int,
+        filters: MetadataFilter | None,
+        language: str,
+    ) -> list[ChunkHit]:
+        words = [
+            w
+            for w in dict.fromkeys(_lexical_terms(text))
+            if len(w) >= 3 and w not in _FUZZY_STOPWORDS
+        ][:FUZZY_MAX_WORDS]
+        if not words:
+            return []
+        wanted = {w: _trigrams(w) for w in words}
+        data = self.store.data(ctx)
+        hits = []
+        for cid, chunk in data.chunks.items():
+            if cid not in data.published or chunk.knowledge_base_id != knowledge_base_id:
+                continue
+            if not matches(filters, chunk.metadata):
+                continue
+            chunk_trigrams = [_trigrams(w) for w in set(_lexical_terms(chunk.text))]
+            score = 0.0
+            for grams in wanted.values():
+                best = max((len(grams & other) / len(grams) for other in chunk_trigrams), default=0)
+                if best >= FUZZY_THRESHOLD:
+                    score += best
+            if score > 0:
+                hits.append(ChunkHit(cid, score))
+        hits.sort(key=lambda h: (-h.score, str(h.chunk_id)))
+        return hits[:top_k]
+
+
 # ---------------------------------------------------------------- object storage and cache
 
 
@@ -830,6 +897,7 @@ class MemoryAdapters:
     repository: MemoryKnowledgeRepository
     vector_index: MemoryVectorIndex
     lexical_index: MemoryLexicalIndex
+    fuzzy_index: MemoryFuzzyIndex
     object_storage: MemoryObjectStorage
     cache: MemoryCache
     rate_limiter: MemoryRateLimiter
@@ -845,6 +913,7 @@ def memory_adapters(store: MemoryStore | None = None) -> MemoryAdapters:
         repository=MemoryKnowledgeRepository(store),
         vector_index=MemoryVectorIndex(store),
         lexical_index=MemoryLexicalIndex(store),
+        fuzzy_index=MemoryFuzzyIndex(store),
         object_storage=MemoryObjectStorage(store),
         cache=MemoryCache(store),
         rate_limiter=MemoryRateLimiter(),
@@ -858,6 +927,7 @@ __all__ = [
     "MemoryAdapters",
     "MemoryAuditLog",
     "MemoryCache",
+    "MemoryFuzzyIndex",
     "MemoryJobQueue",
     "MemoryKnowledgeRepository",
     "MemoryLexicalIndex",
