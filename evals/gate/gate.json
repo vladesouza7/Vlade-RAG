@@ -1,0 +1,17 @@
+{
+  "max_drop": 0.02,
+  "metrics": ["recall@1", "recall@10", "mrr", "ndcg@10"],
+  "k": 10,
+  "knowledge_base": {
+    "language": "pt",
+    "chunking": {"strategy": "markdown", "max_tokens": 400, "overlap_tokens": 40},
+    "embeddings": {"provider": "hashing", "model": "hashing-v1", "dimension": 256},
+    "generation": {"provider": "extractive", "model": "extractive"}
+  },
+  "runs": [
+    {"name": "legal-ptbr.hybrid", "dataset": "evals/datasets/legal-ptbr", "retrievers": ["dense", "lexical"]},
+    {"name": "legal-ptbr-v2.hybrid", "dataset": "evals/datasets/legal-ptbr-v2", "retrievers": ["dense", "lexical"]},
+    {"name": "legal-ptbr-v2.lexical", "dataset": "evals/datasets/legal-ptbr-v2", "retrievers": ["lexical"]},
+    {"name": "legal-ptbr-v2-typos.fuzzy", "dataset": "evals/datasets/legal-ptbr-v2", "questions": "questions-typos.jsonl", "retrievers": ["dense", "lexical", "fuzzy"]}
+  ]
+}

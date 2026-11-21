@@ -67,7 +67,7 @@ jobs:
         run: >
           uv sync --locked --package vlade-rag
           --extra api --extra cli --extra postgres --extra ollama --extra openai --extra otel
-          --extra cache --extra mcp --extra s3
+          --extra cache --extra mcp --extra s3 --extra langgraph
           ${{ matrix.native && '--extra native' || '' }}
       - name: Install dev tools
         # Recent uv versions do not install the root dev group with --package.
@@ -85,6 +85,24 @@ jobs:
         run: uv run --no-sync mypy
       - name: Pytest
         run: uv run --no-sync pytest --cov --cov-report=term --cov-fail-under=85
+
+  quality-gate:
+    name: Quality gate (RF-73)
+    runs-on: ubuntu-latest
+    env:
+      # Throwaway bases in memory, hashing embeddings: no service and no provider (ADR-0024).
+      VLADE_STORAGE__BACKEND: memory
+      VLADE_OBJECT_STORAGE__BACKEND: memory
+    steps:
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@v10.3.3
+        with:
+          python-version: "3.12"
+          enable-cache: true
+      - name: Install
+        run: uv sync --locked --package vlade-rag --extra cli
+      - name: Compare the retrieval metrics with evals/gate/baseline.json
+        run: uv run --no-sync vlade-rag eval gate
 
   bm25:
     name: BM25 retriever (pg_search)
@@ -177,7 +195,7 @@ jobs:
           uv venv /tmp/lic
           # The docling extra pulls PyTorch and NVIDIA CUDA libraries (proprietary). ADR-0001
           # item 4 keeps non-permissive dependencies in optional extras, so it is not checked here.
-          uv export --frozen --no-dev --package vlade-rag --extra server --extra api --extra cli --extra postgres --extra ollama --extra openai --extra otel --extra cache --extra mcp --extra s3 --no-emit-workspace -o /tmp/req.txt
+          uv export --frozen --no-dev --package vlade-rag --extra server --extra api --extra cli --extra postgres --extra ollama --extra openai --extra otel --extra cache --extra mcp --extra s3 --extra langgraph --no-emit-workspace -o /tmp/req.txt
           uv pip install --python /tmp/lic/bin/python -r /tmp/req.txt
           uvx pip-licenses==5.5.5 --python /tmp/lic/bin/python --from=mixed --format=json > /tmp/licenses.json
           python3 scripts/check_licenses.py /tmp/licenses.json

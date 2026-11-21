@@ -77,12 +77,30 @@ class GenerationConfig(_Frozen):
     require_citations: bool = True
 
 
+class OrchestrationConfig(_Frozen):
+    """Engine of the query flow (docs/ARCHITECTURE.md section 12.1, ADR-0023).
+
+    The two conditional edges exist only in the ``langgraph`` engine. With
+    ``rewrite_below_score = None`` and ``max_attempts = 1`` they never run, and the two engines
+    give the same answer.
+    """
+
+    engine: Literal["pipeline", "langgraph"] = "pipeline"
+    # Rewrite the query once when the best result scores below this value and
+    # retrieval.query_transform is "none". The score is the one Search returns (RRF or reranker).
+    rewrite_below_score: float | None = Field(default=None, ge=0)
+    # Retrieval attempts when the answer is not grounded. Each new attempt multiplies top_k.
+    max_attempts: int = Field(default=1, ge=1, le=3)
+    retry_top_k_factor: int = Field(default=2, ge=2, le=4)
+
+
 class KnowledgeBaseConfig(_Frozen):
     language: Literal["pt", "en"] = "pt"
     chunking: ChunkingConfig = Field(default_factory=ChunkingConfig)
     embeddings: EmbeddingsConfig = Field(default_factory=EmbeddingsConfig)
     retrieval: RetrievalConfig = Field(default_factory=RetrievalConfig)
     generation: GenerationConfig = Field(default_factory=GenerationConfig)
+    orchestration: OrchestrationConfig = Field(default_factory=OrchestrationConfig)
 
     def requires_reindex(self, new: KnowledgeBaseConfig) -> Literal["none", "embeddings", "full"]:
         """Return the reindex mode a change from ``self`` to ``new`` requires (section 9.2)."""

@@ -1,0 +1,29 @@
+{
+  "note": "Written by 'vlade-rag eval gate --update-baseline'. Review every change.",
+  "runs": {
+    "legal-ptbr-v2-typos.fuzzy": {
+      "mrr": 0.481066,
+      "ndcg@10": 0.533268,
+      "recall@1": 0.321101,
+      "recall@10": 0.767584
+    },
+    "legal-ptbr-v2.hybrid": {
+      "mrr": 0.501809,
+      "ndcg@10": 0.548535,
+      "recall@1": 0.319572,
+      "recall@10": 0.775229
+    },
+    "legal-ptbr-v2.lexical": {
+      "mrr": 0.64007,
+      "ndcg@10": 0.665647,
+      "recall@1": 0.486239,
+      "recall@10": 0.811927
+    },
+    "legal-ptbr.hybrid": {
+      "mrr": 0.557832,
+      "ndcg@10": 0.60769,
+      "recall@1": 0.45,
+      "recall@10": 0.8
+    }
+  }
+}
