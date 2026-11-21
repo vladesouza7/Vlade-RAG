@@ -5,7 +5,7 @@ from __future__ import annotations
 from collections.abc import Callable, Iterator, Mapping, Sequence
 from contextlib import contextmanager
 from dataclasses import dataclass, field
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from vlade_rag.core.domain.kb_config import EmbeddingsConfig, GenerationConfig, RerankConfig
 from vlade_rag.core.ports import (
@@ -31,6 +31,9 @@ from vlade_rag.core.ports import (
     Tracer,
     VectorIndex,
 )
+
+if TYPE_CHECKING:
+    from vlade_rag.core.application.answer import AnswerEngine
 
 
 class _NoopSpan:
@@ -82,6 +85,8 @@ class Dependencies:
     rerankers: Callable[[RerankConfig], Reranker] | None = None
     # ``retrieval.query_transform`` value -> transformer ("rewrite", "multi_query", "hyde").
     query_transformers: Mapping[str, QueryTransformer] = field(default_factory=dict)
+    # ``orchestration.engine`` value -> engine. Without "pipeline", the built-in one runs.
+    answer_engines: Mapping[str, AnswerEngine] = field(default_factory=dict)
     cache: Cache | None = None
     rate_limiter: RateLimiter | None = None  # without it no request limit applies
     tenants: TenantDirectory | None = None  # needed for quotas; without it no quota applies

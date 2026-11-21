@@ -56,9 +56,10 @@ Extras de `vlade-rag` disponíveis na fase 1:
 | `mcp` | SDK oficial `mcp` e `jsonschema` (fase 2). Traz o servidor MCP |
 | `s3` | boto3 (fase 2). Traz o armazenamento de objetos pela API S3 |
 | `local-models` | `sentence-transformers` (fase 3). Traz o reranker local. Puxa o PyTorch e, no Linux, bibliotecas NVIDIA CUDA com licença proprietária. Fica fora do extra `server` e da verificação de licenças (ADR-0001, item 4) |
+| `langgraph` | `langgraph` (fase 3, MIT). Motor de consulta opcional (ADR-0023). Fica fora do extra `server` |
 | `server` | `native`, `api`, `cli`, `postgres`, `ollama`, `openai`, `otel`, `cache`, `mcp`, `s3` |
 
-O Gemini usa o endpoint compatível com a API da OpenAI e não precisa de extra. Extras previstos para as fases seguintes: `qdrant`, `langgraph`, `eval` (RAGAS), `langfuse` e `all`.
+O Gemini usa o endpoint compatível com a API da OpenAI e não precisa de extra. Extras previstos para as fases seguintes: `qdrant`, `eval` (RAGAS), `langfuse` e `all`.
 
 Os parsers de texto, Markdown e HTML não precisam de extra. Eles usam só a biblioteca padrão.
 
@@ -822,6 +823,11 @@ generation:
   max_output_tokens: 1024
   prompt: answer_with_citations
   require_citations: true
+orchestration:                   # seção 12.1, ADR-0023
+  engine: pipeline               # pipeline ou langgraph (extra langgraph)
+  rewrite_below_score: null      # langgraph: reescreve a consulta uma vez abaixo desta pontuação
+  max_attempts: 1                # langgraph: buscas quando a resposta não tem fundamento (máximo 3)
+  retry_top_k_factor: 2          # langgraph: multiplica o top_k a cada tentativa nova
 ```
 
 O modelo de geração padrão é só um exemplo de configuração local. A aplicação escolhe o modelo.
@@ -986,7 +992,21 @@ O adapter acrescenta o prefixo `{tenant_id}/` a toda chave. Se o servidor Valkey
 - Depois de `retrieve`: se o melhor resultado tem pontuação abaixo do limite configurado e a transformação de consulta está desligada, o grafo roda uma reescrita da consulta uma vez.
 - Depois de `validate`: se `grounded` é `false` e ainda existe uma tentativa, o grafo aumenta o `top_k` e volta para `retrieve`.
 
-A configuração `orchestration.engine: pipeline | langgraph` escolhe a implementação. Os dois motores devem produzir a mesma resposta para a mesma configuração sem arestas condicionais. Um teste verifica essa igualdade.
+A configuração `orchestration.engine: pipeline | langgraph` da base escolhe a implementação. Os dois motores devem produzir a mesma resposta para a mesma configuração sem arestas condicionais. O teste `tests/integration/test_query_engines.py` verifica essa igualdade.
+
+Os dois motores chamam os mesmos passos do `AnswerQuery` (ADR-0023):
+
+```text
+AnswerQuery.prepare                          carregar a base, validar a pergunta e o top_k, ler o prompt
+AnswerEngine.run                             o motor chama os passos abaixo
+  AnswerQuery.retrieve                       passos 1 a 5 da seção 11.1 (Search.run)
+  AnswerQuery.assemble                       passo 6
+  AnswerQuery.generate                       passo 7, com streaming
+  AnswerQuery.validate                       passo 8
+AnswerQuery                                  montar a Answer e gravar o QueryLog (passo 9)
+```
+
+O grafo LangGraph tem os nós `retrieve`, `rewrite`, `assemble`, `generate`, `validate` e `widen`. A aresta depois de `retrieve` usa `orchestration.rewrite_below_score`. A aresta depois de `validate` usa `orchestration.max_attempts` e `orchestration.retry_top_k_factor`. A reescrita muda só a consulta dos retrievers: o prompt usa a pergunta original. No streaming, o texto de cada tentativa vai para o cliente. Se o grafo repete uma tentativa, o evento final traz `replaced = true`.
 
 ### 12.2. Kestra
 
@@ -1158,5 +1178,6 @@ Os serviços com licença AGPL rodam como processos separados e sem modificaçã
 | MCP Inspector | `scripts/mcp_inspector.sh` | O servidor MCP, chamado pelo Inspector em modo CLI (job `MCP server (Inspector)` da CI) | PostgreSQL, Node |
 | Isolamento | `tests/integration/test_tenant_isolation.py` | Leitura entre tenants por cada interface | PostgreSQL |
 | Avaliação | `evals/` | Métricas de recuperação com dataset fixo | PostgreSQL, embeddings locais |
+| Gate de qualidade | `evals/gate/` | `vlade-rag eval gate` compara as métricas de recuperação com a linha de base (RF-73, ADR-0024). Job `Quality gate (RF-73)` da CI | Nenhuma: backend em memória e embeddings `hashing` |
 
 Os testes de unidade não acessam rede. Os testes que chamam um LLM real ficam marcados com `@pytest.mark.llm` e não rodam na CI padrão.
