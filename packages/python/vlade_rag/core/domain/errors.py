@@ -42,6 +42,14 @@ class Conflict(VladeError):
     http_status = 409
 
 
+class EmbeddingSpaceChanged(Conflict):
+    """The active embedding space of the base changed while a document was indexed (reindex)."""
+
+
+class MissingVectors(Conflict):
+    """Some published chunks have no vector in the space a reindex wants to activate."""
+
+
 class QuotaExceeded(VladeError):
     code = "quota_exceeded"
     http_status = 413

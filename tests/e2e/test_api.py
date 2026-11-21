@@ -192,6 +192,27 @@ def test_delete_requires_confirmation_and_admin(api: Api) -> None:
     assert api.client.get(url, headers=api.reader).status_code == 404
 
 
+def test_reindex_preview_confirm_and_conflict(api: Api) -> None:
+    """Roadmap 4.2 (ADR-0027): a preview, a job, the new model, a 409 while it runs."""
+    _load(api)
+    url = "/v1/knowledge-bases/trocas/reindex"
+    body = {"mode": "embeddings", "embeddings": {"model": "hashing-v2"}}
+    assert api.client.post(url, json=body, headers=api.reader).status_code == 403
+    preview = api.client.post(url, json=body, headers=api.admin).json()
+    assert preview["executed"] is False and preview["job"] is None
+    assert preview["chunks"] >= 1 and preview["embeddings"]["model"] == "hashing-v2"
+    started = api.client.post(url, json={**body, "confirm": True}, headers=api.admin)
+    assert started.status_code == 200, started.text
+    job_id = started.json()["job"]["id"]
+    again = api.client.post(url, json={**body, "confirm": True}, headers=api.admin)
+    assert again.status_code == 409
+    assert api.drain() == 1
+    job = api.client.get(f"/v1/jobs/{job_id}", headers=api.reader).json()
+    assert job["kind"] == "reindex" and job["status"] == "succeeded", job
+    bad = api.client.post(url, json={"mode": "partial"}, headers=api.admin)
+    assert bad.status_code == 422
+
+
 def test_tenant_isolation_over_http(api: Api) -> None:
     doc_id = _load(api)
     other = api.other

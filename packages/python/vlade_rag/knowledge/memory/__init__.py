@@ -25,6 +25,7 @@ from vlade_rag.core.domain import (
     Document,
     DocumentVersion,
     EmbeddingSpace,
+    EmbeddingSpaceChanged,
     IngestionJob,
     IngestionStep,
     InvalidArgument,
@@ -34,6 +35,7 @@ from vlade_rag.core.domain import (
     KnowledgeBaseConfig,
     Metadata,
     MetadataFilter,
+    MissingVectors,
     NotFound,
     QueryLogEntry,
     Role,
@@ -48,6 +50,7 @@ from vlade_rag.core.domain import (
     uuid7,
 )
 from vlade_rag.core.domain.api_keys import generate_api_key, hash_secret, parse_api_key
+from vlade_rag.core.domain.kb_config import EmbeddingsConfig
 from vlade_rag.core.ports import ApiKeyInfo, ClaimedJob, IssuedApiKey, RateDecision
 from vlade_rag.knowledge.object_keys import validate_object_key
 from vlade_rag.native import token_spans
@@ -174,6 +177,89 @@ class MemoryKnowledgeRepository:
         if space is None:
             raise NotFound("Embedding space does not exist.")
         return space
+
+    # reindex (ADR-0027)
+
+    async def create_embedding_space(
+        self, ctx: TenantContext, embeddings: EmbeddingsConfig
+    ) -> EmbeddingSpace:
+        data = self.store.data(ctx)
+        space = EmbeddingSpace(
+            id=uuid7(),
+            tenant_id=ctx.tenant_id,
+            provider=embeddings.provider,
+            model=embeddings.model,
+            dimension=embeddings.dimension,
+            version=1 + max((s.version for s in data.spaces.values()), default=0),
+            status=SpaceStatus.BUILDING,
+        )
+        data.spaces[space.id] = space
+        return space
+
+    def _published(self, ctx: TenantContext, kb_id: UUID) -> list[Chunk]:
+        data = self.store.data(ctx)
+        chunks = (
+            c
+            for cid, c in data.chunks.items()
+            if cid in data.published and c.knowledge_base_id == kb_id
+        )
+        return sorted(chunks, key=lambda c: c.id)
+
+    async def list_published_chunks(
+        self, ctx: TenantContext, kb_id: UUID, *, after: UUID | None, limit: int
+    ) -> list[Chunk]:
+        chunks = [c for c in self._published(ctx, kb_id) if after is None or c.id > after]
+        return chunks[:limit]
+
+    async def list_chunks_without_vector(
+        self, ctx: TenantContext, kb_id: UUID, space_id: UUID, *, limit: int
+    ) -> list[Chunk]:
+        vectors = self.store.data(ctx).vectors.get(space_id, {})
+        return [c for c in self._published(ctx, kb_id) if c.id not in vectors][:limit]
+
+    async def activate_embedding_space(
+        self, ctx: TenantContext, kb_id: UUID, space_id: UUID, embeddings: EmbeddingsConfig
+    ) -> UUID:
+        data = self.store.data(ctx)
+        kb = await self.get_knowledge_base_by_id(ctx, kb_id)
+        missing = await self.list_chunks_without_vector(ctx, kb_id, space_id, limit=1_000_000)
+        if missing:
+            raise MissingVectors(f"{len(missing)} published chunks have no vector in the space.")
+        old = kb.active_embedding_space_id
+        config = kb.config.model_copy(update={"embeddings": embeddings})
+        data.kbs[kb_id] = replace(
+            kb,
+            config=config,
+            active_embedding_space_id=space_id,
+            epoch=kb.epoch + 1,
+            updated_at=_now(),
+        )
+        data.spaces[space_id] = replace(data.spaces[space_id], status=SpaceStatus.ACTIVE)
+        if old != space_id and old in data.spaces:
+            data.spaces[old] = replace(data.spaces[old], status=SpaceStatus.RETIRED)
+        return old
+
+    async def update_knowledge_base_config(
+        self, ctx: TenantContext, kb_id: UUID, config: KnowledgeBaseConfig
+    ) -> KnowledgeBase:
+        kb = await self.get_knowledge_base_by_id(ctx, kb_id)
+        updated = replace(kb, config=config, updated_at=_now())
+        self.store.data(ctx).kbs[kb_id] = updated
+        return updated
+
+    async def list_current_versions(
+        self, ctx: TenantContext, kb_id: UUID
+    ) -> list[tuple[Document, DocumentVersion]]:
+        data = self.store.data(ctx)
+        docs = sorted(
+            (d for d in data.documents.values() if d.knowledge_base_id == kb_id),
+            key=lambda d: d.id,
+        )
+        return [
+            (d, data.versions[d.current_version_id])
+            for d in docs
+            if d.current_version_id is not None and d.current_version_id in data.versions
+        ]
 
     async def find_document(
         self, ctx: TenantContext, *, knowledge_base_id: UUID, external_id: str
@@ -325,12 +411,17 @@ class MemoryKnowledgeRepository:
             (c for c in chunks if c.document_version_id == version_id), key=lambda c: c.ordinal
         )
 
-    async def publish_version(self, ctx: TenantContext, version_id: UUID) -> None:
+    async def publish_version(
+        self, ctx: TenantContext, version_id: UUID, *, embedding_space_id: UUID | None = None
+    ) -> None:
         data = self.store.data(ctx)
         version = data.versions.get(version_id)
         if version is None:
             raise NotFound("Document version does not exist.")
         doc = data.documents[version.document_id]
+        active = data.kbs[doc.knowledge_base_id].active_embedding_space_id
+        if embedding_space_id is not None and active != embedding_space_id:
+            raise EmbeddingSpaceChanged("The active embedding space of the base changed.")
         if doc.current_version_id and doc.current_version_id != version_id:
             old = data.versions[doc.current_version_id]
             data.versions[old.id] = replace(old, status=VersionStatus.SUPERSEDED)
@@ -686,6 +777,18 @@ class MemoryJobQueue:
         )
         self.store.data(ctx).jobs[job.id] = job
         return job
+
+    async def find_active(
+        self, ctx: TenantContext, knowledge_base_id: UUID, kind: JobKind
+    ) -> IngestionJob | None:
+        active = [
+            j
+            for j in self.store.data(ctx).jobs.values()
+            if j.knowledge_base_id == knowledge_base_id
+            and j.kind == kind
+            and j.status in (JobStatus.PENDING, JobStatus.RUNNING)
+        ]
+        return min(active, key=lambda j: (j.created_at or _now(), str(j.id)), default=None)
 
     async def get(self, ctx: TenantContext, job_id: UUID) -> IngestionJob:
         job = self.store.data(ctx).jobs.get(job_id)

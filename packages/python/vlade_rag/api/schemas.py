@@ -8,7 +8,7 @@ from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from vlade_rag.core.application import KnowledgeBaseSummary, UsageView
+from vlade_rag.core.application import KnowledgeBaseSummary, ReindexResult, UsageView
 from vlade_rag.core.domain import (
     Answer,
     AuditEvent,
@@ -103,6 +103,41 @@ class JobOut(_Model):
             created_at=job.created_at,
             started_at=job.started_at,
             finished_at=job.finished_at,
+        )
+
+
+class ReindexIn(_Model):
+    mode: Literal["embeddings", "full"]
+    # Partial configurations merged over the current one (ADR-0027).
+    embeddings: dict[str, Any] | None = None
+    chunking: dict[str, Any] | None = None
+    confirm: bool = False
+
+
+class ReindexOut(_Model):
+    executed: bool
+    knowledge_base: str
+    mode: str
+    documents: int
+    chunks: int
+    estimated_embedding_calls: int
+    embeddings: dict[str, Any] | None
+    chunking: dict[str, Any] | None
+    job: JobOut | None
+
+    @classmethod
+    def of(cls, result: ReindexResult) -> ReindexOut:
+        p = result.preview
+        return cls(
+            executed=result.executed,
+            knowledge_base=p.knowledge_base,
+            mode=p.mode,
+            documents=p.documents,
+            chunks=p.chunks,
+            estimated_embedding_calls=p.estimated_embedding_calls,
+            embeddings=None if p.embeddings is None else p.embeddings.model_dump(mode="json"),
+            chunking=None if p.chunking is None else p.chunking.model_dump(mode="json"),
+            job=None if result.job is None else JobOut.of(result.job),
         )
 
 

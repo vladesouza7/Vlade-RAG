@@ -16,6 +16,7 @@ from vlade_rag.core.domain import (
     AuditEvent,
     Chunk,
     Document,
+    EmbeddingSpaceChanged,
     IngestionJob,
     IngestionStep,
     InvalidArgument,
@@ -249,6 +250,9 @@ class SubmitIngestion:
 # ---------------------------------------------------------------- run
 
 
+PUBLISH_ATTEMPTS = 3  # embeddings again when a reindex switches the space (ADR-0027)
+
+
 class _StepFailedError(Exception):
     def __init__(self, step: str, cause: Exception) -> None:
         super().__init__(f"{step}: {cause}")
@@ -265,9 +269,14 @@ class RunIngestionJob:
     async def execute(self, claimed: ClaimedJob) -> None:
         ctx, job = claimed.ctx, claimed.job
         try:
-            if job.kind != JobKind.INGEST:
-                raise InvalidArgument(f"Job kind '{job.kind}' is not supported yet.")
-            result = await self._ingest(ctx, job)
+            if job.kind == JobKind.INGEST:
+                result = await self._ingest(ctx, job)
+            elif job.kind == JobKind.REINDEX:
+                result = await self._reindex(ctx, job)
+            else:
+                raise _StepFailedError(
+                    "dispatch", InvalidArgument(f"Job kind '{job.kind}' is not supported yet.")
+                )
         except _StepFailedError as exc:
             cause = exc.cause
             retry = isinstance(cause, ProviderUnavailable)
@@ -287,7 +296,7 @@ class RunIngestionJob:
 
     @asynccontextmanager
     async def _step(
-        self, ctx: TenantContext, job: IngestionJob, name: str, document_id: UUID
+        self, ctx: TenantContext, job: IngestionJob, name: str, document_id: UUID | None
     ) -> AsyncIterator[None]:
         started = datetime.now(UTC)
         with self.deps.tracer.span(f"ingestion.{name}", {"vlade.job_id": str(job.id)}):
@@ -369,19 +378,28 @@ class RunIngestionJob:
                 normalized.text.encode("utf-8"),
                 "text/markdown",
             )
-        async with self._step(ctx, job, "embed", document_id):
-            vectors = await self._embed(kb, document, chunks)
-        async with self._step(ctx, job, "index_vectors", document_id):
-            space = await repo.get_embedding_space(ctx, kb.active_embedding_space_id)
-            await deps.vector_index.upsert(
-                ctx, space, kb.id, list(zip((c.id for c in chunks), vectors, strict=True))
-            )
-        async with self._step(ctx, job, "validate_indexes", document_id):
-            indexed = await deps.vector_index.count(ctx, space, [c.id for c in chunks])
-            if indexed != len(chunks):
-                raise InvalidArgument(f"{indexed} vectors for {len(chunks)} chunks.")
-        async with self._step(ctx, job, "publish", document_id):
-            await repo.publish_version(ctx, version.id)
+        for attempt in range(1, PUBLISH_ATTEMPTS + 1):
+            async with self._step(ctx, job, "embed", document_id):
+                vectors = await self._embed(kb, document, chunks)
+            async with self._step(ctx, job, "index_vectors", document_id):
+                space = await repo.get_embedding_space(ctx, kb.active_embedding_space_id)
+                await deps.vector_index.upsert(
+                    ctx, space, kb.id, list(zip((c.id for c in chunks), vectors, strict=True))
+                )
+            async with self._step(ctx, job, "validate_indexes", document_id):
+                indexed = await deps.vector_index.count(ctx, space, [c.id for c in chunks])
+                if indexed != len(chunks):
+                    raise InvalidArgument(f"{indexed} vectors for {len(chunks)} chunks.")
+            try:
+                async with self._step(ctx, job, "publish", document_id):
+                    await repo.publish_version(ctx, version.id, embedding_space_id=space.id)
+                break
+            except _StepFailedError as exc:
+                # A reindex switched the space after the vectors were written (ADR-0027):
+                # embed again with the new model, in the new space.
+                if not isinstance(exc.cause, EmbeddingSpaceChanged) or attempt == PUBLISH_ATTEMPTS:
+                    raise
+                kb = await repo.get_knowledge_base_by_id(ctx, kb.id)
         return {
             "document_id": str(document_id),
             "version_id": str(version.id),
@@ -389,6 +407,12 @@ class RunIngestionJob:
             "chunks": len(chunks),
             "skipped": False,
         }
+
+    async def _reindex(self, ctx: TenantContext, job: IngestionJob) -> Metadata:
+        from vlade_rag.core.application.reindex import ReindexRunner
+
+        async with self._step(ctx, job, "reindex", None):
+            return await ReindexRunner(self.deps).run(ctx, job)
 
     async def _embed(
         self, kb: KnowledgeBase, document: Document, chunks: list[Chunk]

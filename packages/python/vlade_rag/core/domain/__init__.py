@@ -7,7 +7,9 @@ knowledge base configuration) and other ``vlade_rag.core.domain`` modules.
 from vlade_rag.core.domain.documents import ParsedDocument, RawDocument, Section, SourceItem
 from vlade_rag.core.domain.errors import (
     Conflict,
+    EmbeddingSpaceChanged,
     InvalidArgument,
+    MissingVectors,
     NotFound,
     PermissionDenied,
     ProviderUnavailable,
@@ -71,6 +73,7 @@ __all__ = [
     "Document",
     "DocumentVersion",
     "EmbeddingSpace",
+    "EmbeddingSpaceChanged",
     "Generation",
     "GenerationDelta",
     "GenerationParams",
@@ -84,6 +87,7 @@ __all__ = [
     "Message",
     "Metadata",
     "MetadataFilter",
+    "MissingVectors",
     "NotFound",
     "ParsedDocument",
     "PermissionDenied",

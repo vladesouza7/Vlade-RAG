@@ -99,6 +99,19 @@ class PostgresJobQueue:
             )
         return _job(row)
 
+    async def find_active(
+        self, ctx: TenantContext, knowledge_base_id: UUID, kind: JobKind
+    ) -> IngestionJob | None:
+        async with self.db.tenant(ctx) as conn:
+            row = await conn.fetchrow(
+                "SELECT * FROM ingestion_jobs WHERE tenant_id = $1 AND knowledge_base_id = $2 "
+                "AND kind = $3 AND status IN ('pending', 'running') ORDER BY created_at LIMIT 1",
+                ctx.tenant_id,
+                knowledge_base_id,
+                kind.value,
+            )
+        return _job(row) if row is not None else None
+
     async def get(self, ctx: TenantContext, job_id: UUID) -> IngestionJob:
         async with self.db.tenant(ctx) as conn:
             row = await conn.fetchrow(

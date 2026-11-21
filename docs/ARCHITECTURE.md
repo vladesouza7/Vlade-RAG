@@ -1039,6 +1039,13 @@ Modo `full` (troca de chunking ou de parser):
 
 Limite: no modo `full`, a troca é atômica por documento, não pela base inteira. Durante a reindexação, a base tem documentos com o chunking antigo e documentos com o chunking novo.
 
+Ingestão durante a reindexação (ADR-0027):
+
+- Antes da troca do passo 5, o worker gera os vetores dos chunks publicados durante a construção. A troca confere, com a linha da base travada, que nenhum chunk publicado está sem vetor no espaço novo. Se algum estiver, ela devolve `MissingVectors`, e o worker tenta de novo.
+- A publicação de uma versão trava a mesma linha da base e confere que o espaço em que a ingestão gravou os vetores ainda é o ativo. Se não for, ela devolve `EmbeddingSpaceChanged`, e a ingestão gera os vetores de novo no espaço novo.
+- O espaço antigo fica `retired`, com os vetores, até a limpeza do módulo `ops` (tarefa 4.4).
+- O modo `full` não muda o modelo de embeddings. Para trocar os dois, rode o modo `embeddings` primeiro.
+
 ## 14. Interfaces
 
 ### 14.1. API REST
@@ -1096,8 +1103,12 @@ vlade-rag kb create <slug> --config kb.yaml
 vlade-rag ingest <kb> <caminho>... [--wait]
 vlade-rag search <kb> "<consulta>"
 vlade-rag query <kb> "<pergunta>"
-vlade-rag reindex <kb> --mode embeddings|full [--confirm]
+vlade-rag reindex <kb> --mode embeddings|full [--embedding-model <modelo>] [--chunking <json>] [--confirm] [--wait]
+vlade-rag job <id>
 vlade-rag eval run <kb> --dataset <arquivo> [--k 10] [--output relatorio.json] [--json]
+vlade-rag eval answers <kb> --dataset <arquivo> --judge-model <modelo> [--output relatorio.json]
+vlade-rag eval publish <relatorio.json> --dataset-name <nome>
+vlade-rag eval gate [--update-baseline]
 vlade-rag worker
 vlade-rag api serve
 vlade-rag mcp serve --transport stdio|http [--host 127.0.0.1] [--port 8765]

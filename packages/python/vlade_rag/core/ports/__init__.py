@@ -46,6 +46,7 @@ from vlade_rag.core.domain import (
     TenantQuotas,
     TenantUsage,
 )
+from vlade_rag.core.domain.kb_config import EmbeddingsConfig
 
 AttrValue = str | int | float | bool
 
@@ -116,6 +117,44 @@ class KnowledgeRepository(Protocol):
 
     async def get_embedding_space(self, ctx: TenantContext, space_id: UUID) -> EmbeddingSpace: ...
 
+    # reindex (ARCHITECTURE section 13, ADR-0027)
+    async def create_embedding_space(
+        self, ctx: TenantContext, embeddings: EmbeddingsConfig
+    ) -> EmbeddingSpace:
+        """A new space with status ``building``. No base uses it until it is activated."""
+        ...
+
+    async def list_published_chunks(
+        self, ctx: TenantContext, kb_id: UUID, *, after: UUID | None, limit: int
+    ) -> list[Chunk]:
+        """Published chunks of the base in id order, the first ``limit`` after ``after``."""
+        ...
+
+    async def list_chunks_without_vector(
+        self, ctx: TenantContext, kb_id: UUID, space_id: UUID, *, limit: int
+    ) -> list[Chunk]:
+        """Published chunks of the base that have no vector in the space."""
+        ...
+
+    async def activate_embedding_space(
+        self, ctx: TenantContext, kb_id: UUID, space_id: UUID, embeddings: EmbeddingsConfig
+    ) -> UUID:
+        """In one transaction: make the space active for the base, retire the old one, store
+        ``embeddings`` in the configuration and bump the epoch. Returns the old space id.
+
+        Raises ``MissingVectors`` when a published chunk has no vector in the space. The check
+        and the switch hold the lock of the base, which ``publish_version`` also takes."""
+        ...
+
+    async def update_knowledge_base_config(
+        self, ctx: TenantContext, kb_id: UUID, config: KnowledgeBaseConfig
+    ) -> KnowledgeBase: ...
+    async def list_current_versions(
+        self, ctx: TenantContext, kb_id: UUID
+    ) -> list[tuple[Document, DocumentVersion]]:
+        """Every document of the base that has a published version, with that version."""
+        ...
+
     # documents and versions
     async def upsert_document(
         self,
@@ -164,8 +203,13 @@ class KnowledgeRepository(Protocol):
     async def list_chunks(self, ctx: TenantContext, version_id: UUID) -> list[Chunk]: ...
 
     # publication and deletion
-    async def publish_version(self, ctx: TenantContext, version_id: UUID) -> None:
-        """Atomically make the version visible, hide the previous one and bump the KB epoch."""
+    async def publish_version(
+        self, ctx: TenantContext, version_id: UUID, *, embedding_space_id: UUID | None = None
+    ) -> None:
+        """Atomically make the version visible, hide the previous one and bump the KB epoch.
+
+        With ``embedding_space_id``, raise ``EmbeddingSpaceChanged`` when it is no longer the
+        active space of the base: the vectors of the version are in an old space."""
         ...
 
     async def delete_document(
@@ -353,6 +397,12 @@ class JobQueue(Protocol):
         input: Metadata,
     ) -> IngestionJob: ...
     async def get(self, ctx: TenantContext, job_id: UUID) -> IngestionJob: ...
+    async def find_active(
+        self, ctx: TenantContext, knowledge_base_id: UUID, kind: JobKind
+    ) -> IngestionJob | None:
+        """The oldest pending or running job of this kind for the base, or ``None``."""
+        ...
+
     async def claim(self, worker_id: str, lease_seconds: int) -> ClaimedJob | None:
         """Take the oldest pending job of any tenant. Returns the job and a worker context."""
         ...

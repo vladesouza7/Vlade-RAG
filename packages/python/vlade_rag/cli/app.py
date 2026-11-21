@@ -746,8 +746,86 @@ def audit_list(
 
 
 @app.command()
+def reindex(
+    knowledge_base: str,
+    mode: str = typer.Option(..., help="embeddings (new model) or full (new chunking)."),
+    embedding_model: str | None = typer.Option(None, help="Mode embeddings: the new model."),
+    embedding_provider: str | None = typer.Option(None, help="Mode embeddings: the provider."),
+    dimension: int | None = typer.Option(None, help="Mode embeddings: the vector dimension."),
+    embeddings: str | None = typer.Option(
+        None, help="Mode embeddings: other fields as JSON, for example '{\"batch_size\": 64}'."
+    ),
+    chunking: str | None = typer.Option(
+        None, help="Mode full: the new chunking as JSON, for example '{\"max_tokens\": 400}'."
+    ),
+    confirm: bool = typer.Option(False, help="Queue the reindex. Without it: a preview only."),
+    wait: bool = typer.Option(False, help="Run the job in this process and wait."),
+) -> None:
+    """Reindex a knowledge base without downtime (ADR-0027). Needs the admin role.
+
+    Searches keep working during the reindex. The embeddings mode calls the embedding provider
+    once for every batch of chunks: check the preview first.
+    """
+    from vlade_rag.core.application import ReindexKnowledgeBase
+
+    try:
+        emb: dict[str, Any] = json.loads(embeddings) if embeddings else {}
+        chk: dict[str, Any] = json.loads(chunking) if chunking else {}
+    except ValueError as exc:
+        typer.echo(f"Invalid JSON: {exc}", err=True)
+        raise typer.Exit(2) from exc
+    for key, value in (
+        ("model", embedding_model),
+        ("provider", embedding_provider),
+        ("dimension", dimension),
+    ):
+        if value is not None:
+            emb[key] = value
+
+    async def go(rt: Any) -> Any:
+        result = await ReindexKnowledgeBase(rt.deps).execute(
+            await _ctx(rt),
+            knowledge_base=knowledge_base,
+            mode=mode,
+            embeddings=emb or None,
+            chunking=chk or None,
+            confirm=confirm,
+        )
+        if result.executed and wait and result.job is not None:
+            from vlade_rag.ingestion.worker import Worker
+
+            await Worker(rt, worker_id="cli").run_until_idle()
+            return result, await rt.deps.job_queue.get(await _ctx(rt), result.job.id)
+        return result, result.job
+
+    result, job_state = _run(_with_runtime(go))
+    p = result.preview
+    typer.echo(
+        f"Knowledge base '{p.knowledge_base}', mode {p.mode}: {p.documents} documents, "
+        f"{p.chunks} published chunks, about {p.estimated_embedding_calls} embedding calls."
+    )
+    if p.embeddings is not None:
+        typer.echo(
+            f"  embeddings: {p.embeddings.provider} {p.embeddings.model} "
+            f"({p.embeddings.dimension} dimensions)"
+        )
+    if p.chunking is not None:
+        typer.echo(f"  chunking: {p.chunking.model_dump(mode='json')}")
+    if not result.executed:
+        typer.echo("Preview only. Run again with --confirm to start the reindex.")
+        return
+    typer.echo(f"Reindex job {job_state.id}: {job_state.status.value}.")
+    if job_state.result:
+        _print_json(job_state.result)
+    if job_state.error:
+        _print_json(job_state.error)
+    if not wait:
+        typer.echo(f"Follow it with: vlade-rag job {job_state.id}")
+
+
+@app.command()
 def job(job_id: UUID) -> None:
-    """Show an ingestion job."""
+    """Show a job: ingestion or reindex."""
     from vlade_rag.core.application import GetIngestionStatus
 
     async def go(rt: Any) -> Any:

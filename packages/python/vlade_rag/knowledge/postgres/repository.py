@@ -17,9 +17,11 @@ from vlade_rag.core.domain import (
     Document,
     DocumentVersion,
     EmbeddingSpace,
+    EmbeddingSpaceChanged,
     KnowledgeBase,
     KnowledgeBaseConfig,
     Metadata,
+    MissingVectors,
     NotFound,
     SpaceStatus,
     TenantContext,
@@ -27,6 +29,7 @@ from vlade_rag.core.domain import (
     VersionStatus,
     uuid7,
 )
+from vlade_rag.core.domain.kb_config import EmbeddingsConfig
 from vlade_rag.knowledge.postgres.db import PostgresDatabase
 
 TEXT_SEARCH_CONFIG = {"pt": "vlade_pt", "en": "vlade_en"}
@@ -101,6 +104,13 @@ def _chunk(row: Mapping[str, Any]) -> Chunk:
 _CHUNK_COLUMNS = """c.id, c.tenant_id, c.knowledge_base_id, c.document_id, c.document_version_id,
 c.ordinal, c.text, c.token_count, c.start_offset, c.end_offset, c.page, c.section, c.metadata,
 d.title AS document_title"""
+
+
+# A published chunk without a vector in the space $3 (reindex, ADR-0027).
+_NO_VECTOR = (
+    "NOT EXISTS (SELECT 1 FROM chunk_embeddings e WHERE e.chunk_id = c.id "
+    "AND e.embedding_space_id = $3)"
+)
 
 
 class PostgresKnowledgeRepository:
@@ -209,6 +219,136 @@ class PostgresKnowledgeRepository:
             distance=Distance(row["distance"]),
             status=SpaceStatus(row["status"]),
         )
+
+    # ------------------------------------------------------------ reindex (ADR-0027)
+
+    async def create_embedding_space(
+        self, ctx: TenantContext, embeddings: EmbeddingsConfig
+    ) -> EmbeddingSpace:
+        async with self.db.tenant(ctx) as conn:
+            row = await conn.fetchrow(
+                "INSERT INTO embedding_spaces (id, tenant_id, provider, model, dimension, version,"
+                " status) SELECT $1, $2, $3, $4, $5, coalesce(max(version), 0) + 1, 'building'"
+                " FROM embedding_spaces WHERE tenant_id = $2 RETURNING id",
+                uuid7(),
+                ctx.tenant_id,
+                embeddings.provider,
+                embeddings.model,
+                embeddings.dimension,
+            )
+        return await self.get_embedding_space(ctx, row["id"])
+
+    async def list_published_chunks(
+        self, ctx: TenantContext, kb_id: UUID, *, after: UUID | None, limit: int
+    ) -> list[Chunk]:
+        async with self.db.tenant(ctx) as conn:
+            rows = await conn.fetch(
+                f"SELECT {_CHUNK_COLUMNS} FROM chunks c JOIN documents d ON d.id = c.document_id "
+                "WHERE c.tenant_id = $1 AND c.knowledge_base_id = $2 AND c.is_published "
+                "AND ($3::uuid IS NULL OR c.id > $3) ORDER BY c.id LIMIT $4",
+                ctx.tenant_id,
+                kb_id,
+                after,
+                limit,
+            )
+        return [_chunk(r) for r in rows]
+
+    async def list_chunks_without_vector(
+        self, ctx: TenantContext, kb_id: UUID, space_id: UUID, *, limit: int
+    ) -> list[Chunk]:
+        async with self.db.tenant(ctx) as conn:
+            rows = await conn.fetch(
+                f"SELECT {_CHUNK_COLUMNS} FROM chunks c JOIN documents d ON d.id = c.document_id "
+                "WHERE c.tenant_id = $1 AND c.knowledge_base_id = $2 AND c.is_published "
+                f"AND {_NO_VECTOR} ORDER BY c.id LIMIT $4",
+                ctx.tenant_id,
+                kb_id,
+                space_id,
+                limit,
+            )
+        return [_chunk(r) for r in rows]
+
+    async def activate_embedding_space(
+        self, ctx: TenantContext, kb_id: UUID, space_id: UUID, embeddings: EmbeddingsConfig
+    ) -> UUID:
+        async with self.db.tenant(ctx) as conn:
+            old = await conn.fetchval(
+                "SELECT active_embedding_space_id FROM knowledge_bases "
+                "WHERE tenant_id = $1 AND id = $2 FOR UPDATE",
+                ctx.tenant_id,
+                kb_id,
+            )
+            if old is None:
+                raise NotFound("Knowledge base does not exist.")
+            missing = await conn.fetchval(
+                "SELECT count(*) FROM chunks c WHERE c.tenant_id = $1 AND c.knowledge_base_id = $2"
+                f" AND c.is_published AND {_NO_VECTOR}",
+                ctx.tenant_id,
+                kb_id,
+                space_id,
+            )
+            if missing:
+                raise MissingVectors(f"{missing} published chunks have no vector in the space.")
+            await conn.execute(
+                "UPDATE knowledge_bases SET active_embedding_space_id = $3, "
+                "config = jsonb_set(config, '{embeddings}', $4::jsonb), epoch = epoch + 1, "
+                "updated_at = now() WHERE tenant_id = $1 AND id = $2",
+                ctx.tenant_id,
+                kb_id,
+                space_id,
+                embeddings.model_dump(mode="json"),
+            )
+            await conn.execute(
+                "UPDATE embedding_spaces SET status = 'active' WHERE tenant_id = $1 AND id = $2",
+                ctx.tenant_id,
+                space_id,
+            )
+            if old != space_id:
+                await conn.execute(
+                    "UPDATE embedding_spaces SET status = 'retired' "
+                    "WHERE tenant_id = $1 AND id = $2",
+                    ctx.tenant_id,
+                    old,
+                )
+        return UUID(str(old))
+
+    async def update_knowledge_base_config(
+        self, ctx: TenantContext, kb_id: UUID, config: KnowledgeBaseConfig
+    ) -> KnowledgeBase:
+        async with self.db.tenant(ctx) as conn:
+            row = await conn.fetchrow(
+                "UPDATE knowledge_bases SET config = $3, language = $4, updated_at = now() "
+                "WHERE tenant_id = $1 AND id = $2 RETURNING *",
+                ctx.tenant_id,
+                kb_id,
+                config.model_dump(mode="json"),
+                config.language,
+            )
+        if row is None:
+            raise NotFound("Knowledge base does not exist.")
+        return _kb(row)
+
+    async def list_current_versions(
+        self, ctx: TenantContext, kb_id: UUID
+    ) -> list[tuple[Document, DocumentVersion]]:
+        async with self.db.tenant(ctx) as conn:
+            docs = await conn.fetch(
+                "SELECT * FROM documents WHERE tenant_id = $1 AND knowledge_base_id = $2 "
+                "AND current_version_id IS NOT NULL ORDER BY id",
+                ctx.tenant_id,
+                kb_id,
+            )
+            versions = await conn.fetch(
+                "SELECT * FROM document_versions WHERE tenant_id = $1 AND id = ANY($2::uuid[])",
+                ctx.tenant_id,
+                [d["current_version_id"] for d in docs],
+            )
+        by_id = {v["id"]: _version(v) for v in versions}
+        return [
+            (_document(d), by_id[d["current_version_id"]])
+            for d in docs
+            if d["current_version_id"] in by_id
+        ]
 
     # ------------------------------------------------------------ documents
 
@@ -419,7 +559,9 @@ class PostgresKnowledgeRepository:
 
     # ------------------------------------------------------------ publication and deletion
 
-    async def publish_version(self, ctx: TenantContext, version_id: UUID) -> None:
+    async def publish_version(
+        self, ctx: TenantContext, version_id: UUID, *, embedding_space_id: UUID | None = None
+    ) -> None:
         async with self.db.tenant(ctx) as conn:
             version = await conn.fetchrow(
                 "SELECT document_id FROM document_versions WHERE tenant_id = $1 AND id = $2",
@@ -434,6 +576,13 @@ class PostgresKnowledgeRepository:
                 ctx.tenant_id,
                 version["document_id"],
             )
+            # The lock of the base orders this publication with a reindex switch (ADR-0027).
+            active = await conn.fetchval(
+                "SELECT active_embedding_space_id FROM knowledge_bases WHERE id = $1 FOR UPDATE",
+                doc["knowledge_base_id"],
+            )
+            if embedding_space_id is not None and active != embedding_space_id:
+                raise EmbeddingSpaceChanged("The active embedding space of the base changed.")
             old = doc["current_version_id"]
             if old is not None and old != version_id:
                 await conn.execute(

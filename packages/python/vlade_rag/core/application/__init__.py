@@ -23,6 +23,12 @@ from vlade_rag.core.application.knowledge_bases import (
     KnowledgeBaseSummary,
     ListKnowledgeBases,
 )
+from vlade_rag.core.application.reindex import (
+    ReindexKnowledgeBase,
+    ReindexPreview,
+    ReindexResult,
+    ReindexRunner,
+)
 from vlade_rag.core.application.request_limits import EnforceRequestLimits
 from vlade_rag.core.application.search import Search, SearchResult
 
@@ -45,6 +51,10 @@ __all__ = [
     "ListAuditEvents",
     "ListKnowledgeBases",
     "NoopTracer",
+    "ReindexKnowledgeBase",
+    "ReindexPreview",
+    "ReindexResult",
+    "ReindexRunner",
     "RunIngestionJob",
     "Search",
     "SearchResult",

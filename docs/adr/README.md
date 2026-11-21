@@ -30,6 +30,7 @@ Cada arquivo registra uma decisão. Um ADR aceito não muda. Para mudar uma deci
 | [0024](0024-gate-de-qualidade-na-ci.md) | Gate de qualidade na CI | Aceito | — |
 | [0025](0025-avaliacao-de-respostas-com-ragas.md) | Avaliação de respostas com RAGAS | Aceito | — |
 | [0026](0026-arize-phoenix-no-lugar-do-langfuse.md) | Arize Phoenix no lugar do Langfuse (substitui os itens 2 e 5 do ADR-0015) | Aceito | D10 |
+| [0027](0027-reindexacao-sem-parada.md) | Reindexação sem parada | Aceito | — |
 
 ## Modelo
 

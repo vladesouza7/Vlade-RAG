@@ -22,6 +22,8 @@ from vlade_rag.api.schemas import (
     KnowledgeBaseCreate,
     KnowledgeBaseOut,
     QueryIn,
+    ReindexIn,
+    ReindexOut,
     SearchHit,
     SearchIn,
     SearchOut,
@@ -40,6 +42,7 @@ from vlade_rag.core.application import (
     KnowledgeBaseSummary,
     ListAuditEvents,
     ListKnowledgeBases,
+    ReindexKnowledgeBase,
     Search,
     SubmitIngestion,
 )
@@ -136,6 +139,22 @@ async def delete_document(
         ctx, knowledge_base=kb, document_id=document_id, confirm=confirm
     )
     return DeletionOut.of(report)
+
+
+@router.post("/knowledge-bases/{kb}/reindex", response_model=ReindexOut)
+async def reindex_knowledge_base(
+    kb: str, body: ReindexIn, ctx: CtxDep, rt: RuntimeDep
+) -> ReindexOut:
+    """Without ``confirm``: a preview. With ``confirm``: a ``reindex`` job (ADR-0027)."""
+    result = await ReindexKnowledgeBase(rt.deps).execute(
+        ctx,
+        knowledge_base=kb,
+        mode=body.mode,
+        embeddings=body.embeddings,
+        chunking=body.chunking,
+        confirm=body.confirm,
+    )
+    return ReindexOut.of(result)
 
 
 @router.get("/usage", response_model=TenantUsageOut)
