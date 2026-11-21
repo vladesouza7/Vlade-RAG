@@ -42,7 +42,7 @@ Este ADR está em Status Proposto. O mantenedor decide. Até a aceitação, as m
 
 5. **Memória do PostgreSQL.** O container de 1 GiB do Compose ficou em 87% de uso com 104 mil chunks. O guia de implantação (tarefa 4.7) deve dizer que a memória do PostgreSQL precisa comportar o índice HNSW da base ativa, com folga.
 
-6. **A limitação L13 continua aberta.** A latência das transformações de consulta com LLM não foi medida, porque o limite de gasto da chave do OpenRouter acabou. A medida precisa de créditos e roda com o mesmo script.
+6. **As transformações de consulta com LLM ficam fora das metas.** A medida de 2026-11-21 deu p95 de 7,1 s a 10,8 s na base real, contra 812 ms sem transformação. A chamada ao LLM leva de 6,4 s a 9,2 s. Nenhuma meta de latência vale para uma busca com transformação, e o padrão continua `none` (limitação L13).
 
 ## Alternativas avaliadas
 

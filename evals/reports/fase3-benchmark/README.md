@@ -7,14 +7,15 @@ Este relatório mede o RNF-01 a RNF-04 do `PROJECT_SPEC.md`. O ADR-0020 propõe 
 | RNF | Meta | Medida | Resultado |
 |---|---|---|---|
 | 01 | p95 de `search` sem reranker, base de 1 milhão de chunks, ≤ 300 ms | Base pequena (184 chunks): p95 de 812 ms. Base sintética: p95 de 408 ms com 6 mil chunks e 7,998 s com 104 mil | **Não cumprido.** A base de 1 milhão não coube na máquina |
-| 02 | p95 de `search` com reranker de 50 candidatos, ≤ 1 s | p95 de 1,978 s (`mongodb/rerank-2.5`) e 2,229 s (`cohere/rerank-4-fast`) | **Não cumprido** |
+| 02 | p95 de `search` com reranker de 50 candidatos, ≤ 1 s | p95 de 1,978 s (`mongodb/rerank-2.5`), 2,210 s (`qwen/qwen3-reranker-8b`) e 2,229 s (`cohere/rerank-4-fast`) | **Não cumprido** |
 | 03 | Tempo até o primeiro token, sem o LLM remoto, ≤ 1,5 s | Base de 104 mil chunks: p95 de 591 ms só com a busca vetorial, e 7,559 s com a configuração padrão | Cumprido só com a busca vetorial |
 | 04 | Vazão de ingestão por worker, sem embeddings, ≥ 50 páginas por segundo | De 8 a 70 páginas por segundo, conforme o tamanho do documento | Cumprido só para documentos longos |
 
 O que explica os números:
 
 - **O embedding remoto da pergunta domina a busca.** Na base pequena, de cada 812 ms de p95, 787 ms são a chamada ao provedor de embeddings. A busca no banco leva de 13 a 21 ms.
-- **O reranker por API passa de 1 s sozinho.** O p95 só do reranker é de 1,216 s e de 1,435 s.
+- **O reranker por API passa de 1 s sozinho.** O p95 só do reranker vai de 1,216 s a 1,687 s.
+- **Uma transformação de consulta com LLM multiplica a busca.** Com o LLM da base pelo OpenRouter, o p95 vai de 812 ms para 7,1 s (`rewrite`), 9,6 s (`hyde`) e 10,8 s (`multi_query`).
 - **A busca lexical cresce com o tamanho da base.** O p95 dela sobe de 401 ms (6 mil chunks) para 7,939 s (104 mil chunks). A busca vetorial não cresce do mesmo jeito, mas o p95 dela saltou no maior estágio, junto com o uso de memória.
 - **A ingestão paga um custo fixo por documento.** Cada documento custa 62 transações no PostgreSQL. Um documento curto não diluí esse custo.
 
@@ -77,10 +78,27 @@ Base `legal-ptbr-v2`: 150 documentos, 184 chunks. O embedding da pergunta é rem
 | Sem reranker | 707 | 812 | 1.052 | 787 | 13 | 21 | — |
 | `mongodb/rerank-2.5` | 1.752 | 1.978 | 2.285 | 723 | 19 | 25 | 1.216 |
 | `cohere/rerank-4-fast` | 1.977 | 2.229 | 2.586 | 863 | 15 | 29 | 1.435 |
+| `qwen/qwen3-reranker-8b` | 1.817 | 2.210 | 2.458 | 556 | 17 | 23 | 1.687 |
 
 As etapas são medidas em separado. A soma dos p95 de cada etapa não é o p95 total.
 
-O reranker `qwen/qwen3-reranker-8b` não tem medida: só 11 de 100 consultas funcionaram, e o relatório incompleto não está nesta pasta.
+O `qwen/qwen3-reranker-8b` foi medido em 2026-11-21, depois de o limite da chave subir. As 100 consultas funcionaram. Ele tem o reranker mais lento (1,687 s no p95) e custou US$ 0,446 nas 103 consultas, cerca de US$ 0,0043 por consulta. O `mongodb/rerank-2.5` custa cerca de US$ 0,0009 por consulta (ADR-0018) e tem o menor p95.
+
+### Transformações de consulta com LLM
+
+A mesma base, sem reranker, com `retrieval.query_transform` (ADR-0019). O LLM é o da base, `tencent/hy4-flash`, pelo OpenRouter. Latência em milissegundos, 100 consultas, uma de cada vez:
+
+| Transformação | p50 | p95 | p99 | Transformação (p95) | Embedding (p95) | Lexical (p95) | Vazão (consultas/s) |
+|---|---|---|---|---|---|---|---|
+| Nenhuma | 707 | 812 | 1.052 | — | 787 | 21 | 1,38 |
+| `rewrite` | 4.543 | 7.100 | 9.316 | 6.393 | 1.539 | 70 | 0,21 |
+| `hyde` | 6.059 | 9.641 | 15.613 | 8.847 | 1.789 | 32 | 0,15 |
+| `multi_query` | 6.916 | 10.824 | 12.981 | 9.197 | 4.447 | 234 | 0,14 |
+
+- **A chamada ao LLM domina.** Ela leva de 6,4 s a 9,2 s no p95. A busca no PostgreSQL continua abaixo de 0,3 s.
+- **O `multi_query` paga mais embeddings.** Cada variação da pergunta tem o próprio embedding: 4,4 s no p95, contra 1,5 s no `rewrite`.
+- **O custo é pequeno.** As 309 consultas das três transformações custaram US$ 0,035 no OpenRouter, cerca de US$ 0,0001 por consulta.
+- **Nenhuma transformação cabe no RNF-01 ou no RNF-02.** Com o reranker ligado, elas não mudam a qualidade (limitação L12). O valor padrão continua `none`.
 
 ## RNF-01: escala
 
@@ -121,10 +139,8 @@ O mesmo teste com a base real e o provedor de embeddings remoto não rodou: o li
 
 ## O que não foi medido
 
-O limite total de gasto da chave do OpenRouter acabou durante a medição. Ficaram sem medida:
+O limite total de gasto da chave do OpenRouter acabou durante a primeira medição. Em 2026-11-21, depois de o limite subir, as transformações de consulta e o reranker `qwen/qwen3-reranker-8b` foram medidos (seção anterior). Continuam sem medida:
 
-- as transformações de consulta com LLM (HyDE, reescrita e multi-query). A limitação L13 do roadmap continua aberta.
-- o reranker `qwen/qwen3-reranker-8b`.
 - a vazão da busca com 4 consultas ao mesmo tempo contra o provedor real.
 - o tempo até o primeiro token com a base real e com reranker.
 - o reranker local (`bge-reranker-v2-m3`). A máquina de desenvolvimento não roda modelos locais.
@@ -153,6 +169,7 @@ python scripts/benchmarks/bench.py search --kb legal-ptbr-v2 \
   --dataset evals/datasets/legal-ptbr-v2/questions.jsonl --n 100
 python scripts/benchmarks/bench.py search --kb legal-ptbr-v2 \
   --dataset evals/datasets/legal-ptbr-v2/questions.jsonl --n 100 --rerank-model mongodb/rerank-2.5
+python scripts/benchmarks/bench.py search --kb legal-ptbr-v2   --dataset evals/datasets/legal-ptbr-v2/questions.jsonl --n 100 --query-transform hyde
 
 # Tempo até o primeiro token, sem o LLM remoto
 python scripts/benchmarks/bench.py ttft --kb bench-hash \
