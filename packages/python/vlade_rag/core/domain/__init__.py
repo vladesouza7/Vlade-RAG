@@ -20,6 +20,7 @@ from vlade_rag.core.domain.errors import (
     UnsupportedFilter,
     VersionChanged,
     VladeError,
+    WriteToolsDisabled,
 )
 from vlade_rag.core.domain.ids import uuid7
 from vlade_rag.core.domain.kb_config import KnowledgeBaseConfig
@@ -114,6 +115,7 @@ __all__ = [
     "VersionChanged",
     "VersionStatus",
     "VladeError",
+    "WriteToolsDisabled",
     "matches",
     "parse_filter",
     "uuid7",

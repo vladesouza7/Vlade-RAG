@@ -456,7 +456,10 @@ class JobQueue(Protocol):
 
 @runtime_checkable
 class AuditLog(Protocol):
-    async def record(self, ctx: TenantContext, event: AuditEvent) -> None: ...
+    async def record(self, ctx: TenantContext, event: AuditEvent) -> UUID:
+        """Store the event and return its id."""
+        ...
+
     async def record_query(self, ctx: TenantContext, entry: QueryLogEntry) -> None: ...
     async def list_events(
         self,
@@ -493,6 +496,14 @@ class ApiKeyInfo:
 class TenantDirectory(Protocol):
     async def create_tenant(self, slug: str, name: str) -> Tenant: ...
     async def get_tenant(self, slug: str) -> Tenant: ...
+    async def get_settings(self, tenant_id: UUID) -> Metadata:
+        """The ``settings`` object of the tenant (quotas, MCP flags)."""
+        ...
+
+    async def set_mcp_write_tools(self, tenant_id: UUID, enabled: bool) -> None:
+        """Set ``settings.mcp.write_tools_enabled`` and record ``tenant.mcp_update``."""
+        ...
+
     async def get_quotas(self, tenant_id: UUID) -> TenantQuotas: ...
     async def set_quotas(self, tenant_id: UUID, quotas: TenantQuotas) -> None:
         """Replace the quotas of the tenant and record ``tenant.quota_update``."""

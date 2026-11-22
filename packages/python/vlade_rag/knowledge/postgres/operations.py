@@ -42,7 +42,7 @@ async def _insert_audit(conn: asyncpg.Connection, event: AuditEvent) -> None:
         "INSERT INTO audit_events (id, tenant_id, principal_id, interface, action, "
         "resource_type, resource_id, outcome, details, trace_id) "
         "VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)",
-        uuid7(),
+        event.id or uuid7(),
         event.tenant_id,
         event.principal_id,
         event.interface,
@@ -235,9 +235,11 @@ class PostgresAuditLog:
     def __init__(self, db: PostgresDatabase) -> None:
         self.db = db
 
-    async def record(self, ctx: TenantContext, event: AuditEvent) -> None:
+    async def record(self, ctx: TenantContext, event: AuditEvent) -> UUID:
+        event_id = event.id or uuid7()
         async with self.db.tenant(ctx) as conn:
-            await _insert_audit(conn, replace(event, tenant_id=ctx.tenant_id))
+            await _insert_audit(conn, replace(event, tenant_id=ctx.tenant_id, id=event_id))
+        return event_id
 
     async def list_events(
         self,
@@ -325,6 +327,36 @@ class PostgresTenantDirectory:
         if row is None:
             raise NotFound(f"Tenant '{slug}' does not exist.")
         return Tenant(id=row["id"], slug=row["slug"], name=row["name"], settings=row["settings"])
+
+    async def get_settings(self, tenant_id: UUID) -> dict[str, Any]:
+        async with self.db.tenant(self._ctx(tenant_id)) as conn:
+            settings = await conn.fetchval("SELECT settings FROM tenants WHERE id = $1", tenant_id)
+        if settings is None:
+            raise NotFound("Tenant does not exist.")
+        return dict(settings)
+
+    async def set_mcp_write_tools(self, tenant_id: UUID, enabled: bool) -> None:
+        async with self.db.tenant(self._ctx(tenant_id)) as conn:
+            updated = await conn.fetchval(
+                "UPDATE tenants SET settings = jsonb_set(settings, '{mcp}', "
+                "coalesce(settings->'mcp', '{}'::jsonb) || "
+                "jsonb_build_object('write_tools_enabled', $2::boolean), true) "
+                "WHERE id = $1 RETURNING id",
+                tenant_id,
+                enabled,
+            )
+            if updated is None:
+                raise NotFound("Tenant does not exist.")
+            await _insert_audit(
+                conn,
+                self._event(
+                    tenant_id,
+                    "tenant.mcp_update",
+                    "tenant",
+                    str(tenant_id),
+                    {"write_tools_enabled": enabled},
+                ),
+            )
 
     @staticmethod
     def _event(

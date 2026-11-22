@@ -61,6 +61,18 @@ class ObjectStorageSettings(BaseModel):
     s3: S3Settings = Field(default_factory=S3Settings)
 
 
+class SourcesSettings(BaseModel):
+    """Download of a document from an origin URI (ARCHITECTURE section 15).
+
+    ``allowed_domains`` is empty by default, so an ``https://`` URI is refused. Each entry is a
+    host name; a subdomain of an entry is also allowed. The download never follows a redirect.
+    """
+
+    allowed_domains: list[str] = Field(default_factory=list)
+    max_bytes: int = Field(default=50 * 1024 * 1024, ge=1)
+    timeout: float = Field(default=30.0, gt=0)
+
+
 class OllamaSettings(BaseModel):
     base_url: str = "http://127.0.0.1:11434"
     think: bool | None = None
@@ -192,6 +204,7 @@ class Settings(BaseSettings):
     providers: ProvidersSettings = Field(default_factory=ProvidersSettings)
     cache: CacheSettings = Field(default_factory=CacheSettings)
     security: SecuritySettings = Field(default_factory=SecuritySettings)
+    sources: SourcesSettings = Field(default_factory=SourcesSettings)
     worker: WorkerSettings = Field(default_factory=WorkerSettings)
     limits: LimitsSettings = Field(default_factory=LimitsSettings)
     otel: OtelSettings = Field(default_factory=OtelSettings)

@@ -9,7 +9,7 @@ from vlade_rag.core.application.answer import (
     assemble_context,
     validate_answer,
 )
-from vlade_rag.core.application.deps import Dependencies, Limits, NoopTracer
+from vlade_rag.core.application.deps import Dependencies, Limits, NoopTracer, SourcePolicy
 from vlade_rag.core.application.documents import DeleteDocument, DocumentView, GetDocument
 from vlade_rag.core.application.ingestion import (
     GetIngestionStatus,
@@ -58,6 +58,7 @@ __all__ = [
     "RunIngestionJob",
     "Search",
     "SearchResult",
+    "SourcePolicy",
     "SubmitIngestion",
     "SubmitResult",
     "UsageView",

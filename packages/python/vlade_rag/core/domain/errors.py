@@ -28,6 +28,12 @@ class PermissionDenied(VladeError):
     http_status = 403
 
 
+class WriteToolsDisabled(PermissionDenied):
+    """The tenant did not enable the MCP write tools (MCP_SPEC section 4)."""
+
+    code = "write_tools_disabled"
+
+
 class InvalidArgument(VladeError):
     code = "invalid_argument"
     http_status = 422

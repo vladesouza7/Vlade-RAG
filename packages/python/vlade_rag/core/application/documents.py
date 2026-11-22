@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from uuid import UUID
 
 from vlade_rag.core.application.deps import Dependencies
@@ -74,7 +74,7 @@ class DeleteDocument:
         report, _keys = await repo.delete_document(ctx, document_id, dry_run=not confirm)
         if confirm:
             await self.deps.object_storage.delete_prefix(ctx, document_prefix(kb.id, document_id))
-        await self.deps.audit_log.record(
+        event_id = await self.deps.audit_log.record(
             ctx,
             AuditEvent(
                 tenant_id=ctx.tenant_id,
@@ -88,4 +88,4 @@ class DeleteDocument:
                 trace_id=ctx.trace_id,
             ),
         )
-        return report
+        return replace(report, audit_event_id=event_id)

@@ -1,7 +1,8 @@
-"""MCP read tools (docs/MCP_SPEC.md sections 5.2 to 5.6).
+"""MCP tools (docs/MCP_SPEC.md sections 5.2 to 5.9).
 
 Each tool is a ``ToolSpec``: the JSON schemas of the contract, the minimum role, the rate-limit
-group and a handler that calls only use cases. The write tools arrive in roadmap task 4.3.
+group and a handler that calls only use cases. The write tools need the tenant flag
+``mcp.write_tools_enabled``; the server checks it before it lists or calls them.
 """
 
 from __future__ import annotations
@@ -16,13 +17,22 @@ from mcp_types import Tool, ToolAnnotations
 
 from vlade_rag.core.application import (
     AnswerQuery,
+    DeleteDocument,
     Dependencies,
     GetDocument,
     GetIngestionStatus,
     ListKnowledgeBases,
+    ReindexKnowledgeBase,
     Search,
+    SubmitIngestion,
 )
-from vlade_rag.core.domain import InvalidArgument, Role, TenantContext
+from vlade_rag.core.domain import (
+    InvalidArgument,
+    RawDocument,
+    Role,
+    TenantContext,
+)
+from vlade_rag.ingestion.sources.download import read_source
 from vlade_rag.mcp.policies import Group
 
 Handler = Callable[[Dependencies, TenantContext, Mapping[str, Any]], Awaitable[dict[str, Any]]]
@@ -38,6 +48,8 @@ class ToolSpec:
     group: Group
     idempotent: bool
     handler: Handler
+    read_only: bool = True
+    destructive: bool = False
 
     def to_mcp(self) -> Tool:
         return Tool(
@@ -46,8 +58,8 @@ class ToolSpec:
             input_schema=self.input_schema,
             output_schema=self.output_schema,
             annotations=ToolAnnotations(
-                read_only_hint=True,
-                destructive_hint=False,
+                read_only_hint=self.read_only,
+                destructive_hint=self.destructive,
                 idempotent_hint=self.idempotent,
                 open_world_hint=False,
             ),
@@ -224,6 +236,118 @@ async def _get_ingestion_status(
             "started_at": _iso(job.started_at),
             "finished_at": _iso(job.finished_at),
         }
+    }
+
+
+# ---------------------------------------------------------------- vlade_ingest_document
+
+
+async def _ingest_document(
+    deps: Dependencies, ctx: TenantContext, args: Mapping[str, Any]
+) -> dict[str, Any]:
+    metadata = args.get("metadata") or {}
+    if not isinstance(metadata, dict):
+        raise InvalidArgument("'metadata' must be a JSON object.")
+    source_uri: str | None = None
+    declared: str | None = None
+    if "content_text" in args:
+        data = str(args["content_text"]).encode("utf-8")
+        source_type = "upload"
+    else:
+        source_uri = str(args["source_uri"])
+        content = await read_source(deps, ctx, source_uri)
+        data, declared = content.data, content.mime_type
+        source_type = "uri"
+    result = await SubmitIngestion(deps).execute(
+        ctx,
+        knowledge_base=args["knowledge_base"],
+        raw=RawDocument(
+            filename=args["filename"],
+            mime_type=declared or "",
+            data=data,
+            source_type=source_type,
+            source_uri=source_uri,
+            metadata=metadata,
+        ),
+        title=args.get("title"),
+        external_id=args.get("external_id"),
+    )
+    return {
+        "job_id": str(result.job.id),
+        "document_id": str(result.document.id),
+        "status": result.job.status.value,
+    }
+
+
+# ---------------------------------------------------------------- vlade_delete_document
+
+
+async def _delete_document(
+    deps: Dependencies, ctx: TenantContext, args: Mapping[str, Any]
+) -> dict[str, Any]:
+    knowledge_base = args["knowledge_base"]
+    document_id = _uuid(args["document_id"], "document_id")
+    view = await GetDocument(deps).execute(
+        ctx, knowledge_base=knowledge_base, document_id=document_id
+    )
+    report = await DeleteDocument(deps).execute(
+        ctx,
+        knowledge_base=knowledge_base,
+        document_id=document_id,
+        confirm=args.get("confirm", False),
+    )
+    if not report.executed:
+        return {
+            "executed": False,
+            "action": "delete_document",
+            "document_title": view.document.title,
+            "will_delete": {
+                "versions": report.versions,
+                "chunks": report.chunks,
+                "embeddings": report.embeddings,
+                "stored_objects": report.stored_objects,
+            },
+        }
+    payload: dict[str, Any] = {"executed": True, "action": "delete_document"}
+    if report.audit_event_id is not None:
+        payload["audit_event_id"] = str(report.audit_event_id)
+    return payload
+
+
+# ---------------------------------------------------------------- vlade_reindex_knowledge_base
+
+
+async def _reindex_knowledge_base(
+    deps: Dependencies, ctx: TenantContext, args: Mapping[str, Any]
+) -> dict[str, Any]:
+    mode = args["mode"]
+    model = args.get("embedding_model")
+    if mode == "full" and model:
+        raise InvalidArgument("'embedding_model' is valid only in the embeddings mode.")
+    embeddings = {"model": model} if model else None
+    result = await ReindexKnowledgeBase(deps).execute(
+        ctx,
+        knowledge_base=args["knowledge_base"],
+        mode=mode,
+        embeddings=embeddings,
+        confirm=args.get("confirm", False),
+    )
+    if not result.executed:
+        preview = result.preview
+        return {
+            "executed": False,
+            "action": "reindex_knowledge_base",
+            "knowledge_base": preview.knowledge_base,
+            "mode": preview.mode,
+            "documents": preview.documents,
+            "chunks": preview.chunks,
+            "estimated_embedding_calls": preview.estimated_embedding_calls,
+        }
+    assert result.job is not None  # noqa: S101 - executed means a job
+    return {
+        "executed": True,
+        "action": "reindex_knowledge_base",
+        "job_id": str(result.job.id),
     }
 
 
@@ -434,6 +558,98 @@ _JOB_OUT = {
 }
 
 
+_INGEST_IN = {
+    "type": "object",
+    "required": ["knowledge_base", "filename"],
+    "additionalProperties": False,
+    "properties": {
+        "knowledge_base": {"type": "string"},
+        "filename": {"type": "string", "maxLength": 255},
+        "content_text": {"type": "string", "maxLength": 1000000},
+        "source_uri": {"type": "string", "format": "uri"},
+        "title": {"type": "string"},
+        "external_id": {"type": "string", "maxLength": 255},
+        "metadata": {"type": "object", "additionalProperties": True},
+    },
+    "oneOf": [
+        {"required": ["content_text"]},
+        {"required": ["source_uri"]},
+    ],
+}
+_INGEST_OUT = {
+    "type": "object",
+    "required": ["job_id", "document_id", "status"],
+    "properties": {
+        "job_id": _UUID,
+        "document_id": _UUID,
+        # "succeeded" when the content is equal to the current version (nothing to ingest).
+        "status": {"type": "string", "enum": ["pending", "succeeded"]},
+    },
+}
+
+_DELETE_IN = {
+    "type": "object",
+    "required": ["knowledge_base", "document_id"],
+    "additionalProperties": False,
+    "properties": {
+        "knowledge_base": {"type": "string"},
+        "document_id": _UUID,
+        "confirm": {"type": "boolean", "default": False},
+    },
+}
+_DELETE_OUT = {
+    "type": "object",
+    "required": ["executed", "action"],
+    "properties": {
+        "executed": {"type": "boolean"},
+        "action": {"type": "string", "const": "delete_document"},
+        "document_title": {"type": "string"},
+        "will_delete": {
+            "type": "object",
+            "required": ["versions", "chunks", "embeddings", "stored_objects"],
+            "properties": {
+                "versions": {"type": "integer"},
+                "chunks": {"type": "integer"},
+                "embeddings": {"type": "integer"},
+                "stored_objects": {"type": "integer"},
+            },
+        },
+        "audit_event_id": _UUID,
+    },
+}
+
+_REINDEX_IN = {
+    "type": "object",
+    "required": ["knowledge_base", "mode"],
+    "additionalProperties": False,
+    "properties": {
+        "knowledge_base": {"type": "string"},
+        "mode": {"type": "string", "enum": ["embeddings", "full"]},
+        "embedding_model": {
+            "type": "string",
+            "description": (
+                "Só no modo embeddings. Sem valor: usa o modelo da configuração atual."
+            ),
+        },
+        "confirm": {"type": "boolean", "default": False},
+    },
+}
+_REINDEX_OUT = {
+    "type": "object",
+    "required": ["executed", "action"],
+    "properties": {
+        "executed": {"type": "boolean"},
+        "action": {"type": "string", "const": "reindex_knowledge_base"},
+        "knowledge_base": {"type": "string"},
+        "mode": {"type": "string", "enum": ["embeddings", "full"]},
+        "documents": {"type": "integer"},
+        "chunks": {"type": "integer"},
+        "estimated_embedding_calls": {"type": "integer"},
+        "job_id": _UUID,
+    },
+}
+
+
 def read_tools() -> list[ToolSpec]:
     """The read tools, in the order of MCP_SPEC section 5.1."""
     return [
@@ -507,3 +723,65 @@ def read_tools() -> list[ToolSpec]:
             handler=_get_ingestion_status,
         ),
     ]
+
+
+def write_tools() -> list[ToolSpec]:
+    """The write tools, in the order of MCP_SPEC section 5.1."""
+    return [
+        ToolSpec(
+            name="vlade_ingest_document",
+            description=(
+                "Envia um documento para uma base de conhecimento. A ingestão é assíncrona. A "
+                "ferramenta devolve um job_id. Use `vlade_get_ingestion_status` para acompanhar "
+                "o job. Envie o texto em `content_text` ou um endereço em `source_uri`. Não envie "
+                "os dois."
+            ),
+            input_schema=_INGEST_IN,
+            output_schema=_INGEST_OUT,
+            role=Role.WRITER,
+            group=Group.WRITE,
+            idempotent=False,
+            handler=_ingest_document,
+            read_only=False,
+        ),
+        ToolSpec(
+            name="vlade_delete_document",
+            description=(
+                "Apaga um documento, todas as versões, os trechos, os vetores e o arquivo "
+                "original. A exclusão não pode ser desfeita. Primeiro chame a ferramenta sem "
+                "`confirm` para ver a prévia. Mostre a prévia ao usuário. Chame de novo com "
+                "`confirm: true` só depois de o usuário aprovar."
+            ),
+            input_schema=_DELETE_IN,
+            output_schema=_DELETE_OUT,
+            role=Role.ADMIN,
+            group=Group.ADMIN,
+            idempotent=True,
+            handler=_delete_document,
+            read_only=False,
+            destructive=True,
+        ),
+        ToolSpec(
+            name="vlade_reindex_knowledge_base",
+            description=(
+                "Reindexa uma base de conhecimento. O modo embeddings gera os vetores de novo "
+                "com o modelo informado. O modo full processa de novo todos os arquivos "
+                "originais. A reindexação consome tempo e custo de provedor. Primeiro chame a "
+                "ferramenta sem `confirm` para ver a estimativa. Chame de novo com `confirm: "
+                "true` só depois de o usuário aprovar."
+            ),
+            input_schema=_REINDEX_IN,
+            output_schema=_REINDEX_OUT,
+            role=Role.ADMIN,
+            group=Group.ADMIN,
+            idempotent=False,
+            handler=_reindex_knowledge_base,
+            read_only=False,
+            destructive=True,
+        ),
+    ]
+
+
+def all_tools() -> list[ToolSpec]:
+    """Every tool. The server filters them by role and by the tenant setting."""
+    return [*read_tools(), *write_tools()]
