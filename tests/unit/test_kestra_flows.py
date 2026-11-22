@@ -53,7 +53,7 @@ def test_ingest_batch_takes_documents_as_json() -> None:
     assert inputs["documents"]["type"] == "STRING"
     text = text_of(flow("ingest_batch"))
     assert "/v1/knowledge-bases/" in text
-    assert 'multipart/form-data' in text
+    assert "multipart/form-data" in text
     assert "filename" in text
 
 
