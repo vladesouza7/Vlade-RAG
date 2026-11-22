@@ -187,3 +187,33 @@ async def test_reindex_preview_confirm_and_conflict(mcp_world: McpWorld) -> None
     assert found["results"]
     events = await _audit(mcp_world, "vlade_reindex_knowledge_base")
     assert [e.outcome for e in events] == ["error", "success", "preview"]  # newest first
+
+
+# ---------------------------------------------------------------- evaluate
+
+
+async def test_evaluate_uses_a_registered_dataset(mcp_world: McpWorld) -> None:
+    await _enable(mcp_world)
+    args = {
+        "knowledge_base": "vendas",
+        "dataset": "legal-ptbr",
+        "metrics": ["mrr"],
+        "k": 3,
+    }
+    schema = spec_tools()["vlade_evaluate"]["output"]
+    async with mcp_world.client(mcp_world.admin) as client:
+        result = await client.call_tool("vlade_evaluate", args)
+        assert not result.is_error, result
+        payload = structured(result)
+        jsonschema.validate(payload, schema)
+        await Worker(mcp_world.runtime, worker_id="mcp-test").run_until_idle()
+        job = structured(
+            await client.call_tool("vlade_get_ingestion_status", {"job_id": payload["job_id"]})
+        )["job"]
+        missing = error_of(
+            await client.call_tool("vlade_evaluate", {**args, "dataset": "nao-existe"})
+        )
+    assert job["status"] == "succeeded", job["error"]
+    assert job["result"]["dataset"] == "legal-ptbr"
+    assert "mrr" in job["result"]["metrics"]
+    assert missing["code"] == "not_found"

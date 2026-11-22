@@ -8,7 +8,12 @@ from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from vlade_rag.core.application import KnowledgeBaseSummary, ReindexResult, UsageView
+from vlade_rag.core.application import (
+    EvaluationResult,
+    KnowledgeBaseSummary,
+    ReindexResult,
+    UsageView,
+)
 from vlade_rag.core.domain import (
     Answer,
     AuditEvent,
@@ -138,6 +143,31 @@ class ReindexOut(_Model):
             embeddings=None if p.embeddings is None else p.embeddings.model_dump(mode="json"),
             chunking=None if p.chunking is None else p.chunking.model_dump(mode="json"),
             job=None if result.job is None else JobOut.of(result.job),
+        )
+
+
+class EvaluationIn(_Model):
+    knowledge_base: str
+    dataset: str = Field(min_length=1, max_length=100)
+    metrics: list[str] | None = None
+    k: int | None = Field(default=None, ge=1)
+
+
+class EvaluationOut(_Model):
+    job: JobOut
+    dataset: str
+    items: int
+    k: int
+    metrics: list[str]
+
+    @classmethod
+    def of(cls, result: EvaluationResult) -> EvaluationOut:
+        return cls(
+            job=JobOut.of(result.job),
+            dataset=result.dataset,
+            items=result.items,
+            k=result.k,
+            metrics=list(result.metrics),
         )
 
 

@@ -1,0 +1,63 @@
+id: ingest_batch
+namespace: vlade
+description: >
+  Envia um lote de documentos a uma base pela API REST. Cada documento entra como texto.
+  O flow não acessa o banco.
+
+inputs:
+  - name: knowledge_base
+    type: STRING
+    required: true
+  - name: documents
+    type: STRING
+    required: true
+    description: >
+      JSON com uma lista de objetos {"filename": "...", "content_text": "..."}.
+      Use uma entrada do tipo STRING para preservar o JSON.
+
+tasks:
+  - id: submit
+    type: io.kestra.plugin.scripts.python.Script
+    containerImage: python:3.12-slim
+    env:
+      VLADE_API_URL: "{{ vars.vlade_api_url }}"
+      VLADE_API_KEY: "{{ secrets.VLADE_API_KEY }}"
+      KNOWLEDGE_BASE: "{{ inputs.knowledge_base }}"
+      DOCUMENTS: "{{ inputs.documents }}"
+    script: |
+      import json
+      import os
+      import urllib.request
+
+      documents = json.loads(os.environ["DOCUMENTS"])
+      if not isinstance(documents, list) or not documents:
+          raise SystemExit("'documents' must be a non-empty JSON list")
+
+      endpoint = (
+          os.environ["VLADE_API_URL"].rstrip("/")
+          + "/v1/knowledge-bases/"
+          + os.environ["KNOWLEDGE_BASE"]
+          + "/documents"
+      )
+      for item in documents:
+          filename = item["filename"]
+          content = item["content_text"].encode("utf-8")
+          boundary = "----vlade-batch"
+          body = (
+              f"--{boundary}\r\n"
+              f'Content-Disposition: form-data; name="file"; filename="{filename}"\r\n'
+              "Content-Type: text/markdown\r\n\r\n"
+          ).encode() + content + f"\r\n--{boundary}--\r\n".encode()
+          request = urllib.request.Request(
+              endpoint,
+              data=body,
+              method="POST",
+              headers={
+                  "Authorization": "Bearer " + os.environ["VLADE_API_KEY"],
+                  "Content-Type": f"multipart/form-data; boundary={boundary}",
+              },
+          )
+          with urllib.request.urlopen(request, timeout=60) as response:
+              if response.status != 202:
+                  raise SystemExit(f"API returned HTTP {response.status}")
+              print(json.loads(response.read())["job"]["id"])

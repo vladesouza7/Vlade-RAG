@@ -15,6 +15,8 @@ from vlade_rag.core.ports import (
     Chunker,
     DocumentParser,
     EmbeddingProvider,
+    EvaluationDatasets,
+    EvaluationRunner,
     FusionStrategy,
     JobQueue,
     KnowledgeRepository,
@@ -102,6 +104,9 @@ class Dependencies:
     tracer: Tracer = field(default_factory=NoopTracer)
     limits: Limits = field(default_factory=Limits)
     sources: SourcePolicy = field(default_factory=SourcePolicy)
+    # Evaluation needs the registry of datasets and a worker runner. Both are wired in bootstrap.
+    evaluation_datasets: EvaluationDatasets | None = None
+    evaluation_runner: EvaluationRunner | None = None
     default_kb_config: Mapping[str, Any] = field(default_factory=dict)
 
     def parser_for(self, mime_type: str) -> DocumentParser | None:

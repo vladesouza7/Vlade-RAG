@@ -768,6 +768,9 @@ VLADE_OBJECT_STORAGE__S3__SECRET_ACCESS_KEY=***
 VLADE_OBJECT_STORAGE__S3__PATH_STYLE=true
 VLADE_OBJECT_STORAGE__S3__CREATE_BUCKET=false    # true cria o bucket ao iniciar (serviço local)
 VLADE_SECURITY__API_KEY_PEPPER=***
+VLADE_EVALUATION__DATASETS_PATH=evals/datasets               # nomes de datasets para avaliação agendada (ADR-0011)
+VLADE_EVALUATION__DEFAULT_K=10
+VLADE_EVALUATION__MAX_ITEMS=1000
 VLADE_SOURCES__ALLOWED_DOMAINS=["docs.exemplo.com"]     # lista vazia recusa source_uri https:// (ADR-0028)
 VLADE_SOURCES__MAX_BYTES=52428800                      # limite do download; o menor entre este e max_upload_bytes
 VLADE_SOURCES__TIMEOUT=30.0
@@ -1014,7 +1017,7 @@ O grafo LangGraph tem os nós `retrieve`, `rewrite`, `assemble`, `generate`, `va
 
 ### 12.2. Kestra
 
-O Kestra chama a API REST com uma chave de serviço do tenant. Os flows ficam em `deploy/kestra/flows/`. Os flows não acessam o banco diretamente.
+O Kestra chama a API REST com uma chave de serviço do tenant. Os flows ficam em `deploy/kestra/flows/`. Os flows não acessam o banco diretamente. O `README.md` da pasta lista as variáveis e os segredos. Os gatilhos de `evaluate_nightly` e `backup` começam desligados.
 
 | Flow | Gatilho | Chamadas |
 |---|---|---|

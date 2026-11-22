@@ -17,6 +17,8 @@ from vlade_rag.api.schemas import (
     CitationOut,
     DeletionOut,
     DocumentOut,
+    EvaluationIn,
+    EvaluationOut,
     IngestOut,
     JobOut,
     KnowledgeBaseCreate,
@@ -43,6 +45,7 @@ from vlade_rag.core.application import (
     ListAuditEvents,
     ListKnowledgeBases,
     ReindexKnowledgeBase,
+    RunEvaluation,
     Search,
     SubmitIngestion,
 )
@@ -155,6 +158,19 @@ async def reindex_knowledge_base(
         confirm=body.confirm,
     )
     return ReindexOut.of(result)
+
+
+@router.post("/evaluations", response_model=EvaluationOut, status_code=status.HTTP_202_ACCEPTED)
+async def run_evaluation(body: EvaluationIn, ctx: CtxDep, rt: RuntimeDep) -> EvaluationOut:
+    """Queue a retrieval evaluation of a registered dataset (ADR-0011)."""
+    result = await RunEvaluation(rt.deps).execute(
+        ctx,
+        knowledge_base=body.knowledge_base,
+        dataset=body.dataset,
+        metrics=body.metrics,
+        k=body.k,
+    )
+    return EvaluationOut.of(result)
 
 
 @router.get("/usage", response_model=TenantUsageOut)

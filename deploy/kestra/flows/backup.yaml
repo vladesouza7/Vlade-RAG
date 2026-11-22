@@ -1,0 +1,49 @@
+id: backup
+namespace: vlade
+description: >
+  Backup diário do PostgreSQL e do bucket de objetos. Não chama a API: o flow roda com
+  credenciais de operação fora do tenant (ADR-0011).
+
+inputs:
+  - name: retention_days
+    type: INT
+    defaults: 14
+
+triggers:
+  - id: daily
+    type: io.kestra.plugin.core.trigger.Schedule
+    cron: "0 2 * * *"
+    timezone: UTC
+    disabled: true
+
+tasks:
+  - id: dump_database
+    type: io.kestra.plugin.scripts.shell.Commands
+    containerImage: postgres:17
+    outputFiles:
+      - vlade.dump
+    env:
+      PGPASSWORD: "{{ secrets.VLADE_BACKUP_DB_PASSWORD }}"
+    commands:
+      - pg_dump -h {{ vars.vlade_backup_db_host }} -U vlade_owner -Fc -f {{ workingDir }}/vlade.dump vlade
+
+  - id: upload_database
+    type: io.kestra.plugin.scripts.shell.Commands
+    containerImage: amazon/aws-cli:2
+    inputFiles:
+      vlade.dump: "{{ outputs.dump_database.files['vlade.dump'] }}"
+    env:
+      AWS_ACCESS_KEY_ID: "{{ secrets.VLADE_BACKUP_S3_ACCESS_KEY }}"
+      AWS_SECRET_ACCESS_KEY: "{{ secrets.VLADE_BACKUP_S3_SECRET_KEY }}"
+      AWS_DEFAULT_REGION: "{{ vars.vlade_backup_s3_region }}"
+    commands:
+      - aws s3 cp {{ workingDir }}/vlade.dump s3://{{ vars.vlade_backup_bucket }}/database/{{ execution.startDate | date('yyyy_MM_dd') }}.dump
+
+  - id: sync_objects
+    type: io.kestra.plugin.scripts.shell.Commands
+    containerImage: minio/mc:latest
+    env:
+      MC_HOST_source: "{{ vars.vlade_backup_source_alias }}"
+      MC_HOST_target: "{{ vars.vlade_backup_target_alias }}"
+    commands:
+      - mc mirror --overwrite source/{{ vars.vlade_object_bucket }} target/{{ vars.vlade_backup_bucket }}/objects/
