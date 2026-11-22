@@ -1,0 +1,55 @@
+{
+  "date": "2026-11-21",
+  "criterion": "RNF-11: consumo de memoria do perfil dev ate 3 GB, sem Ollama",
+  "machine": {
+    "platform": "Ubuntu 24.04 no WSL 2",
+    "cpus": 4,
+    "host_memory": "7.7 GiB",
+    "docker_version": "29.9.3"
+  },
+  "profile": {
+    "services": ["api", "postgres", "valkey"],
+    "image_api": "vlade-rag:dev",
+    "memory_limits_mib": {
+      "api": 768,
+      "postgres": 1024,
+      "valkey": 320
+    },
+    "memory_limits_total_mib": 2112
+  },
+  "load": {
+    "duration_seconds": 25,
+    "concurrent_searches": 8,
+    "successful_searches": 550,
+    "failures": 0,
+    "knowledge_bases": 1,
+    "documents": 4,
+    "embeddings": "hashing"
+  },
+  "measurement": {
+    "tool": "docker stats --no-stream",
+    "samples": 8,
+    "peak_mib": {
+      "api": 73.96,
+      "postgres": 84.38,
+      "valkey": 8.11,
+      "total_dev_profile": 165.86
+    },
+    "idle_before_load_mib": {
+      "api": 72.34,
+      "postgres": 26.83,
+      "valkey": 7.72,
+      "total_dev_profile": 106.89
+    },
+    "last_sample_mib": {
+      "api": 73.61,
+      "postgres": 84.78,
+      "valkey": 7.8,
+      "total_dev_profile": 166.19
+    },
+    "optional_phoenix_mib": 469.5,
+    "total_with_phoenix_mib": 635.69
+  },
+  "result": "pass",
+  "limit_mib": 3072
+}
