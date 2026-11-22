@@ -176,6 +176,18 @@ class LimitsSettings(BaseModel):
     store_query_text: bool = False
 
 
+class EvaluationSettings(BaseModel):
+    """Registry of datasets for scheduled evaluations (ADR-0011).
+
+    ``datasets_path`` is a directory of the server. A name is a subdirectory with a
+    ``questions.jsonl`` file. The caller sends only the name.
+    """
+
+    datasets_path: str = "evals/datasets"
+    default_k: int = Field(default=10, ge=1, le=100)
+    max_items: int = Field(default=1000, ge=1)
+
+
 class OtelSettings(BaseModel):
     enabled: bool = False
     endpoint: str | None = None
@@ -207,6 +219,7 @@ class Settings(BaseSettings):
     sources: SourcesSettings = Field(default_factory=SourcesSettings)
     worker: WorkerSettings = Field(default_factory=WorkerSettings)
     limits: LimitsSettings = Field(default_factory=LimitsSettings)
+    evaluation: EvaluationSettings = Field(default_factory=EvaluationSettings)
     otel: OtelSettings = Field(default_factory=OtelSettings)
     # Server default for new knowledge bases, as JSON. A config sent on creation is merged
     # over it. Example: {"embeddings": {"provider": "openrouter", ...}, "generation": {...}}

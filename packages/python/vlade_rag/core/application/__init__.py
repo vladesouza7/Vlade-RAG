@@ -11,6 +11,7 @@ from vlade_rag.core.application.answer import (
 )
 from vlade_rag.core.application.deps import Dependencies, Limits, NoopTracer, SourcePolicy
 from vlade_rag.core.application.documents import DeleteDocument, DocumentView, GetDocument
+from vlade_rag.core.application.evaluation import EvaluationResult, RunEvaluation
 from vlade_rag.core.application.ingestion import (
     GetIngestionStatus,
     RunIngestionJob,
@@ -42,6 +43,7 @@ __all__ = [
     "Dependencies",
     "DocumentView",
     "EnforceRequestLimits",
+    "EvaluationResult",
     "GetDocument",
     "GetIngestionStatus",
     "GetKnowledgeBase",
@@ -55,6 +57,7 @@ __all__ = [
     "ReindexPreview",
     "ReindexResult",
     "ReindexRunner",
+    "RunEvaluation",
     "RunIngestionJob",
     "Search",
     "SearchResult",

@@ -496,16 +496,25 @@ Entrada:
       "type": "array",
       "items": {
         "type": "string",
-        "enum": ["recall_at_k", "precision_at_k", "mrr", "ndcg", "faithfulness", "answer_relevancy", "context_precision", "context_recall"]
+        "enum": ["recall_at_k", "precision_at_k", "mrr", "ndcg"]
       }
-    }
+    },
+    "k": { "type": "integer", "minimum": 1, "maximum": 50 }
   }
 }
 ```
 
-Saída: `job_id`.
+Saída:
 
-A ferramenta depende do caso de uso `RunEvaluation` e do flow `evaluate_nightly` (fase 4, tarefa 4.1). O servidor MCP publica a ferramenta quando esse caso de uso existir.
+```json
+{
+  "type": "object",
+  "required": ["job_id"],
+  "properties": { "job_id": { "type": "string", "format": "uuid" } }
+}
+```
+
+O job grava o relatório no campo `result`. As métricas de resposta com juiz pago (`faithfulness`, `answer_relevancy`, `context_precision` e `context_recall`) continuam só na CLI `vlade-rag eval answers`.
 
 ## 6. Resources
 

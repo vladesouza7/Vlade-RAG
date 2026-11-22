@@ -275,6 +275,13 @@ class RunIngestionJob:
                 result = await self._ingest(ctx, job)
             elif job.kind == JobKind.REINDEX:
                 result = await self._reindex(ctx, job)
+            elif job.kind == JobKind.EVALUATION:
+                runner = self.deps.evaluation_runner
+                if runner is None:
+                    raise _StepFailedError(
+                        "dispatch", InvalidArgument("The evaluation runner is not configured.")
+                    )
+                result = await runner.run(ctx, job)
             else:
                 raise _StepFailedError(
                     "dispatch", InvalidArgument(f"Job kind '{job.kind}' is not supported yet.")

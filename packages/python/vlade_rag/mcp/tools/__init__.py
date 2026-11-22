@@ -23,6 +23,7 @@ from vlade_rag.core.application import (
     GetIngestionStatus,
     ListKnowledgeBases,
     ReindexKnowledgeBase,
+    RunEvaluation,
     Search,
     SubmitIngestion,
 )
@@ -351,6 +352,22 @@ async def _reindex_knowledge_base(
     }
 
 
+# ---------------------------------------------------------------- vlade_evaluate
+
+
+async def _evaluate(
+    deps: Dependencies, ctx: TenantContext, args: Mapping[str, Any]
+) -> dict[str, Any]:
+    result = await RunEvaluation(deps).execute(
+        ctx,
+        knowledge_base=args["knowledge_base"],
+        dataset=args["dataset"],
+        metrics=args.get("metrics"),
+        k=args.get("k"),
+    )
+    return {"job_id": str(result.job.id)}
+
+
 # ---------------------------------------------------------------- schemas
 
 _UUID = {"type": "string", "format": "uuid"}
@@ -650,6 +667,30 @@ _REINDEX_OUT = {
 }
 
 
+_EVALUATE_IN = {
+    "type": "object",
+    "required": ["knowledge_base", "dataset"],
+    "additionalProperties": False,
+    "properties": {
+        "knowledge_base": {"type": "string"},
+        "dataset": {"type": "string", "description": "Nome do dataset registrado."},
+        "metrics": {
+            "type": "array",
+            "items": {
+                "type": "string",
+                "enum": ["recall_at_k", "precision_at_k", "mrr", "ndcg"],
+            },
+        },
+        "k": {"type": "integer", "minimum": 1, "maximum": 50},
+    },
+}
+_EVALUATE_OUT = {
+    "type": "object",
+    "required": ["job_id"],
+    "properties": {"job_id": _UUID},
+}
+
+
 def read_tools() -> list[ToolSpec]:
     """The read tools, in the order of MCP_SPEC section 5.1."""
     return [
@@ -778,6 +819,20 @@ def write_tools() -> list[ToolSpec]:
             handler=_reindex_knowledge_base,
             read_only=False,
             destructive=True,
+        ),
+        ToolSpec(
+            name="vlade_evaluate",
+            description=(
+                "Inicia uma avaliação de qualidade de uma base com um dataset registrado. A "
+                "avaliação é assíncrona e devolve um job_id."
+            ),
+            input_schema=_EVALUATE_IN,
+            output_schema=_EVALUATE_OUT,
+            role=Role.ADMIN,
+            group=Group.ADMIN,
+            idempotent=False,
+            handler=_evaluate,
+            read_only=False,
         ),
     ]
 

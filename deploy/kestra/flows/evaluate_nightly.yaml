@@ -1,0 +1,79 @@
+id: evaluate_nightly
+namespace: vlade
+description: >
+  Agenda diária de avaliação de recuperação. Chama POST /v1/evaluations e espera o job.
+
+inputs:
+  - name: knowledge_base
+    type: STRING
+    required: true
+  - name: dataset
+    type: STRING
+    required: true
+    description: Nome de um dataset do registro do servidor.
+  - name: metrics
+    type: STRING
+    defaults: mrr,ndcg
+  - name: k
+    type: INT
+    defaults: 10
+  - name: poll_seconds
+    type: INT
+    defaults: 10
+
+triggers:
+  - id: nightly
+    type: io.kestra.plugin.core.trigger.Schedule
+    cron: "0 3 * * *"
+    timezone: UTC
+    disabled: true
+
+tasks:
+  - id: evaluate
+    type: io.kestra.plugin.scripts.python.Script
+    containerImage: python:3.12-slim
+    env:
+      VLADE_API_URL: "{{ vars.vlade_api_url }}"
+      VLADE_API_KEY: "{{ secrets.VLADE_API_KEY }}"
+      KNOWLEDGE_BASE: "{{ inputs.knowledge_base }}"
+      DATASET: "{{ inputs.dataset }}"
+      METRICS: "{{ inputs.metrics }}"
+      K: "{{ inputs.k }}"
+      POLL_SECONDS: "{{ inputs.poll_seconds }}"
+    script: |
+      import json
+      import os
+      import time
+      import urllib.request
+
+      base = os.environ["VLADE_API_URL"].rstrip("/")
+      key = os.environ["VLADE_API_KEY"]
+      payload = {
+          "knowledge_base": os.environ["KNOWLEDGE_BASE"],
+          "dataset": os.environ["DATASET"],
+          "metrics": [m.strip() for m in os.environ["METRICS"].split(",") if m.strip()],
+          "k": int(os.environ["K"]),
+      }
+      request = urllib.request.Request(
+          base + "/v1/evaluations",
+          data=json.dumps(payload).encode(),
+          method="POST",
+          headers={"Authorization": "Bearer " + key, "Content-Type": "application/json"},
+      )
+      with urllib.request.urlopen(request, timeout=60) as response:
+          job = json.loads(response.read())["job"]
+      while True:
+        request = urllib.request.Request(
+            base + "/v1/jobs/" + job["id"],
+            headers={"Authorization": "Bearer " + key},
+            method="GET",
+        )
+        with urllib.request.urlopen(request, timeout=60) as response:
+            status = json.loads(response.read())
+        if status["status"] in ("succeeded", "failed", "cancelled"):
+            print("job", job["id"], status["status"])
+            print(json.dumps(status.get("result") or {}, sort_keys=True))
+            if status["status"] != "succeeded":
+                raise SystemExit(1)
+            break
+        time.sleep(int(os.environ["POLL_SECONDS"]))

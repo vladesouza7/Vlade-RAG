@@ -213,6 +213,25 @@ def test_reindex_preview_confirm_and_conflict(api: Api) -> None:
     assert bad.status_code == 422
 
 
+def test_evaluations_queue_a_job(api: Api) -> None:
+    """Task 4.1 (ADR-0011): POST /v1/evaluations runs a registered dataset."""
+    _load(api)
+    url = "/v1/evaluations"
+    body = {"knowledge_base": "trocas", "dataset": "legal-ptbr", "metrics": ["mrr"], "k": 3}
+    assert api.client.post(url, json=body, headers=api.reader).status_code == 403
+    assert (
+        api.client.post(url, json={**body, "dataset": "nope"}, headers=api.admin).status_code == 404
+    )
+    started = api.client.post(url, json=body, headers=api.admin)
+    assert started.status_code == 202, started.text
+    job_id = started.json()["job"]["id"]
+    assert started.json()["dataset"] == "legal-ptbr"
+    assert api.drain() == 1
+    job = api.client.get(f"/v1/jobs/{job_id}", headers=api.reader).json()
+    assert job["kind"] == "evaluation" and job["status"] == "succeeded", job
+    assert "mrr" in job["result"]["metrics"]
+
+
 def test_tenant_isolation_over_http(api: Api) -> None:
     doc_id = _load(api)
     other = api.other

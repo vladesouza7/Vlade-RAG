@@ -34,6 +34,7 @@ WRITE_TOOLS = [
     "vlade_ingest_document",
     "vlade_delete_document",
     "vlade_reindex_knowledge_base",
+    "vlade_evaluate",
 ]
 
 

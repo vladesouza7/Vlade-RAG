@@ -27,6 +27,8 @@ from vlade_rag.core.ports import (
 )
 from vlade_rag.core.registry import PluginSpec, Registry
 from vlade_rag.embeddings.hashing import HashingEmbeddingProvider
+from vlade_rag.evaluation.datasets_store import FileEvaluationDatasets
+from vlade_rag.evaluation.worker import EvaluationWorker
 from vlade_rag.generation.prompts import BuiltinPromptRegistry
 from vlade_rag.generation.providers.extractive import ExtractiveLLM
 from vlade_rag.ingestion.chunking import NativeChunker, NativeTextNormalizer
@@ -392,11 +394,15 @@ async def build_runtime(
             max_bytes=settings.sources.max_bytes,
             timeout=settings.sources.timeout,
         ),
+        evaluation_datasets=FileEvaluationDatasets(
+            settings.evaluation.datasets_path, max_items=settings.evaluation.max_items
+        ),
         tenants=tenants,
         **ports,
     )
     if tracer is not None:
         deps.tracer = tracer  # without it, the use cases record no span
+    deps.evaluation_runner = EvaluationWorker(deps)
     return Runtime(
         settings=settings,
         deps=deps,

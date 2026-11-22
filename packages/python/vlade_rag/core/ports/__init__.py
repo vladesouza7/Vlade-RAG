@@ -557,6 +557,21 @@ class Evaluator(Protocol):
 
 
 @runtime_checkable
+class EvaluationDatasets(Protocol):
+    """Registry of named datasets, addressed by name and never by a caller-supplied path."""
+
+    async def list_names(self) -> tuple[str, ...]: ...
+    async def load(self, name: str) -> tuple[EvalItem, ...]: ...
+
+
+@runtime_checkable
+class EvaluationRunner(Protocol):
+    """Worker side of an ``evaluation`` job."""
+
+    async def run(self, ctx: TenantContext, job: IngestionJob) -> Metadata: ...
+
+
+@runtime_checkable
 class Span(Protocol):
     def set_attribute(self, key: str, value: AttrValue) -> None: ...
     def add_event(self, name: str, attributes: Mapping[str, AttrValue] | None = None) -> None: ...
@@ -583,6 +598,8 @@ __all__ = [
     "EmbeddingProvider",
     "EvalItem",
     "EvalReport",
+    "EvaluationDatasets",
+    "EvaluationRunner",
     "Evaluator",
     "FusionStrategy",
     "IssuedApiKey",
