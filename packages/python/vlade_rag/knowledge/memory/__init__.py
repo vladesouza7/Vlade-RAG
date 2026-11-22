@@ -13,6 +13,7 @@ from collections import Counter
 from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass, field, replace
 from datetime import UTC, datetime, timedelta
+from typing import Any
 from uuid import UUID
 
 from vlade_rag.core.domain import (
@@ -963,8 +964,10 @@ class MemoryAuditLog:
     def __init__(self, store: MemoryStore) -> None:
         self.store = store
 
-    async def record(self, ctx: TenantContext, event: AuditEvent) -> None:
-        self.store.data(ctx).audit.append(replace(event, created_at=_now()))
+    async def record(self, ctx: TenantContext, event: AuditEvent) -> UUID:
+        event_id = event.id or uuid7()
+        self.store.data(ctx).audit.append(replace(event, id=event_id, created_at=_now()))
+        return event_id
 
     async def record_query(self, ctx: TenantContext, entry: QueryLogEntry) -> None:
         self.store.data(ctx).queries.append(entry)
@@ -1001,6 +1004,23 @@ class MemoryTenantDirectory:
             if tenant.slug == slug:
                 return tenant
         raise NotFound(f"Tenant '{slug}' does not exist.")
+
+    async def get_settings(self, tenant_id: UUID) -> dict[str, Any]:
+        tenant = self.store.tenants.get(tenant_id)
+        if tenant is None:
+            raise NotFound("Tenant does not exist.")
+        return dict(tenant.settings)
+
+    async def set_mcp_write_tools(self, tenant_id: UUID, enabled: bool) -> None:
+        tenant = self.store.tenants.get(tenant_id)
+        if tenant is None:
+            raise NotFound("Tenant does not exist.")
+        mcp = dict(tenant.settings.get("mcp") or {})
+        mcp["write_tools_enabled"] = enabled
+        self.store.tenants[tenant_id] = replace(tenant, settings={**tenant.settings, "mcp": mcp})
+        self._audit(
+            tenant_id, "tenant.mcp_update", str(tenant_id), {"write_tools_enabled": enabled}
+        )
 
     def _audit(
         self, tenant_id: UUID, action: str, resource_id: str, details: Mapping[str, object]

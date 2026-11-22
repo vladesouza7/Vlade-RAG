@@ -11,7 +11,7 @@ from collections.abc import Awaitable, Callable
 from dataclasses import dataclass, field
 from typing import Any
 
-from vlade_rag.core.application import Dependencies, Limits
+from vlade_rag.core.application import Dependencies, Limits, SourcePolicy
 from vlade_rag.core.config import Settings, get_settings
 from vlade_rag.core.domain import InvalidArgument
 from vlade_rag.core.domain.kb_config import EmbeddingsConfig, GenerationConfig, RerankConfig
@@ -387,6 +387,11 @@ async def build_runtime(
             store_query_text=limits.store_query_text,
         ),
         default_kb_config=settings.default_kb_config,
+        sources=SourcePolicy(
+            allowed_domains=tuple(settings.sources.allowed_domains),
+            max_bytes=settings.sources.max_bytes,
+            timeout=settings.sources.timeout,
+        ),
         tenants=tenants,
         **ports,
     )

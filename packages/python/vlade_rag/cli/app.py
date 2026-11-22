@@ -539,6 +539,27 @@ def tenant_create(slug: str, name: str = typer.Option(None, help="Display name."
     typer.echo(f"Tenant '{tenant.slug}' created: {tenant.id}")
 
 
+@tenant_app.command("mcp-write")
+def tenant_mcp_write(
+    slug: str,
+    enable: bool | None = typer.Option(
+        None, "--enable/--disable", help="Allow or block the write tools. Without a flag: show."
+    ),
+) -> None:
+    """Show or change the MCP write tools of a tenant (MCP_SPEC section 4)."""
+
+    async def go(rt: Any) -> bool:
+        tenant = await rt.tenants.get_tenant(slug)
+        if enable is not None:
+            await rt.tenants.set_mcp_write_tools(tenant.id, enable)
+        settings = await rt.tenants.get_settings(tenant.id)
+        mcp = settings.get("mcp")
+        return isinstance(mcp, dict) and mcp.get("write_tools_enabled") is True
+
+    enabled = _run(_with_runtime(go))
+    typer.echo(f"MCP write tools of '{slug}': {'enabled' if enabled else 'disabled'}")
+
+
 @tenant_app.command("quota")
 def tenant_quota(
     slug: str,

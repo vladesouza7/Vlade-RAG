@@ -1,6 +1,6 @@
 """Rate limits, error mapping and audit of MCP calls (docs/MCP_SPEC.md sections 4, 8, 9, 10).
 
-Write-tool gating and confirmation arrive with the write tools (roadmap task 4.3).
+The server checks the write-tool flag of the tenant before it runs a write tool (task 4.3).
 """
 
 from __future__ import annotations
@@ -11,6 +11,7 @@ import math
 from collections.abc import Mapping
 from enum import StrEnum
 from typing import Any
+from uuid import UUID
 
 from vlade_rag.core.application import Dependencies, EnforceRequestLimits
 from vlade_rag.core.domain import (
@@ -141,13 +142,14 @@ async def record_audit(
     client: Mapping[str, str | None],
     error_code: str | None = None,
     resource_id: str | None = None,
-) -> None:
-    """Record one MCP call. A failure to record is logged and does not fail the call."""
+) -> UUID | None:
+    """Record one MCP call and return the id of the event. A failure to record is logged and
+    does not fail the call."""
     details: dict[str, Any] = {"arguments": audit_arguments(arguments), "client": dict(client)}
     if error_code is not None:
         details["error_code"] = error_code
     try:
-        await deps.audit_log.record(
+        return await deps.audit_log.record(
             ctx,
             AuditEvent(
                 tenant_id=ctx.tenant_id,
@@ -163,6 +165,7 @@ async def record_audit(
         )
     except Exception:
         logger.exception("Could not record the audit event of %s", name)
+        return None
 
 
 __all__ = [

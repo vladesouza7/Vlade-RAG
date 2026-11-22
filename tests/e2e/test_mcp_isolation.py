@@ -136,9 +136,11 @@ async def test_the_tenant_comes_from_the_key_not_from_the_arguments(mcp_world: M
 
 
 async def test_a_reader_key_has_no_write_access_to_the_server(mcp_world: McpWorld) -> None:
-    """The write tools are not offered, and calling one by name is a protocol error."""
+    """The write tools are not offered, and a reader cannot call one by name."""
     async with mcp_world.client(mcp_world.reader) as client:
         names = {t.name for t in (await client.list_tools()).tools}
         assert not any(n in names for n in ("vlade_ingest_document", "vlade_delete_document"))
-        with pytest.raises(MCPError):
-            await client.call_tool("vlade_delete_document", {"knowledge_base": "vendas"})
+        result = await client.call_tool(
+            "vlade_delete_document", {"knowledge_base": "vendas", "document_id": str(uuid4())}
+        )
+    assert error_of(result)["code"] == "forbidden"

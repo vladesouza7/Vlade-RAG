@@ -39,7 +39,14 @@ from starlette.types import ASGIApp
 from vlade_rag import __version__
 from vlade_rag.bootstrap import Runtime, build_runtime
 from vlade_rag.core.config import Settings, get_settings
-from vlade_rag.core.domain import InvalidArgument, NotFound, Role, TenantContext, Unauthenticated
+from vlade_rag.core.domain import (
+    InvalidArgument,
+    NotFound,
+    Role,
+    TenantContext,
+    Unauthenticated,
+    WriteToolsDisabled,
+)
 from vlade_rag.mcp import prompts as prompt_defs
 from vlade_rag.mcp import resources as resource_defs
 from vlade_rag.mcp.auth import ApiKeyMiddleware, context_of
@@ -50,7 +57,7 @@ from vlade_rag.mcp.policies import (
     outcome_of,
     record_audit,
 )
-from vlade_rag.mcp.tools import ToolSpec, read_tools
+from vlade_rag.mcp.tools import ToolSpec, all_tools
 
 logger = logging.getLogger(__name__)
 
@@ -95,7 +102,15 @@ def build_server(runtime: Runtime, fixed_ctx: TenantContext | None = None) -> Se
     is the context that ``ApiKeyMiddleware`` stored after it checked the key.
     """
     deps = runtime.deps
-    tools: dict[str, ToolSpec] = {spec.name: spec for spec in read_tools()}
+    tools: dict[str, ToolSpec] = {spec.name: spec for spec in all_tools()}
+
+    async def write_enabled(ctx: TenantContext) -> bool:
+        """The tenant setting of MCP_SPEC section 4: write tools are off by default."""
+        if deps.tenants is None:
+            return False
+        settings = await deps.tenants.get_settings(ctx.tenant_id)
+        mcp = settings.get("mcp")
+        return isinstance(mcp, dict) and mcp.get("write_tools_enabled") is True
 
     def caller(rctx: ServerRequestContext[Any]) -> TenantContext:
         ctx = fixed_ctx or context_of(rctx.request)
@@ -127,7 +142,12 @@ def build_server(runtime: Runtime, fixed_ctx: TenantContext | None = None) -> Se
             ctx = caller(rctx)
         except Unauthenticated as exc:
             raise rpc_error(exc) from exc
-        return ListToolsResult(tools=[s.to_mcp() for s in tools.values() if ctx.has(s.role)])
+        enabled = await write_enabled(ctx)
+        return ListToolsResult(
+            tools=[
+                s.to_mcp() for s in tools.values() if ctx.has(s.role) and (s.read_only or enabled)
+            ]
+        )
 
     async def on_call_tool(
         rctx: ServerRequestContext[Any], params: CallToolRequestParams
@@ -141,6 +161,11 @@ def build_server(runtime: Runtime, fixed_ctx: TenantContext | None = None) -> Se
         try:
             ctx = caller(rctx)
             ctx.require(spec.role)
+            if not spec.read_only and not await write_enabled(ctx):
+                raise WriteToolsDisabled(
+                    "The tenant did not enable the MCP write tools. Set "
+                    "'mcp.write_tools_enabled' to true."
+                )
             message = _validation_message(spec.input_schema, arguments)
             if message is not None:
                 raise InvalidArgument(message)
@@ -173,7 +198,7 @@ def build_server(runtime: Runtime, fixed_ctx: TenantContext | None = None) -> Se
             ctx,
             action="mcp.tool_call",
             name=spec.name,
-            outcome="success",
+            outcome="preview" if payload.get("executed") is False else "success",
             arguments=arguments,
             client=client,
             resource_id=arguments.get("knowledge_base"),

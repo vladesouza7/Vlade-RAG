@@ -376,10 +376,12 @@ Saída:
   "properties": {
     "job_id": { "type": "string", "format": "uuid" },
     "document_id": { "type": "string", "format": "uuid" },
-    "status": { "type": "string", "enum": ["pending"] }
+    "status": { "type": "string", "enum": ["pending", "succeeded"] }
   }
 }
 ```
+
+`pending` é o caso normal. `succeeded` aparece quando o conteúdo é igual à versão atual: o job termina sem ingerir de novo.
 
 ### 5.8. `vlade_delete_document`
 
@@ -402,22 +404,32 @@ Entrada:
 }
 ```
 
-Saída sem confirmação:
+Saída:
 
 ```json
 {
-  "executed": false,
-  "action": "delete_document",
-  "will_delete": { "versions": 3, "chunks": 412, "embeddings": 412, "stored_objects": 3 },
-  "document_title": "Manual de Vendas 2026"
+  "type": "object",
+  "required": ["executed", "action"],
+  "properties": {
+    "executed": { "type": "boolean" },
+    "action": { "type": "string", "const": "delete_document" },
+    "document_title": { "type": "string" },
+    "will_delete": {
+      "type": "object",
+      "required": ["versions", "chunks", "embeddings", "stored_objects"],
+      "properties": {
+        "versions": { "type": "integer" },
+        "chunks": { "type": "integer" },
+        "embeddings": { "type": "integer" },
+        "stored_objects": { "type": "integer" }
+      }
+    },
+    "audit_event_id": { "type": "string", "format": "uuid" }
+  }
 }
 ```
 
-Saída com confirmação:
-
-```json
-{ "executed": true, "action": "delete_document", "audit_event_id": "..." }
-```
+Sem confirmação, a saída traz `document_title` e `will_delete`, com `executed: false`. Com confirmação, a saída traz `audit_event_id` e `executed: true`.
 
 ### 5.9. `vlade_reindex_knowledge_base`
 
@@ -441,7 +453,26 @@ Entrada:
 }
 ```
 
-Saída sem confirmação: `executed: false`, `documents`, `chunks`, `estimated_embedding_calls`. Saída com confirmação: `executed: true`, `job_id`.
+Saída:
+
+```json
+{
+  "type": "object",
+  "required": ["executed", "action"],
+  "properties": {
+    "executed": { "type": "boolean" },
+    "action": { "type": "string", "const": "reindex_knowledge_base" },
+    "knowledge_base": { "type": "string" },
+    "mode": { "type": "string", "enum": ["embeddings", "full"] },
+    "documents": { "type": "integer" },
+    "chunks": { "type": "integer" },
+    "estimated_embedding_calls": { "type": "integer" },
+    "job_id": { "type": "string", "format": "uuid" }
+  }
+}
+```
+
+Sem confirmação, a saída traz `documents`, `chunks` e `estimated_embedding_calls`, com `executed: false`. Com confirmação, a saída traz `job_id` e `executed: true`.
 
 Se já existe uma reindexação em andamento na base, a ferramenta devolve o erro `conflict`.
 
@@ -473,6 +504,8 @@ Entrada:
 ```
 
 Saída: `job_id`.
+
+A ferramenta depende do caso de uso `RunEvaluation` e do flow `evaluate_nightly` (fase 4, tarefa 4.1). O servidor MCP publica a ferramenta quando esse caso de uso existir.
 
 ## 6. Resources
 

@@ -64,6 +64,15 @@ class Limits:
     store_query_text: bool = False
 
 
+@dataclass(frozen=True, slots=True)
+class SourcePolicy:
+    """Rules for a document downloaded from an origin URI (ARCHITECTURE section 15)."""
+
+    allowed_domains: tuple[str, ...] = ()
+    max_bytes: int = 50 * 1024 * 1024
+    timeout: float = 30.0
+
+
 @dataclass
 class Dependencies:
     """Everything the use cases need. Built by ``vlade_rag.core.registry``."""
@@ -92,6 +101,7 @@ class Dependencies:
     tenants: TenantDirectory | None = None  # needed for quotas; without it no quota applies
     tracer: Tracer = field(default_factory=NoopTracer)
     limits: Limits = field(default_factory=Limits)
+    sources: SourcePolicy = field(default_factory=SourcePolicy)
     default_kb_config: Mapping[str, Any] = field(default_factory=dict)
 
     def parser_for(self, mime_type: str) -> DocumentParser | None:

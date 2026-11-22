@@ -18,7 +18,7 @@ from mcp_types import Implementation
 from tests.e2e.conftest import McpWorld, error_of
 from vlade_rag.core.application import ListAuditEvents
 from vlade_rag.mcp.policies import GROUP_LIMITS, Group
-from vlade_rag.mcp.tools import read_tools
+from vlade_rag.mcp.tools import all_tools, read_tools, write_tools
 
 pytestmark = pytest.mark.anyio
 
@@ -29,6 +29,11 @@ READ_TOOLS = [
     "vlade_query",
     "vlade_get_document",
     "vlade_get_ingestion_status",
+]
+WRITE_TOOLS = [
+    "vlade_ingest_document",
+    "vlade_delete_document",
+    "vlade_reindex_knowledge_base",
 ]
 
 
@@ -57,23 +62,25 @@ def structured(result: Any) -> dict[str, Any]:
 
 def test_tool_definitions_match_the_spec() -> None:
     spec = spec_tools()
-    tools = {t.name: t for t in read_tools()}
-    assert list(tools) == READ_TOOLS
+    tools = {t.name: t for t in all_tools()}
+    assert list(tools) == READ_TOOLS + WRITE_TOOLS
     for name, tool in tools.items():
         assert tool.description == spec[name]["description"], name
         assert tool.input_schema == spec[name]["input"], name
         assert tool.output_schema == spec[name]["output"], name
+    assert [t.name for t in read_tools()] == READ_TOOLS
+    assert [t.name for t in write_tools()] == WRITE_TOOLS
 
 
 async def test_tools_list_has_annotations_and_schemas(mcp_world: McpWorld) -> None:
     async with mcp_world.client(mcp_world.reader) as client:
         listed = (await client.list_tools()).tools
     assert [t.name for t in listed] == READ_TOOLS
-    spec = {t.name: t for t in read_tools()}
+    spec = {t.name: t for t in all_tools()}
     for tool in listed:
         assert tool.annotations is not None
-        assert tool.annotations.read_only_hint is True
-        assert tool.annotations.destructive_hint is False
+        assert tool.annotations.read_only_hint is spec[tool.name].read_only
+        assert tool.annotations.destructive_hint is spec[tool.name].destructive
         assert tool.annotations.open_world_hint is False
         assert tool.annotations.idempotent_hint is spec[tool.name].idempotent
         assert tool.input_schema == spec[tool.name].input_schema

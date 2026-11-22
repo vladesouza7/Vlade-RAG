@@ -768,6 +768,9 @@ VLADE_OBJECT_STORAGE__S3__SECRET_ACCESS_KEY=***
 VLADE_OBJECT_STORAGE__S3__PATH_STYLE=true
 VLADE_OBJECT_STORAGE__S3__CREATE_BUCKET=false    # true cria o bucket ao iniciar (serviço local)
 VLADE_SECURITY__API_KEY_PEPPER=***
+VLADE_SOURCES__ALLOWED_DOMAINS=["docs.exemplo.com"]     # lista vazia recusa source_uri https:// (ADR-0028)
+VLADE_SOURCES__MAX_BYTES=52428800                      # limite do download; o menor entre este e max_upload_bytes
+VLADE_SOURCES__TIMEOUT=30.0
 VLADE_CACHE__URL=redis://valkey:6379/0           # Valkey ou Redis. Sem URL, o cache e o limite ficam no processo
 VLADE_LIMITS__RATE_PER_KEY_PER_MINUTE=600        # 0 desliga o limite
 VLADE_LIMITS__RATE_PER_TENANT_PER_MINUTE=3000    # 0 desliga o limite
@@ -1081,11 +1084,12 @@ O [`MCP_SPEC.md`](MCP_SPEC.md) define o servidor MCP. A implementação fica em 
 
 | Módulo | Função |
 |---|---|
-| `mcp/tools` | As ferramentas de leitura: schemas do contrato, papel mínimo, grupo de limite e o handler de cada uma |
+| `mcp/tools` | As ferramentas de leitura e de escrita: schemas do contrato, papel mínimo, grupo de limite e o handler de cada uma |
 | `mcp/resources` e `mcp/prompts` | Os resources `vlade://` e os dois prompts |
 | `mcp/auth` | Chave de API: `ApiKeyMiddleware` no transporte HTTP (401 sem chave válida) |
 | `mcp/policies` | Limites por grupo, mapeamento de erros e auditoria |
 | `mcp/server` | O `Server` do SDK com os handlers e os transportes `stdio` e Streamable HTTP |
+| `ingestion/sources` | O download de `source_uri` (ADR-0028) |
 
 O servidor HTTP não guarda sessão (*stateless*): cada requisição traz a própria chave e o tenant vem dela. O servidor usa o `Server` de baixo nível do SDK, e não o `MCPServer`. Assim ele controla, em cada chamada, a autenticação, a lista de ferramentas por papel, os limites e a auditoria. O serviço `mcp` do Compose (perfis `staging` e `prod`) roda `vlade-rag mcp serve --transport http`.
 
@@ -1095,6 +1099,7 @@ O servidor HTTP não guarda sessão (*stateless*): cada requisição traz a pró
 vlade-rag db upgrade
 vlade-rag tenant create <slug>
 vlade-rag tenant quota <slug> [--documents N] [--bytes N] [--requests-per-day N] [--clear]
+vlade-rag tenant mcp-write <slug> [--enable|--disable]
 vlade-rag key create --tenant <slug> --roles reader,writer
 vlade-rag key list --tenant <slug>
 vlade-rag key revoke <prefixo> --tenant <slug>
@@ -1126,7 +1131,8 @@ A CLI fala com o banco diretamente pelos casos de uso. A CLI lê a chave de `VLA
 | Limite de requisições | Token bucket no Valkey por chave e por tenant, em requisições por minuto (padrão de 600 por chave e 3000 por tenant). A capacidade do balde é o limite por minuto. Uma chamada acima do limite recebe `rate_limited` (HTTP 429) com o cabeçalho `Retry-After`. Sem `VLADE_CACHE__URL`, o limite é por processo. Se o Valkey falha, a requisição passa e o log recebe um aviso. A API aplica o limite depois de autenticar a chave, e o servidor MCP fará o mesmo |
 | Cotas | `tenants.settings.quotas`: `documents`, `bytes` e `requests_per_day`. Sem valor, a cota é ilimitada. Acima de `requests_per_day`, a chamada recebe `quota_exceeded` com HTTP 429. O dia segue o horário UTC. `SubmitIngestion` recusa o arquivo com `quota_exceeded` (HTTP 413) e grava o evento `document.ingest` com resultado `denied`. Um arquivo que atualiza um documento existente não conta como documento novo. Um arquivo igual à versão atual não conta bytes |
 | Upload | Tamanho máximo padrão de 50 MB. Lista de tipos MIME permitidos. Verificação do tipo pelo conteúdo, não só pela extensão |
-| URI de origem | Download por URL desativado por padrão. Quando ativo, aceita só domínios de uma lista permitida e bloqueia endereços privados e de link-local |
+| URI de origem | Download por URL desativado por padrão: uma lista vazia em `VLADE_SOURCES__ALLOWED_DOMAINS` recusa `https://`. Quando ativo, aceita só os domínios da lista e os subdomínios, exige a porta 443, não segue redirecionamentos e bloqueia endereços privados, de link-local e multicast antes da requisição. `s3://` exige o bucket do servidor e uma chave do tenant (ADR-0028). A limitação L23 registra a janela de troca de DNS |
+| Ferramentas MCP de escrita | Fora de `tools/list` por padrão. O operador liga com `vlade-rag tenant mcp-write <slug> --enable`, que grava `tenants.settings.mcp.write_tools_enabled`. Chamadas desligadas devolvem `write_tools_disabled`. Ferramentas destrutivas exigem `confirm: true` depois da prévia |
 | Segredos | Só por variável de ambiente ou gerenciador de segredos. O processador de logs remove campos com nomes de segredo |
 | Dados pessoais | Mascaramento opcional de e-mail, CPF, CNPJ e telefone nos logs e nos traces |
 | Injeção de prompt | Delimitadores `<source>` e regra no prompt (seção 11.4) |
