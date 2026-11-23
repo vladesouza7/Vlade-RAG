@@ -33,29 +33,20 @@ Este arquivo registra as mudanças relevantes de cada versão. O formato segue o
 - Limite de requisições por chave e por tenant (token bucket) e cota de requisições por dia. Uma chamada acima do limite recebe `rate_limited` (HTTP 429) com `Retry-After`. Configuração: `VLADE_LIMITS__RATE_PER_KEY_PER_MINUTE`, `VLADE_LIMITS__RATE_PER_TENANT_PER_MINUTE` e `vlade-rag tenant quota --requests-per-day`.
 - Adapters Valkey (extra `cache`, `redis-py`): cache e limite de requisições compartilhados entre processos, ligados por `VLADE_CACHE__URL`. O Compose já usa o serviço `valkey`. `GET /health/ready` confere o cache.
 - Cache de resultados de busca por base e por `kb_epoch`, com validade de 10 minutos.
+
+### Corrigido
+
+- O `build_runtime` recebia o tracer e não o passava aos casos de uso. Só o span HTTP da API chegava ao coletor de traces.
+- As políticas de RLS tratam `app.tenant_id` vazio como ausência de tenant.
+- Os filtros de metadados no PostgreSQL não codificam mais o JSON duas vezes.
+
+## [0.4.0] - 2026-11-23
+
+### Adicionado
+
 - Flows Kestra da tarefa 4.1 em `deploy/kestra/flows/`: `ingest_batch`, `reindex_knowledge_base`, `evaluate_nightly` e `backup`. Novo caso de uso `RunEvaluation`, endpoint `POST /v1/evaluations`, job `evaluation`, ferramenta MCP `vlade_evaluate` e registro de datasets por nome em `VLADE_EVALUATION__DATASETS_PATH`. As métricas de resposta com juiz pago continuam só na CLI
 - Relatório de consumo de memória do perfil `dev` em `evals/reports/fase4-memoria/`: pico de 166 MiB com 550 buscas concorrentes, abaixo do limite de 3 GB (RNF-11).
 - Ferramentas MCP de escrita com confirmação: `vlade_ingest_document`, `vlade_delete_document` e `vlade_reindex_knowledge_base` (fase 4, tarefa 4.3). Elas ficam fora de `tools/list` até `vlade-rag tenant mcp-write <slug> --enable`. A chamada sem `confirm` devolve só a prévia, com resultado de auditoria `preview`. O `source_uri` aceita `s3://` no bucket do tenant e `https://` com `VLADE_SOURCES__ALLOWED_DOMAINS`, sem redirecionamento e com bloqueio de endereços privados. A ferramenta `vlade_evaluate` entrou com a tarefa 4.1
-- Servidor MCP (extra `mcp`, SDK oficial): ferramentas `vlade_list_knowledge_bases`, `vlade_search`, `vlade_query`, `vlade_get_document` e `vlade_get_ingestion_status`, resources `vlade://kb/{slug}` e `vlade://kb/{slug}/documents/{id}` e os prompts `vlade_answer_with_citations` e `vlade_summarize_document`. Transportes `stdio` e Streamable HTTP (`vlade-rag mcp serve`). A chave de API define o tenant e o papel. Cada chamada tem limite por grupo e grava um evento de auditoria com `interface = mcp`. O serviço `mcp` do Compose roda nos perfis `staging` e `prod`.
-- Armazenamento de objetos pela API S3 (extra `s3`, `boto3`): `VLADE_OBJECT_STORAGE__BACKEND=s3` com AWS ou qualquer serviço compatível. O `GET /health/ready` confere o bucket. Os três adapters (memória, arquivos e S3) passam no mesmo contrato do port, e todos recusam chaves inseguras. O MinIO deixou de ser o serviço de exemplo (ADR-0017).
-- Serviço `rustfs` no Compose (RustFS 1.0.6, Apache-2.0, ADR-0021) nos perfis `s3`, `staging` e `prod`. No notebook: `docker compose --profile dev --profile s3 up`. A CI roda o contrato do `ObjectStorage` contra um container do RustFS.
-- Provedor Gemini pelo endpoint compatível com a API da OpenAI (`GEMINI_API_KEY`). A opção `embedding_dimensions` de cada provedor compatível envia `dimensions` nos embeddings.
-- Métricas de recuperação sem LLM (Recall@K, Precision@K, MRR e NDCG@K) e o comando `vlade-rag eval run`, com o relatório da configuração completa. A pasta `evals/reports/` guarda a linha de base da fase 1 no dataset `legal-ptbr`.
-- Reranker por API (`ApiReranker`, ADR-0018): chama o endpoint `/rerank` do OpenRouter ou de um provedor compatível, sem dependência nova. Configuração: `retrieval.rerank.provider: openrouter` e `retrieval.rerank.model`. O comando `vlade-rag eval run` aceita `--rerank-model` e `--rerank-provider` para medir um modelo sem mudar a base. Com o reranker, o Recall@1 no `legal-ptbr` sobe de 0,70 para 0,95 e a pergunta 20 passa para a posição 1.
-- Transformadores de consulta (`query_transform`: `rewrite`, `multi_query` e `hyde`, ADR-0019): usam o LLM da base e fundem as consultas derivadas com RRF. A consulta original sempre roda e o reranker a usa. Se o LLM falha, a busca segue com a consulta original. Os valores padrão não mudam.
-- Retriever fuzzy com `pg_trgm` (`retrievers: [dense, lexical, fuzzy]`). A migração 0002 cria a função que monta o índice trigram na primeira busca fuzzy. Quem atualiza uma instalação roda `vlade-rag db upgrade`.
-- Retriever `bm25` com `pg_search` (ParadeDB, AGPL-3.0), na imagem opcional `vlade-postgres-bm25` (`deploy/postgres/Dockerfile.bm25`, ADR-0022). A migração 0003 cria as funções da busca. A primeira busca `bm25` cria a extensão e o índice. No Compose, a imagem muda com `POSTGRES_DOCKERFILE` e `POSTGRES_IMAGE`. Sem `pg_search`, o retriever `bm25` devolve uma mensagem que cita a imagem. A CI roda os testes do retriever contra a imagem.
-- Motor de consulta LangGraph (extra `langgraph`, ADR-0023). A seção `orchestration` da configuração da base escolhe o motor (`pipeline` ou `langgraph`). Ela também liga duas arestas condicionais. A primeira reescreve a consulta uma vez quando o melhor resultado é fraco (`rewrite_below_score`). A segunda busca de novo com mais chunks quando a resposta não tem fundamento (`max_attempts`, `retry_top_k_factor`). Com as arestas desligadas, os dois motores dão a mesma resposta.
-- Gate de qualidade (RF-73, ADR-0024): `vlade-rag eval gate` mede a recuperação em bases descartáveis, sem provedor, e falha se uma métrica cai mais que o limite de `evals/gate/gate.json`. A opção `--update-baseline` grava a linha de base. A CI roda o gate em todo pull request.
-- Avaliação de respostas com RAGAS (extra `eval`, RF-71, ADR-0025): `vlade-rag eval answers` roda cada pergunta pelo fluxo da base. Um LLM juiz mede faithfulness, answer relevancy, context precision e context recall. O padrão usa o OpenRouter, com o raciocínio do juiz desligado.
-- Arize Phoenix no lugar do Langfuse (ADR-0026). O serviço `phoenix` entra no Compose, no perfil `phoenix`. Os spans de IA ganham os atributos OpenInference e um span raiz por consulta. `vlade-rag eval publish` publica uma avaliação como experimento. `VLADE_OTEL__METRICS` e `VLADE_OTEL__PROJECT` são novos, e a CLI também envia traces.
-- `vlade-rag eval run` aceita `--retrievers` e `--query-transform`. O dataset `legal-ptbr` ganhou duas variantes das perguntas, com erros de digitação e com paráfrases, e o script `scripts/datasets/derive_legal_ptbr_variants.py`.
-- Dataset `legal-ptbr-v2`: 150 documentos de 4 leis (LGPD, CDC, Marco Civil da Internet e Lei de Acesso à Informação) e 109 perguntas formais e coloquiais. Algumas perguntas têm dois ou mais documentos relevantes. Há uma variante com erros de digitação. Cada pergunta nova traz evidências conferidas no texto do artigo. O script `scripts/datasets/summarize_by_group.py` resume um relatório por grupo e por estilo.
-- Reranker local (`SentenceTransformersReranker`, extra `local-models`): um cross-encoder do `sentence-transformers` que roda no processo do servidor, sem enviar texto para fora. Configuração: `retrieval.rerank.provider: sentence-transformers` e `VLADE_PROVIDERS__LOCAL_MODELS__DEVICE`, `__BATCH_SIZE` e `__MAX_LENGTH`. O modelo padrão `BAAI/bge-reranker-v2-m3` ocupa cerca de 2,3 GB de memória. O extra puxa o PyTorch e fica fora do extra `server`.
-- Benchmark de latência e de vazão (`scripts/benchmarks/bench.py`, subcomandos `search`, `ttft`, `ingest` e `info`). O script mede a busca, o tempo até o primeiro token e a vazão de ingestão, com o tempo de cada etapa. Os relatórios estão em `evals/reports/fase3-benchmark/`. O ADR-0020 (proposto) trata das metas que falharam.
-- Agent Skill `skills/vlade-rag/` no padrão agentskills.io, com as regras de uso das ferramentas `vlade_*`.
-- Teste do servidor MCP com o MCP Inspector em modo CLI (`scripts/mcp_inspector.sh`), no job `MCP server (Inspector)` da CI.
-- Leitura da auditoria: `GET /v1/audit-events` e `vlade-rag audit list`. Eventos novos: cota negada, cota alterada, chave emitida e chave revogada.
 - Reindexação sem parada (ADR-0027): `POST /v1/knowledge-bases/{kb}/reindex` e `vlade-rag reindex`, nos modos `embeddings` (modelo novo, espaço novo e troca atômica) e `full` (chunking novo, uma versão nova por documento). Sem `confirm`, a resposta é uma prévia. As buscas continuam durante a reindexação e nunca misturam espaços de embeddings.
 - Módulo `ops` (tarefa 4.4): `vlade-rag ops cleanup` apaga espaços `retired` e `building` órfãos e versões `superseded` depois do período de espera. `vlade-rag ops recover-jobs` devolve jobs vencidos para a fila. `vlade-rag ops health` mostra as verificações de prontidão.
 - Guia de implantação (tarefa 4.7): `docs/operacao/implantacao.md` descreve pré-requisitos, variáveis de ambiente, perfis, instalação, verificação, configuração inicial, observabilidade, operação diária, atualização, backup e segurança. A CI passou a verificar a pasta com o linter ASD-STE100.
@@ -65,6 +56,4 @@ Este arquivo registra as mudanças relevantes de cada versão. O formato segue o
 
 ### Corrigido
 
-- O `build_runtime` recebia o tracer e não o passava aos casos de uso. Só o span HTTP da API chegava ao coletor de traces.
-- As políticas de RLS tratam `app.tenant_id` vazio como ausência de tenant.
-- Os filtros de metadados no PostgreSQL não codificam mais o JSON duas vezes.
+- A migração 0005 cria `vlade_pending_job_count`, uma função `SECURITY DEFINER` que conta os jobs pendentes. Antes, a RLS escondia as linhas e o gauge da fila ficava em zero.
