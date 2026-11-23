@@ -1,6 +1,6 @@
 # ADR-0004: PostgreSQL com pgvector como armazenamento padrão
 
-- Status: Aceito. O item 4 foi substituído pelo ADR-0016.
+- Status: Aceito. O ADR-0016 substitui o item 4. O projeto implementou o item 5 em 2026-11-23.
 - Data: 2026-11-19
 
 ## Contexto
@@ -13,7 +13,7 @@ O Vlade-RAG precisa guardar entidades, vetores e índices de texto com isolament
 2. pgvector guarda os vetores, com índice HNSW.
 3. A tabela `chunk_embeddings` tem a coluna `embedding vector` sem dimensão fixa. Cada espaço de embeddings recebe um índice HNSW parcial com expressão de dimensão fixa. Detalhes na seção 7.3 do `ARCHITECTURE.md`.
 4. O acesso ao banco usa SQLAlchemy 2 (modo assíncrono), `asyncpg` e `pgvector-python`. O Alembic gerencia as migrações.
-5. O Qdrant entra como adapter alternativo de `VectorIndex` na fase 5.
+5. O Qdrant entra como adapter alternativo de `VectorIndex`. O projeto implementou o adapter na fase 5, no extra `qdrant`. O pgvector continua como padrão e como referência da comparação de qualidade. `tests/integration/test_qdrant_equivalence.py` exige uma diferença de até 2 pontos percentuais de Recall@10 entre os dois.
 
 ## Alternativas avaliadas
 

@@ -188,6 +188,29 @@ class EvaluationSettings(BaseModel):
     max_items: int = Field(default=1000, ge=1)
 
 
+class QdrantSettings(BaseModel):
+    """Connection to Qdrant, an alternative VectorIndex (ADR-0004)."""
+
+    url: str = "http://localhost:6333"
+    api_key: SecretStr | None = None
+    timeout: int = Field(default=30, ge=1)
+    collection_prefix: str = "vlade_"
+    # With published or metadata filters, Qdrant returns more candidates before filtering.
+    oversample: int = Field(default=5, ge=1, le=50)
+
+    @field_validator("api_key", mode="before")
+    @classmethod
+    def _empty_is_none(cls, value: object) -> object:
+        return None if value in ("", None) else value
+
+
+class VectorIndexSettings(BaseModel):
+    """pgvector stays the default. Qdrant is optional and needs the "qdrant" extra."""
+
+    backend: Literal["postgres", "qdrant"] = "postgres"
+    qdrant: QdrantSettings = Field(default_factory=QdrantSettings)
+
+
 class OtelSettings(BaseModel):
     enabled: bool = False
     endpoint: str | None = None
@@ -212,6 +235,7 @@ class Settings(BaseSettings):
     api: ApiSettings = Field(default_factory=ApiSettings)
     database: DatabaseSettings = Field(default_factory=DatabaseSettings)
     storage: StorageSettings = Field(default_factory=StorageSettings)
+    vector_index: VectorIndexSettings = Field(default_factory=VectorIndexSettings)
     object_storage: ObjectStorageSettings = Field(default_factory=ObjectStorageSettings)
     providers: ProvidersSettings = Field(default_factory=ProvidersSettings)
     cache: CacheSettings = Field(default_factory=CacheSettings)
