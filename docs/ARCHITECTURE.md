@@ -1179,6 +1179,20 @@ Regra: `tenant_id` não é rótulo de métrica. Um rótulo por tenant cria cardi
 
 Logs JSON em `stdout`, com `structlog`. Campos obrigatórios: `timestamp`, `level`, `event`, `trace_id`, `span_id`, `tenant_id` quando existe. O Grafana Alloy coleta os logs e envia ao Loki.
 
+### 16.4. Pilha LGTM
+
+O perfil `prod` sobe Alloy, Prometheus, Loki, Tempo e Grafana. O perfil `staging` sobe só o Alloy entre os serviços de observabilidade, que envia aos backends externos definidos em `PROMETHEUS_REMOTE_WRITE_URL`, `LOKI_PUSH_URL` e `TEMPO_OTLP_ENDPOINT`.
+
+O Alloy recebe OTLP em `4317` (gRPC) e `4318` (HTTP). As métricas viram escrita remota no Prometheus. Os traces vão ao Tempo. Os logs do Docker vão ao Loki. O Grafana lê as três fontes. O Prometheus coleta o Alloy, o `node-exporter`, o `cadvisor`, o `postgres-exporter` e o `redis-exporter`.
+
+| Sinal | Retenção padrão | Onde mudar |
+|---|---|---|
+| Métricas | 15 dias | `PROMETHEUS_RETENTION` |
+| Logs | 7 dias | `loki/local-config.yaml` |
+| Traces | 48 horas | `tempo/tempo.yml` |
+
+Todas as portas escutam em `127.0.0.1`. A configuração e os dashboards ficam em `deploy/observability/`. O README da pasta lista as variáveis, a segurança e o consumo de memória.
+
 ## 17. Implantação
 
 `deploy/compose/docker-compose.yml` usa `profiles`:

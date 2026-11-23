@@ -1,0 +1,16 @@
+# Dashboard provisioning of the Vlade-RAG observability stack (ADR-0015).
+# Every JSON file in /var/lib/grafana/dashboards appears in the Vlade-RAG folder.
+
+apiVersion: 1
+
+providers:
+  - name: Vlade-RAG
+    orgId: 1
+    folder: Vlade-RAG
+    type: file
+    disableDeletion: false
+    updateIntervalSeconds: 30
+    allowUiUpdates: false
+    options:
+      path: /var/lib/grafana/dashboards
+      foldersFromFilesStructure: false
