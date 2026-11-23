@@ -124,6 +124,15 @@ class PostgresJobQueue:
             raise Conflict("A reindex of this knowledge base is already queued.") from exc
         return _job(row)
 
+    async def pending_count(self, kind: JobKind) -> int:
+        async with self.db.system() as conn:
+            row = await conn.fetchrow(
+                "SELECT count(*) AS total FROM ingestion_jobs "
+                "WHERE status = 'pending' AND kind = $1",
+                kind.value,
+            )
+        return int(row["total"]) if row is not None else 0
+
     async def find_active(
         self, ctx: TenantContext, knowledge_base_id: UUID, kind: JobKind
     ) -> IngestionJob | None:

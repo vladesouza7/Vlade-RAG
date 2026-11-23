@@ -1,0 +1,84 @@
+# Prometheus alerts of the Vlade-RAG stack. The metric names follow ARCHITECTURE section 16.2.
+# tests/promtool/alerts.test.yml provokes each condition and checks that the alert fires.
+
+groups:
+  - name: vlade-rag
+    interval: 30s
+    rules:
+      - alert: VladeIngestionFailures
+        expr: increase(vlade_ingestion_jobs_total{status="failed"}[10m]) >= 3
+        for: 0m
+        labels:
+          severity: warning
+        annotations:
+          summary: Consecutive ingestion failures
+          description: Three or more ingestion jobs failed in ten minutes.
+
+      - alert: VladeRetrievalLatencyHigh
+        expr: >-
+          histogram_quantile(0.95, sum by (le) (rate(vlade_stage_duration_seconds_bucket{stage="retrieval"}[5m])))
+          > 1.5
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: Retrieval latency is high
+          description: The p95 of the retrieval stage is above 1.5 seconds for five minutes.
+
+      - alert: VladeGenerationErrors
+        expr: >-
+          sum(rate(vlade_requests_total{interface="llm",outcome="failed"}[5m]))
+          / sum(rate(vlade_requests_total{interface="llm"}[5m])) > 0.1
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: Generation errors
+          description: The LLM generation step fails more than ten percent of the requests.
+
+      - alert: VladeProviderUnavailable
+        expr: >-
+          sum(rate(vlade_requests_total{interface="provider",outcome="failed"}[5m]))
+          / sum(rate(vlade_requests_total{interface="provider"}[5m])) > 0.1
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: Provider connection failures
+          description: A model provider rejects more than ten percent of the calls.
+
+      - alert: VladeQueueGrowing
+        expr: vlade_ingestion_queue_depth > 50
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: The ingestion queue is growing
+          description: More than fifty jobs wait for the worker for ten minutes.
+
+      - alert: VladePostgresDown
+        expr: pg_up == 0
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: PostgreSQL is down
+          description: The PostgreSQL exporter cannot connect to the database.
+
+      - alert: VladeMemoryHigh
+        expr: node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes < 0.1
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: Memory is low
+          description: Less than ten percent of the host memory is available.
+
+      - alert: VladeEvalQualityDrop
+        expr: vlade_eval_metric{metric="ndcg@10"} < 0.7
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: Evaluation quality dropped
+          description: The NDCG@10 of the last evaluation is below 0.7.

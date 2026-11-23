@@ -435,6 +435,10 @@ class JobQueue(Protocol):
         input: Metadata,
     ) -> IngestionJob: ...
     async def get(self, ctx: TenantContext, job_id: UUID) -> IngestionJob: ...
+    async def pending_count(self, kind: JobKind) -> int:
+        """Number of pending jobs of this kind, across tenants. Feeds the queue-depth gauge."""
+        ...
+
     async def find_active(
         self, ctx: TenantContext, knowledge_base_id: UUID, kind: JobKind
     ) -> IngestionJob | None:
@@ -585,6 +589,27 @@ class Tracer(Protocol):
     def current_trace_id(self) -> str | None: ...
 
 
+@runtime_checkable
+class Metrics(Protocol):
+    """Application metrics. Never use ``tenant_id`` as a label (ADR-0015)."""
+
+    def counter(
+        self, name: str, value: float = 1, attributes: Mapping[str, AttrValue] | None = None
+    ) -> None: ...
+
+    def histogram(
+        self, name: str, value: float, attributes: Mapping[str, AttrValue] | None = None
+    ) -> None: ...
+
+    def gauge(
+        self, name: str, value: float, attributes: Mapping[str, AttrValue] | None = None
+    ) -> None: ...
+
+    def llm_usage(
+        self, provider: str, model: str, input_tokens: int, output_tokens: int
+    ) -> None: ...
+
+
 __all__ = [
     "ApiKeyInfo",
     "AttrValue",
@@ -607,6 +632,7 @@ __all__ = [
     "KnowledgeRepository",
     "LLMProvider",
     "LexicalIndex",
+    "Metrics",
     "ObjectStorage",
     "PromptRegistry",
     "PromptTemplate",

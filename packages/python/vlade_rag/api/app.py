@@ -47,13 +47,14 @@ def create_app(settings: Settings | None = None, runtime: Runtime | None = None)
     """Build the API. Without ``runtime``, the lifespan builds one from ``settings``."""
     settings = settings or get_settings()
 
-    from vlade_rag.observability.opentelemetry import setup_telemetry
+    from vlade_rag.observability.opentelemetry import setup_metrics, setup_telemetry
 
     tracer = setup_telemetry(settings)
+    metrics = setup_metrics(settings)
 
     @asynccontextmanager
     async def lifespan(app: FastAPI) -> AsyncIterator[None]:
-        rt = runtime or await build_runtime(settings, tracer=tracer)
+        rt = runtime or await build_runtime(settings, tracer=tracer, metrics=metrics)
         app.state.runtime = rt
         worker_task: asyncio.Task[None] | None = None
         if settings.api.embedded_worker:
@@ -118,7 +119,9 @@ def create_app(settings: Settings | None = None, runtime: Runtime | None = None)
         ) as span:
             response = await call_next(request)
             span.set_attribute("http.response.status_code", response.status_code)
-        _record_duration(request.method, response.status_code, time.perf_counter() - started)
+        _record_duration(
+            metrics, request.method, response.status_code, time.perf_counter() - started
+        )
         return response
 
     app.include_router(health.router)
@@ -126,17 +129,14 @@ def create_app(settings: Settings | None = None, runtime: Runtime | None = None)
     return app
 
 
-def _record_duration(method: str, status: int, seconds: float) -> None:
-    try:
-        from opentelemetry import metrics
-    except ImportError:
-        return
-    global _DURATION
-    if _DURATION is None:
-        _DURATION = metrics.get_meter("vlade_rag").create_histogram(
-            "vlade_request_duration_seconds", unit="s", description="HTTP request duration"
-        )
-    _DURATION.record(seconds, {"interface": "api", "method": method, "status": status})
-
-
-_DURATION: Any = None
+def _record_duration(metrics: Any, method: str, status: int, seconds: float) -> None:
+    """Record the HTTP counter and histogram with the catalogue names (ARCHITECTURE 16.2)."""
+    outcome = "success" if status < 400 else "client_error" if status < 500 else "server_error"
+    metrics.counter(
+        "vlade_requests_total",
+        1,
+        {"interface": "api", "operation": method, "outcome": outcome},
+    )
+    metrics.histogram(
+        "vlade_request_duration_seconds", seconds, {"interface": "api", "operation": method}
+    )

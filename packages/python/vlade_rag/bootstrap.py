@@ -19,6 +19,7 @@ from vlade_rag.core.ports import (
     DocumentParser,
     EmbeddingProvider,
     LLMProvider,
+    Metrics,
     PromptRegistry,
     QueryTransformer,
     Reranker,
@@ -247,6 +248,7 @@ async def build_runtime(
     settings: Settings | None = None,
     *,
     tracer: Tracer | None = None,
+    metrics: Metrics | None = None,
     load_plugins: bool = True,
 ) -> Runtime:
     settings = settings or get_settings()
@@ -402,6 +404,8 @@ async def build_runtime(
     )
     if tracer is not None:
         deps.tracer = tracer  # without it, the use cases record no span
+    if metrics is not None:
+        deps.metrics = metrics  # without it, the use cases record no metric
     deps.evaluation_runner = EvaluationWorker(deps)
     return Runtime(
         settings=settings,

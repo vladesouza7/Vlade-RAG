@@ -1193,6 +1193,12 @@ O Alloy recebe OTLP em `4317` (gRPC) e `4318` (HTTP). As métricas viram escrita
 
 Todas as portas escutam em `127.0.0.1`. A configuração e os dashboards ficam em `deploy/observability/`. O README da pasta lista as variáveis, a segurança e o consumo de memória.
 
+### 16.5. Dashboards e alertas
+
+O Grafana provisiona cinco dashboards na pasta `Vlade-RAG`: `rag-performance`, `llm-observability`, `retrieval-analytics`, `infrastructure` e `workflow-monitoring`. Os painéis leem as métricas da tabela 16.2, os logs do Loki e os traces do Tempo. O adaptador OpenTelemetry estima o custo de LLM com uma tabela de preços. Um modelo fora da tabela custa zero.
+
+O Prometheus carrega oito alertas de `deploy/observability/prometheus/rules/alerts.yml`. Cada alerta tem um teste de falha provocada em `tests/promtool/alerts.test.yml`, executado pela CI com `promtool test rules`. Os alertas cobrem ingestão, latência de recuperação, geração, provedores, fila, PostgreSQL, memória e qualidade das avaliações.
+
 ## 17. Implantação
 
 `deploy/compose/docker-compose.yml` usa `profiles`:

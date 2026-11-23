@@ -149,6 +149,17 @@ class Search:
                 span.set_attribute(key, value)
             await self._log(ctx, kb, query.text, len(results), started)
             trace_id = self.deps.tracer.current_trace_id()
+        metrics = self.deps.metrics
+        metrics.counter(
+            "vlade_requests_total",
+            1,
+            {"interface": ctx.interface, "operation": "search", "outcome": "success"},
+        )
+        metrics.histogram(
+            "vlade_request_duration_seconds",
+            time.perf_counter() - started,
+            {"interface": ctx.interface, "operation": "search"},
+        )
         return SearchResult(kb, results, trace_id)
 
     def validate_text(self, text: str) -> str:
@@ -175,6 +186,7 @@ class Search:
         top_k: int,
         rerank: bool | None = None,
     ) -> list[ScoredChunk]:
+        started = time.perf_counter()
         cfg = kb.config.retrieval
         use_rerank = cfg.rerank.enabled if rerank is None else rerank
         if use_rerank and self.deps.rerankers is None:
@@ -205,6 +217,7 @@ class Search:
             )
         if use_rerank and self.deps.rerankers is not None and fused:
             top_n = min(top_k, cfg.rerank.top_n)
+            rerank_started = time.perf_counter()
             with self.deps.tracer.span(
                 "rerank",
                 {
@@ -216,8 +229,24 @@ class Search:
             ):
                 reranker = self.deps.rerankers(cfg.rerank)
                 fused = await reranker.rerank(query.text, fused, top_n)
+            self.deps.metrics.histogram(
+                "vlade_stage_duration_seconds",
+                time.perf_counter() - rerank_started,
+                {"stage": "rerank", "adapter": cfg.rerank.model},
+            )
         results = fused[:top_k]
         await self._cache_put(ctx, cache_key, results)
+        metrics = self.deps.metrics
+        for (name, _, _), found in zip(jobs, lists, strict=True):
+            # A derived query names its lists "dense#1": keep the low-cardinality retriever name.
+            metrics.histogram(
+                "vlade_retrieval_results", float(len(found)), {"retriever": name.split("#")[0]}
+            )
+        metrics.histogram(
+            "vlade_stage_duration_seconds",
+            time.perf_counter() - started,
+            {"stage": "retrieval", "adapter": "+".join(r.name for r in retrievers)},
+        )
         return results
 
     async def _transform(self, ctx: TenantContext, kb: KnowledgeBase, query: Query) -> list[Query]:

@@ -34,6 +34,7 @@ from vlade_rag.core.domain import (
     TokenUsage,
     parse_filter,
 )
+from vlade_rag.core.domain.errors import ProviderUnavailable
 from vlade_rag.core.domain.models import JsonValue
 from vlade_rag.core.ports import AttrValue, PromptTemplate, Span
 
@@ -330,22 +331,52 @@ class AnswerQuery:
         }
         if self.deps.limits.store_query_text:
             attributes[sc.INPUT_VALUE] = prepared.query.text
+        started = time.perf_counter()
         with self.deps.tracer.span("llm_generation", attributes) as span:
-            if streaming:
-                usage = TokenUsage()
-                parts: list[str] = []
-                async for delta in llm.stream(messages, params):
-                    if delta.text:
-                        parts.append(delta.text)
-                        yield AnswerDelta(delta.text)
-                    if delta.usage is not None:
-                        usage = delta.usage
-                result = Generated("".join(parts), usage, gen_cfg.model)
-            else:
-                generation = await llm.generate(messages, params)
-                result = Generated(generation.text, generation.usage, generation.model)
+            try:
+                if streaming:
+                    usage = TokenUsage()
+                    parts: list[str] = []
+                    async for delta in llm.stream(messages, params):
+                        if delta.text:
+                            parts.append(delta.text)
+                            yield AnswerDelta(delta.text)
+                        if delta.usage is not None:
+                            usage = delta.usage
+                    result = Generated("".join(parts), usage, gen_cfg.model)
+                else:
+                    generation = await llm.generate(messages, params)
+                    result = Generated(generation.text, generation.usage, generation.model)
+            except ProviderUnavailable:
+                self._record_llm_failure("provider")
+                raise
+            except Exception:
+                self._record_llm_failure("generation")
+                raise
             _record_generation(span, result, self.deps.limits.store_query_text)
+        metrics = self.deps.metrics
+        elapsed = time.perf_counter() - started
+        metrics.histogram(
+            "vlade_stage_duration_seconds",
+            elapsed,
+            {"stage": "llm_generation", "adapter": llm.name},
+        )
+        metrics.counter(
+            "vlade_requests_total",
+            1,
+            {"interface": "llm", "operation": "generate", "outcome": "success"},
+        )
+        metrics.llm_usage(
+            llm.name, result.model, result.usage.input_tokens, result.usage.output_tokens
+        )
         yield result
+
+    def _record_llm_failure(self, interface: str) -> None:
+        self.deps.metrics.counter(
+            "vlade_requests_total",
+            1,
+            {"interface": interface, "operation": "generate", "outcome": "failed"},
+        )
 
     def validate(
         self, prepared: PreparedQuery, text: str, context: Sequence[ScoredChunk]
@@ -408,6 +439,21 @@ class AnswerQuery:
             model=draft.generated.model,
             usage=draft.generated.usage,
             trace_id=self.deps.tracer.current_trace_id(),
+        )
+        elapsed = time.perf_counter() - p.started
+        metrics = self.deps.metrics
+        metrics.counter(
+            "vlade_requests_total",
+            1,
+            {"interface": ctx.interface, "operation": "query", "outcome": "success"},
+        )
+        metrics.histogram(
+            "vlade_request_duration_seconds",
+            elapsed,
+            {"interface": ctx.interface, "operation": "query"},
+        )
+        metrics.counter(
+            "vlade_answers_grounded_total", 1, {"grounded": str(answer.grounded).lower()}
         )
         await self.deps.audit_log.record_query(
             ctx,

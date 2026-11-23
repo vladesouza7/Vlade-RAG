@@ -209,6 +209,22 @@ jobs:
         with:
           command: check advisories
 
+  alerts:
+    name: Alert rules (promtool)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - name: Check the Prometheus configuration
+        run: |
+          docker run --rm --entrypoint promtool \
+            -v "$PWD/deploy/observability/prometheus:/etc/prometheus:ro" \
+            prom/prometheus:v3.16.0 check config /etc/prometheus/prometheus.yml
+      - name: Provoke every failure and check that its alert fires
+        run: |
+          docker run --rm --entrypoint promtool \
+            -v "$PWD:/repo:ro" \
+            prom/prometheus:v3.16.0 test rules /repo/tests/promtool/alerts.test.yml
+
   docs:
     name: Docs (ASD-STE100 pt-BR)
     runs-on: ubuntu-latest
@@ -225,7 +241,7 @@ jobs:
           python3 .claude/skills/asd-ste100-pt-br/scripts/ste-lint-ptbr.py \
             --disable rotacao-de-sinonimos \
             VLADE-RAG.md CLAUDE.md README.md CONTRIBUTING.md CODE_OF_CONDUCT.md \
-            SECURITY.md CHANGELOG.md docs/*.md docs/adr/*.md \
+            SECURITY.md CHANGELOG.md docs/*.md docs/adr/*.md docs/operacao/*.md \
             packages/python/README.md packages/rust/*/README.md \
             evals/datasets/README.md evals/datasets/*/README.md evals/reports/README.md \
             skills/*/SKILL.md
