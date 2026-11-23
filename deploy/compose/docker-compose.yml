@@ -3,6 +3,8 @@
 # Models: remote providers (OpenRouter, OpenCode, OpenAI) need only API keys in .env.
 # Optional local model server: add --profile ollama and set OLLAMA_BASE_URL=http://ollama:11434
 # Memory limits keep the dev profile under 3 GB without Ollama (RNF-11).
+# Observability (staging, prod): Alloy, Prometheus, Loki, Tempo and Grafana (ADR-0015).
+# The stack listens on 127.0.0.1 only. The configuration is in deploy/observability/.
 
 x-app-env: &app-env
   VLADE_ENVIRONMENT: ${VLADE_ENVIRONMENT:-dev}
@@ -31,8 +33,9 @@ x-app-env: &app-env
   VLADE_DEFAULT_KB_CONFIG: ${VLADE_DEFAULT_KB_CONFIG:-{}}
   # Traces (ADR-0015, ADR-0026). With --profile phoenix: VLADE_OTEL__ENABLED=true,
   # VLADE_OTEL__ENDPOINT=http://phoenix:6006 and VLADE_OTEL__METRICS=false (Phoenix takes no metrics).
+  # In staging and prod the default endpoint is the Alloy collector of the observability stack.
   VLADE_OTEL__ENABLED: ${VLADE_OTEL__ENABLED:-false}
-  VLADE_OTEL__ENDPOINT: ${VLADE_OTEL__ENDPOINT:-}
+  VLADE_OTEL__ENDPOINT: ${VLADE_OTEL__ENDPOINT:-http://alloy:4318}
   VLADE_OTEL__METRICS: ${VLADE_OTEL__METRICS:-true}
   VLADE_OTEL__PROJECT: ${VLADE_OTEL__PROJECT:-vlade-rag}
   OTEL_EXPORTER_OTLP_HEADERS: ${OTEL_EXPORTER_OTLP_HEADERS:-}
@@ -171,6 +174,8 @@ services:
       RUSTFS_ACCESS_KEY: ${S3_ACCESS_KEY_ID:-}
       RUSTFS_SECRET_KEY: ${S3_SECRET_ACCESS_KEY:-}
       RUSTFS_CONSOLE_ENABLE: ${RUSTFS_CONSOLE_ENABLE:-false}
+      # RustFS sends traces, metrics and logs by OTLP. Empty: no telemetry.
+      RUSTFS_OBS_ENDPOINT: ${RUSTFS_OBS_ENDPOINT:-}
     volumes:
       - s3data:/data
     ports:
@@ -209,6 +214,160 @@ services:
     mem_limit: 1g
     restart: unless-stopped
 
+  # ---------------------------------------------------------------- observability
+  # Alloy receives OTLP from the API, the worker and the MCP server. It converts metrics to
+  # Prometheus remote write, forwards traces to Tempo and reads Docker logs into Loki.
+  # Staging uses the same collector with external backends through the three URLs below.
+  alloy:
+    profiles: [staging, prod]
+    image: grafana/alloy:v1.22.0
+    command:
+      - run
+      - --server.http.listen-addr=0.0.0.0:12345
+      - --storage.path=/var/lib/alloy/data
+      - /etc/alloy/config.alloy
+    environment:
+      PROMETHEUS_REMOTE_WRITE_URL: ${PROMETHEUS_REMOTE_WRITE_URL:-http://prometheus:9090/api/v1/write}
+      LOKI_PUSH_URL: ${LOKI_PUSH_URL:-http://loki:3100/loki/api/v1/push}
+      TEMPO_OTLP_ENDPOINT: ${TEMPO_OTLP_ENDPOINT:-tempo:4317}
+    volumes:
+      - ../observability/alloy:/etc/alloy:ro
+      - alloydata:/var/lib/alloy/data
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - /var/lib/docker/containers:/var/lib/docker/containers:ro
+    ports:
+      - "127.0.0.1:${ALLOY_OTLP_GRPC_HOST_PORT:-4317}:4317"
+      - "127.0.0.1:${ALLOY_OTLP_HTTP_HOST_PORT:-4318}:4318"
+      - "127.0.0.1:${ALLOY_UI_HOST_PORT:-12345}:12345"
+    mem_limit: 256m
+    restart: unless-stopped
+
+  prometheus:
+    profiles: [prod]
+    image: prom/prometheus:v3.16.0
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+      - --storage.tsdb.path=/prometheus
+      - --storage.tsdb.retention.time=${PROMETHEUS_RETENTION:-15d}
+      - --web.enable-remote-write-receiver
+      - --web.enable-lifecycle
+    volumes:
+      - ../observability/prometheus:/etc/prometheus:ro
+      - prometheusdata:/prometheus
+    ports:
+      - "127.0.0.1:${PROMETHEUS_HOST_PORT:-9090}:9090"
+    mem_limit: 512m
+    restart: unless-stopped
+
+  loki:
+    profiles: [prod]
+    image: grafana/loki:3.7.10
+    command: ["-config.file=/etc/loki/local-config.yaml"]
+    volumes:
+      - ../observability/loki:/etc/loki:ro
+      - lokidata:/loki
+    ports:
+      - "127.0.0.1:${LOKI_HOST_PORT:-3100}:3100"
+    mem_limit: 384m
+    restart: unless-stopped
+
+  tempo:
+    profiles: [prod]
+    image: grafana/tempo:2.10.10
+    command: ["-config.file=/etc/tempo/tempo.yml"]
+    volumes:
+      - ../observability/tempo:/etc/tempo:ro
+      - tempodata:/var/tempo
+    ports:
+      - "127.0.0.1:${TEMPO_HOST_PORT:-3200}:3200"
+    mem_limit: 384m
+    restart: unless-stopped
+
+  grafana:
+    profiles: [prod]
+    image: grafana/grafana:13.3.1
+    environment:
+      GF_SECURITY_ADMIN_USER: ${GRAFANA_ADMIN_USER:-admin}
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:-admin}
+      GF_USERS_ALLOW_SIGN_UP: "false"
+      GF_ANALYTICS_REPORTING_ENABLED: "false"
+      GF_ANALYTICS_CHECK_FOR_UPDATES: "false"
+      GF_NEWS_NEWS_FEED_ENABLED: "false"
+    volumes:
+      - ../observability/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ../observability/grafana/dashboards:/var/lib/grafana/dashboards:ro
+      - grafanadata:/var/lib/grafana
+    ports:
+      - "127.0.0.1:${GRAFANA_HOST_PORT:-3000}:3000"
+    mem_limit: 384m
+    restart: unless-stopped
+
+  node-exporter:
+    profiles: [prod]
+    image: prom/node-exporter:v1.13.1
+    command:
+      - --path.procfs=/host/proc
+      - --path.sysfs=/host/sys
+      - --path.rootfs=/host
+      - --collector.filesystem.mount-points-exclude=^/(sys|proc|dev|host|etc)($$|/)
+    volumes:
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+      - /:/host:ro
+    ports:
+      - "127.0.0.1:${NODE_EXPORTER_HOST_PORT:-9100}:9100"
+    pid: host
+    mem_limit: 96m
+    restart: unless-stopped
+
+  cadvisor:
+    profiles: [prod]
+    image: gcr.io/cadvisor/cadvisor:v0.52.1
+    command:
+      - --housekeeping_interval=15s
+      - --docker_only=true
+      - --store_container_labels=false
+    privileged: true
+    devices:
+      - /dev/kmsg:/dev/kmsg
+    volumes:
+      - /:/rootfs:ro
+      - /var/run:/var/run:ro
+      - /sys:/sys:ro
+      - /var/lib/docker/:/var/lib/docker:ro
+      - /dev/disk/:/dev/disk:ro
+    ports:
+      - "127.0.0.1:${CADVISOR_HOST_PORT:-8080}:8080"
+    mem_limit: 192m
+    restart: unless-stopped
+
+  postgres-exporter:
+    profiles: [prod]
+    image: prometheuscommunity/postgres-exporter:v0.21.1
+    environment:
+      # The owner reads the statistics. The deployment guide shows a read-only role.
+      DATA_SOURCE_NAME: postgresql://vlade_owner:${POSTGRES_PASSWORD:?Defina POSTGRES_PASSWORD no arquivo .env}@postgres:5432/vlade?sslmode=disable
+    ports:
+      - "127.0.0.1:${POSTGRES_EXPORTER_HOST_PORT:-9187}:9187"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    mem_limit: 96m
+    restart: unless-stopped
+
+  redis-exporter:
+    profiles: [prod]
+    image: oliver006/redis_exporter:v1.98.0
+    environment:
+      REDIS_ADDR: redis://valkey:6379
+    ports:
+      - "127.0.0.1:${REDIS_EXPORTER_HOST_PORT:-9121}:9121"
+    depends_on:
+      valkey:
+        condition: service_healthy
+    mem_limit: 96m
+    restart: unless-stopped
+
   ollama:
     profiles: [ollama]
     image: ollama/ollama:0.40.16
@@ -224,3 +383,8 @@ volumes:
   s3data:
   phoenix:
   ollama:
+  alloydata:
+  prometheusdata:
+  lokidata:
+  tempodata:
+  grafanadata:

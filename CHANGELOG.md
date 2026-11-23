@@ -58,6 +58,7 @@ Este arquivo registra as mudanças relevantes de cada versão. O formato segue o
 - Leitura da auditoria: `GET /v1/audit-events` e `vlade-rag audit list`. Eventos novos: cota negada, cota alterada, chave emitida e chave revogada.
 - Reindexação sem parada (ADR-0027): `POST /v1/knowledge-bases/{kb}/reindex` e `vlade-rag reindex`, nos modos `embeddings` (modelo novo, espaço novo e troca atômica) e `full` (chunking novo, uma versão nova por documento). Sem `confirm`, a resposta é uma prévia. As buscas continuam durante a reindexação e nunca misturam espaços de embeddings.
 - Módulo `ops` (tarefa 4.4): `vlade-rag ops cleanup` apaga espaços `retired` e `building` órfãos e versões `superseded` depois do período de espera. `vlade-rag ops recover-jobs` devolve jobs vencidos para a fila. `vlade-rag ops health` mostra as verificações de prontidão.
+- Pilha de observabilidade (tarefa 4.5, ADR-0015): Alloy, Prometheus, Loki, Tempo e Grafana no perfil `prod`, e o Alloy também no perfil `staging` para enviar aos backends externos. O Alloy recebe OTLP em `4317` e `4318`, escreve métricas no Prometheus, envia traces ao Tempo e lê os logs do Docker para o Loki. O Prometheus coleta Alloy, `node-exporter`, `cadvisor`, `postgres-exporter` e `redis-exporter`. O Grafana provisiona as fontes de dados, com o Tempo ligado aos logs do Loki. Todas as portas escutam em `127.0.0.1`. A configuração e o README estão em `deploy/observability/`.
 
 ### Corrigido
 

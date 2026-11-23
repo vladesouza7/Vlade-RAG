@@ -1,0 +1,87 @@
+// Grafana Alloy collector of the Vlade-RAG observability stack (ADR-0015).
+//
+// Data flow:
+//   API, worker, MCP --OTLP--> Alloy --remote write--> Prometheus
+//                                  --OTLP----------> Tempo
+//   Docker logs ------------------> Alloy -----------> Loki
+//
+// The three URLs come from the environment, so the staging profile can use external backends.
+
+otelcol.receiver.otlp "vlade" {
+  grpc {
+    endpoint = "0.0.0.0:4317"
+  }
+  http {
+    endpoint = "0.0.0.0:4318"
+  }
+  output {
+    metrics = [otelcol.exporter.prometheus.vlade.input]
+    logs    = [otelcol.exporter.loki.vlade.input]
+    traces  = [otelcol.exporter.otlp.tempo.input]
+  }
+}
+
+otelcol.exporter.prometheus "vlade" {
+  forward_to = [prometheus.remote_write.vlade.receiver]
+}
+
+prometheus.remote_write "vlade" {
+  endpoint {
+    url = sys.env("PROMETHEUS_REMOTE_WRITE_URL")
+  }
+}
+
+otelcol.exporter.loki "vlade" {
+  forward_to = [loki.write.vlade.receiver]
+}
+
+loki.write "vlade" {
+  endpoint {
+    url = sys.env("LOKI_PUSH_URL")
+  }
+}
+
+otelcol.exporter.otlp "tempo" {
+  client {
+    endpoint = sys.env("TEMPO_OTLP_ENDPOINT")
+    tls {
+      insecure = true
+    }
+  }
+}
+
+// Docker logs of the compose project. The service label makes the Grafana queries simple.
+discovery.docker "vlade" {
+  host = "unix:///var/run/docker.sock"
+  filter {
+    name   = "label"
+    values = ["com.docker.compose.project"]
+  }
+}
+
+loki.source.docker "vlade" {
+  host          = "unix:///var/run/docker.sock"
+  targets       = discovery.docker.vlade.targets
+  forward_to    = [loki.write.vlade.receiver]
+  relabel_rules = loki.relabel.vlade.rules
+}
+
+loki.relabel "vlade" {
+  forward_to = []
+
+  rule {
+    source_labels = ["__meta_docker_container_name"]
+    regex         = "/(.*)"
+    target_label  = "container"
+  }
+
+  rule {
+    source_labels = ["__meta_docker_container_label_com_docker_compose_service"]
+    target_label  = "service"
+  }
+
+  rule {
+    source_labels = ["__meta_docker_container_label_com_docker_compose_project"]
+    target_label  = "project"
+  }
+}

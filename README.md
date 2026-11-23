@@ -97,6 +97,20 @@ docker compose --profile dev --profile ollama up -d
 docker compose exec ollama ollama pull bge-m3
 ```
 
+### Observabilidade (perfil `prod`)
+
+O perfil `prod` sobe Alloy, Prometheus, Loki, Tempo e Grafana, além dos exporters de infraestrutura. A aplicação envia traces e métricas ao Alloy por OTLP quando `VLADE_OTEL__ENABLED=true`.
+
+1. Defina `GRAFANA_ADMIN_PASSWORD` no `.env`.
+2. Ligue a telemetria com `VLADE_OTEL__ENABLED=true` e `VLADE_OTEL__ENDPOINT=http://alloy:4318`.
+3. Suba a pilha:
+
+   ```bash
+   docker compose --profile prod up -d
+   ```
+
+O Grafana fica em `http://127.0.0.1:3000`. A configuração, a retenção e as portas estão em [`deploy/observability/README.md`](deploy/observability/README.md). No perfil `staging`, só o Alloy sobe entre os serviços de observabilidade e envia aos backends externos.
+
 ## Estrutura do repositório
 
 | Pasta | Conteúdo |
