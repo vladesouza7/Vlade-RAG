@@ -365,10 +365,12 @@ async def serve_stdio(runtime: Runtime, api_key: str | None) -> int:
 async def serve_http(settings: Settings | None, host: str, port: int) -> None:
     import uvicorn
 
-    from vlade_rag.observability.opentelemetry import setup_telemetry
+    from vlade_rag.observability.opentelemetry import setup_metrics, setup_telemetry
 
     settings = settings or get_settings()
-    runtime = await build_runtime(settings, tracer=setup_telemetry(settings))
+    runtime = await build_runtime(
+        settings, tracer=setup_telemetry(settings), metrics=setup_metrics(settings)
+    )
     try:
         config = uvicorn.Config(
             create_http_app(runtime, host=host),

@@ -1,0 +1,150 @@
+# Provoked failure tests for every alert of deploy/observability/prometheus/rules/alerts.yml.
+# Run with: docker run --rm -v "$PWD:/repo:ro" prom/prometheus:v3.16.0 \
+#   promtool test rules /repo/tests/promtool/alerts.test.yml
+
+rule_files:
+  - ../../deploy/observability/prometheus/rules/alerts.yml
+
+evaluation_interval: 1m
+
+tests:
+  # Three ingestion failures in ten minutes.
+  - interval: 1m
+    input_series:
+      - series: 'vlade_ingestion_jobs_total{kind="ingest",status="failed"}'
+        values: '0+0x10 3+1x40'
+    alert_rule_test:
+      - eval_time: 25m
+        alertname: VladeIngestionFailures
+        exp_alerts:
+          - exp_labels:
+              kind: ingest
+              severity: warning
+              status: failed
+            exp_annotations:
+              summary: Consecutive ingestion failures
+              description: Three or more ingestion jobs failed in ten minutes.
+
+  # Retrieval p95 above 1.5 s for five minutes. All the samples sit in the 2.5 s bucket.
+  - interval: 1m
+    input_series:
+      - series: 'vlade_stage_duration_seconds_bucket{stage="retrieval",le="0.1"}'
+        values: '0+0x50'
+      - series: 'vlade_stage_duration_seconds_bucket{stage="retrieval",le="0.5"}'
+        values: '0+0x50'
+      - series: 'vlade_stage_duration_seconds_bucket{stage="retrieval",le="1"}'
+        values: '0+0x50'
+      - series: 'vlade_stage_duration_seconds_bucket{stage="retrieval",le="2.5"}'
+        values: '0+0x5 1+1x45'
+      - series: 'vlade_stage_duration_seconds_bucket{stage="retrieval",le="+Inf"}'
+        values: '0+0x5 1+1x45'
+    alert_rule_test:
+      - eval_time: 30m
+        alertname: VladeRetrievalLatencyHigh
+        exp_alerts:
+          - exp_labels:
+              severity: warning
+            exp_annotations:
+              summary: Retrieval latency is high
+              description: The p95 of the retrieval stage is above 1.5 seconds for five minutes.
+
+  # Two failed generations for eight successes: a failure rate of 20 percent.
+  - interval: 1m
+    input_series:
+      - series: 'vlade_requests_total{interface="llm",operation="generate",outcome="failed"}'
+        values: '0+0x2 2+2x45'
+      - series: 'vlade_requests_total{interface="llm",operation="generate",outcome="success"}'
+        values: '0+0x2 8+8x45'
+    alert_rule_test:
+      - eval_time: 20m
+        alertname: VladeGenerationErrors
+        exp_alerts:
+          - exp_labels:
+              severity: critical
+            exp_annotations:
+              summary: Generation errors
+              description: The LLM generation step fails more than ten percent of the requests.
+
+  # Two failed provider calls for eight successes.
+  - interval: 1m
+    input_series:
+      - series: 'vlade_requests_total{interface="provider",operation="generate",outcome="failed"}'
+        values: '0+0x2 2+2x45'
+      - series: 'vlade_requests_total{interface="provider",operation="generate",outcome="success"}'
+        values: '0+0x2 8+8x45'
+    alert_rule_test:
+      - eval_time: 20m
+        alertname: VladeProviderUnavailable
+        exp_alerts:
+          - exp_labels:
+              severity: critical
+            exp_annotations:
+              summary: Provider connection failures
+              description: A model provider rejects more than ten percent of the calls.
+
+  # Sixty queued jobs for more than ten minutes.
+  - interval: 1m
+    input_series:
+      - series: 'vlade_ingestion_queue_depth{kind="ingest"}'
+        values: '0+0x5 60+0x40'
+    alert_rule_test:
+      - eval_time: 25m
+        alertname: VladeQueueGrowing
+        exp_alerts:
+          - exp_labels:
+              kind: ingest
+              severity: warning
+            exp_annotations:
+              summary: The ingestion queue is growing
+              description: More than fifty jobs wait for the worker for ten minutes.
+
+  # The PostgreSQL exporter loses the connection.
+  - interval: 1m
+    input_series:
+      - series: 'pg_up{job="postgres"}'
+        values: '1+0x5 0+0x40'
+    alert_rule_test:
+      - eval_time: 20m
+        alertname: VladePostgresDown
+        exp_alerts:
+          - exp_labels:
+              job: postgres
+              severity: critical
+            exp_annotations:
+              summary: PostgreSQL is down
+              description: The PostgreSQL exporter cannot connect to the database.
+
+  # Only five percent of the host memory is available.
+  - interval: 1m
+    input_series:
+      - series: 'node_memory_MemTotal_bytes{job="node"}'
+        values: '10000000000+0x50'
+      - series: 'node_memory_MemAvailable_bytes{job="node"}'
+        values: '5000000000+0x5 500000000+0x45'
+    alert_rule_test:
+      - eval_time: 20m
+        alertname: VladeMemoryHigh
+        exp_alerts:
+          - exp_labels:
+              job: node
+              severity: warning
+            exp_annotations:
+              summary: Memory is low
+              description: Less than ten percent of the host memory is available.
+
+  # The last evaluation scores 0.6 in NDCG@10.
+  - interval: 1m
+    input_series:
+      - series: 'vlade_eval_metric{metric="ndcg@10",dataset="legal-ptbr"}'
+        values: '0.9+0x5 0.6+0x45'
+    alert_rule_test:
+      - eval_time: 25m
+        alertname: VladeEvalQualityDrop
+        exp_alerts:
+          - exp_labels:
+              dataset: legal-ptbr
+              metric: ndcg@10
+              severity: warning
+            exp_annotations:
+              summary: Evaluation quality dropped
+              description: The NDCG@10 of the last evaluation is below 0.7.

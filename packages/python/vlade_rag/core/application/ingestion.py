@@ -212,6 +212,9 @@ class SubmitIngestion:
             )
             result = {"document_id": str(document.id), "skipped": True, "reason": "unchanged"}
             await self.deps.job_queue.complete(ctx, job.id, result)
+            self.deps.metrics.counter(
+                "vlade_ingestion_jobs_total", 1, {"kind": "ingest", "status": "skipped"}
+            )
             job = await self.deps.job_queue.get(ctx, job.id)
             return SubmitResult(job=job, document=document, skipped=True)
 
@@ -234,6 +237,9 @@ class SubmitIngestion:
                 "filename": raw.filename,
                 "mime_type": mime_type,
             },
+        )
+        self.deps.metrics.counter(
+            "vlade_ingestion_jobs_total", 1, {"kind": "ingest", "status": "submitted"}
         )
         await self.deps.audit_log.record(
             ctx,
@@ -300,8 +306,21 @@ class RunIngestionJob:
             await self.deps.job_queue.fail(
                 ctx, job.id, error, retry=retry, max_attempts=self.deps.limits.job_max_attempts
             )
+            self.deps.metrics.counter(
+                "vlade_ingestion_jobs_total", 1, {"kind": job.kind.value, "status": "failed"}
+            )
             return
         await self.deps.job_queue.complete(ctx, job.id, result)
+        self.deps.metrics.counter(
+            "vlade_ingestion_jobs_total", 1, {"kind": job.kind.value, "status": "success"}
+        )
+        if job.kind == JobKind.EVALUATION and isinstance(result, dict):
+            for name, value in dict(result.get("metrics", {})).items():
+                self.deps.metrics.gauge(
+                    "vlade_eval_metric",
+                    float(value),
+                    {"metric": str(name), "dataset": str(result.get("dataset", ""))},
+                )
 
     @asynccontextmanager
     async def _step(
@@ -332,6 +351,7 @@ class RunIngestionJob:
                     ),
                 )
                 raise _StepFailedError(name, exc) from exc
+            finished = datetime.now(UTC)
             await self.deps.job_queue.record_step(
                 ctx,
                 job.id,
@@ -342,8 +362,13 @@ class RunIngestionJob:
                     document_id,
                     None,
                     started,
-                    datetime.now(UTC),
+                    finished,
                 ),
+            )
+            self.deps.metrics.histogram(
+                "vlade_stage_duration_seconds",
+                (finished - started).total_seconds(),
+                {"stage": name, "adapter": "ingestion"},
             )
 
     async def _ingest(self, ctx: TenantContext, job: IngestionJob) -> Metadata:

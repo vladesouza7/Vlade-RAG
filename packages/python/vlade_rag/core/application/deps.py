@@ -22,6 +22,7 @@ from vlade_rag.core.ports import (
     KnowledgeRepository,
     LexicalIndex,
     LLMProvider,
+    Metrics,
     ObjectStorage,
     PromptRegistry,
     QueryTransformer,
@@ -52,6 +53,26 @@ class NoopTracer:
         yield _NoopSpan()
 
     def current_trace_id(self) -> str | None:
+        return None
+
+
+class NoopMetrics:
+    def counter(
+        self, name: str, value: float = 1, attributes: Mapping[str, AttrValue] | None = None
+    ) -> None:
+        return None
+
+    def histogram(
+        self, name: str, value: float, attributes: Mapping[str, AttrValue] | None = None
+    ) -> None:
+        return None
+
+    def gauge(
+        self, name: str, value: float, attributes: Mapping[str, AttrValue] | None = None
+    ) -> None:
+        return None
+
+    def llm_usage(self, provider: str, model: str, input_tokens: int, output_tokens: int) -> None:
         return None
 
 
@@ -102,6 +123,7 @@ class Dependencies:
     rate_limiter: RateLimiter | None = None  # without it no request limit applies
     tenants: TenantDirectory | None = None  # needed for quotas; without it no quota applies
     tracer: Tracer = field(default_factory=NoopTracer)
+    metrics: Metrics = field(default_factory=NoopMetrics)
     limits: Limits = field(default_factory=Limits)
     sources: SourcePolicy = field(default_factory=SourcePolicy)
     # Evaluation needs the registry of datasets and a worker runner. Both are wired in bootstrap.

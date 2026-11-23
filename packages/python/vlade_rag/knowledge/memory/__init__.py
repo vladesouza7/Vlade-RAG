@@ -890,6 +890,14 @@ class MemoryJobQueue:
             raise NotFound("Job does not exist.")
         return job
 
+    async def pending_count(self, kind: JobKind) -> int:
+        return sum(
+            1
+            for _, data in self.store.all_data()
+            for job in data.jobs.values()
+            if job.kind == kind and job.status == JobStatus.PENDING
+        )
+
     async def claim(self, worker_id: str, lease_seconds: int) -> ClaimedJob | None:
         pending = [
             (job.created_at or _now(), tenant_id, job)

@@ -9,7 +9,13 @@ from vlade_rag.core.application.answer import (
     assemble_context,
     validate_answer,
 )
-from vlade_rag.core.application.deps import Dependencies, Limits, NoopTracer, SourcePolicy
+from vlade_rag.core.application.deps import (
+    Dependencies,
+    Limits,
+    NoopMetrics,
+    NoopTracer,
+    SourcePolicy,
+)
 from vlade_rag.core.application.documents import DeleteDocument, DocumentView, GetDocument
 from vlade_rag.core.application.evaluation import EvaluationResult, RunEvaluation
 from vlade_rag.core.application.ingestion import (
@@ -52,6 +58,7 @@ __all__ = [
     "Limits",
     "ListAuditEvents",
     "ListKnowledgeBases",
+    "NoopMetrics",
     "NoopTracer",
     "ReindexKnowledgeBase",
     "ReindexPreview",

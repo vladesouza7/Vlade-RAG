@@ -124,6 +124,12 @@ class PostgresJobQueue:
             raise Conflict("A reindex of this knowledge base is already queued.") from exc
         return _job(row)
 
+    async def pending_count(self, kind: JobKind) -> int:
+        # The definer function crosses tenants. A plain SELECT sees no row under RLS.
+        async with self.db.system() as conn:
+            total = await conn.fetchval("SELECT vlade_pending_job_count($1)", kind.value)
+        return int(total or 0)
+
     async def find_active(
         self, ctx: TenantContext, knowledge_base_id: UUID, kind: JobKind
     ) -> IngestionJob | None:

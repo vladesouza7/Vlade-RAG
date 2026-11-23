@@ -52,10 +52,16 @@ def _run[T](coro: Coroutine[Any, Any, T]) -> T:
 
 async def _with_runtime[T](fn: Callable[[Any], Awaitable[T]]) -> T:
     from vlade_rag.bootstrap import build_runtime
-    from vlade_rag.observability.opentelemetry import flush_telemetry, setup_telemetry
+    from vlade_rag.observability.opentelemetry import (
+        flush_telemetry,
+        setup_metrics,
+        setup_telemetry,
+    )
 
     settings = get_settings()
-    runtime = await build_runtime(settings, tracer=setup_telemetry(settings))
+    runtime = await build_runtime(
+        settings, tracer=setup_telemetry(settings), metrics=setup_metrics(settings)
+    )
     try:
         return await fn(runtime)
     finally:

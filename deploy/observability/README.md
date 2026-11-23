@@ -32,7 +32,7 @@ Todas as portas escutam em `127.0.0.1`. Para expor a interface do Grafana, use u
 
 ## Como subir
 
-1. Preencha `GRAFANA_ADMIN_PASSWORD` no `.env`. O Compose usa `admin` quando a variável está vazia; troque no perfil `prod`.
+1. Preencha `GRAFANA_ADMIN_PASSWORD` no `.env`. O Compose usa `admin` quando a variável está vazia. Troque a senha no perfil `prod`.
 2. Ligue a telemetria da aplicação:
 
    ```bash
@@ -55,7 +55,34 @@ Todas as portas escutam em `127.0.0.1`. Para expor a interface do Grafana, use u
    curl -fsS http://127.0.0.1:3000/api/health
    ```
 
-5. Abra o Grafana em `http://127.0.0.1:3000` e use o usuário `admin` com a senha do `.env`.
+5. Abra o Grafana em `http://127.0.0.1:3000` e use o usuário `admin` com a senha do `.env`. A pasta `Vlade-RAG` tem os cinco dashboards.
+
+## Métricas da aplicação
+
+O código registra as métricas da tabela 16.2 da arquitetura por OTLP. O Alloy converte as métricas em escrita remota no Prometheus. O custo em `vlade_llm_cost_usd_total` vem de uma tabela pequena de preços. Um modelo fora da tabela custa zero. `tenant_id` nunca entra em rótulo de métrica.
+
+Para gerar dados de demonstração sem provedor externo, rode `scripts/observability/seed_telemetry.py` com `VLADE_OTEL__ENABLED=true`, `VLADE_OTEL__ENDPOINT=http://127.0.0.1:4318`, `VLADE_STORAGE__BACKEND=memory` e `VLADE_OBJECT_STORAGE__BACKEND=memory`. O script cria uma base com hashing e LLM extrativo, ingere documentos, faz buscas, responde perguntas e roda uma avaliação.
+
+## Dashboards
+
+| UID | Título | Dados principais |
+|---|---|---|
+| `rag-performance` | RAG Performance | Latência e vazão de consultas, respostas fundamentadas, duração das etapas, avaliações e traces |
+| `llm-observability` | LLM Observability | Tokens, custo estimado, erros de geração e falhas de provedor |
+| `retrieval-analytics` | Retrieval Analytics | Resultados por retriever, latência de recuperação e de reranking, logs |
+| `infrastructure` | Infrastructure | CPU, memória, disco, conexões do PostgreSQL e clientes do Valkey |
+| `workflow-monitoring` | Workflow Monitoring | Fila de ingestão, jobs por status, duração das etapas e alertas |
+
+O Grafana lê os arquivos JSON de `grafana/dashboards/` e os coloca na pasta `Vlade-RAG`. Os painéis que mostram falhas ficam vazios quando não há falhas: é o estado normal.
+
+## Alertas
+
+As oito regras em `prometheus/rules/alerts.yml` cobrem falhas de ingestão, latência de recuperação, erros de geração e falhas de provedor. Outras regras cobrem fila em crescimento, PostgreSQL indisponível, memória baixa e queda na qualidade das avaliações. Cada regra tem um teste de falha provocada em `tests/promtool/alerts.test.yml`. A CI roda o `promtool test rules`. A CI falha se um alerta não disparar.
+
+```bash
+docker run --rm --entrypoint promtool -v "$PWD:/repo:ro" \
+  prom/prometheus:v3.16.0 test rules /repo/tests/promtool/alerts.test.yml
+```
 
 ## Retenção
 
@@ -88,7 +115,7 @@ O endpoint do Tempo usa gRPC sem TLS por padrão. Para um backend externo com TL
 
 ## Memória
 
-Os limites somam cerca de 2,4 GB: Alloy 256 MiB, Prometheus 512 MiB, Loki 384 MiB, Tempo 384 MiB, Grafana 384 MiB, `cadvisor` 192 MiB e os três exporters 96 MiB cada. O perfil `prod` completo precisa de mais memória do que o perfil `dev`, porque soma a API, o worker, o MCP, o PostgreSQL, o Valkey e o RustFS.
+Os limites somam cerca de 2,4 GB. Alloy usa 256 MiB. Prometheus usa 512 MiB. Loki, Tempo e Grafana usam 384 MiB cada. O `cadvisor` usa 192 MiB e os três exporters usam 96 MiB cada. O perfil `prod` completo precisa de mais memória do que o perfil `dev`, porque soma a API, o worker, o MCP, o PostgreSQL, o Valkey e o RustFS.
 
 ## Arquivos
 
@@ -96,9 +123,9 @@ Os limites somam cerca de 2,4 GB: Alloy 256 MiB, Prometheus 512 MiB, Loki 384 Mi
 |---|---|
 | `alloy/config.alloy` | Receptor OTLP, escrita remota, traces para o Tempo, logs do Docker para o Loki |
 | `prometheus/prometheus.yml` | Jobs de coleta e escrita remota |
-| `prometheus/rules/` | Regras de alerta (tarefa 4.6) |
+| `prometheus/rules/alerts.yml` | Oito regras de alerta |
 | `loki/local-config.yaml` | Loki em binário único, com armazenamento em disco |
 | `tempo/tempo.yml` | Tempo em binário único, com armazenamento local |
 | `grafana/provisioning/datasources/` | Fontes de dados do Grafana |
 | `grafana/provisioning/dashboards/` | Provedor dos dashboards |
-| `grafana/dashboards/` | Os cinco dashboards (tarefa 4.6) |
+| `grafana/dashboards/` | Os cinco dashboards provisionados |

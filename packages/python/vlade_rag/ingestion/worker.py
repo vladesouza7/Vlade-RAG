@@ -14,6 +14,7 @@ from contextlib import suppress
 
 from vlade_rag.bootstrap import Runtime
 from vlade_rag.core.application import RunIngestionJob
+from vlade_rag.core.domain import JobKind
 from vlade_rag.core.ports import ClaimedJob
 
 logger = logging.getLogger(__name__)
@@ -64,12 +65,22 @@ class Worker:
             with suppress(asyncio.CancelledError):
                 await beat
 
+    async def _record_queue_depth(self) -> None:
+        metrics = self.runtime.deps.metrics
+        for kind in JobKind:
+            metrics.gauge(
+                "vlade_ingestion_queue_depth",
+                await self.queue.pending_count(kind),
+                {"kind": kind.value},
+            )
+
     async def run_until_idle(self) -> int:
         """Run pending jobs one by one until the queue is empty. Returns the number of jobs."""
         count = 0
         while (claimed := await self.queue.claim(self.worker_id, self.lease_seconds)) is not None:
             await self.process(claimed)
             count += 1
+        await self._record_queue_depth()
         return count
 
     async def run(self, stop: asyncio.Event | None = None) -> None:
@@ -86,6 +97,7 @@ class Worker:
                     if requeued:
                         logger.warning("Requeued %d expired jobs", requeued)
                     next_requeue = loop.time() + REQUEUE_EVERY_SECONDS
+                    await self._record_queue_depth()
                 claimed = None
                 if len(active) < self.concurrency:
                     claimed = await self.queue.claim(self.worker_id, self.lease_seconds)

@@ -119,7 +119,7 @@ O Grafana fica em `http://127.0.0.1:3000`. A configuração, a retenção e as p
 | `packages/rust/vlade_rag_core/` | Motor nativo `vlade-rag-core` |
 | `tests/` | Testes de unidade, contrato, integração e ponta a ponta |
 | `deploy/` | Compose, Dockerfiles, PostgreSQL |
-| `docs/` | Especificação, arquitetura, MCP, roadmap e ADRs |
+| `docs/` | Especificação, arquitetura, MCP, roadmap, ADRs e guias de operação |
 | `evals/` | Datasets de avaliação |
 
 ## Documentação
@@ -132,6 +132,7 @@ O Grafana fica em `http://127.0.0.1:3000`. A configuração, a retenção e as p
 | [`docs/MCP_SPEC.md`](docs/MCP_SPEC.md) | Contrato do servidor MCP |
 | [`docs/ROADMAP.md`](docs/ROADMAP.md) | Fases e situação |
 | [`docs/adr/`](docs/adr/README.md) | Decisões de arquitetura |
+| [`docs/operacao/`](docs/operacao/README.md) | Guias de implantação e operação |
 
 ## Contribuir
 
