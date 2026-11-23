@@ -20,6 +20,10 @@ x-app-env: &app-env
   VLADE_PROVIDERS__OPENCODE__API_KEY: ${OPENCODE_API_KEY:-}
   VLADE_PROVIDERS__GEMINI__API_KEY: ${GEMINI_API_KEY:-}
   VLADE_PROVIDERS__GEMINI__EMBEDDING_DIMENSIONS: ${GEMINI_EMBEDDING_DIMENSIONS:-false}
+  # Vector index: "postgres" (pgvector, the default) or "qdrant" (ADR-0004).
+  VLADE_VECTOR_INDEX__BACKEND: ${VLADE_VECTOR_INDEX__BACKEND:-postgres}
+  VLADE_VECTOR_INDEX__QDRANT__URL: ${VLADE_VECTOR_INDEX__QDRANT__URL:-http://qdrant:6333}
+  VLADE_VECTOR_INDEX__QDRANT__API_KEY: ${VLADE_VECTOR_INDEX__QDRANT__API_KEY:-}
   # Object storage: "filesystem" (a volume) or "s3" (AWS or any S3-compatible service, ADR-0006).
   VLADE_OBJECT_STORAGE__BACKEND: ${VLADE_OBJECT_STORAGE__BACKEND:-filesystem}
   VLADE_OBJECT_STORAGE__S3__BUCKET: ${S3_BUCKET:-}
@@ -183,6 +187,23 @@ services:
       - "127.0.0.1:${S3_CONSOLE_HOST_PORT:-9001}:9001"
     healthcheck:
       test: ["CMD", "curl", "--fail", "--silent", "http://127.0.0.1:9000/health"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    mem_limit: 512m
+    restart: unless-stopped
+
+  qdrant:
+    # Alternative vector index (ADR-0004). Local: docker compose --profile dev --profile qdrant up.
+    # The application uses it only with VLADE_VECTOR_INDEX__BACKEND=qdrant.
+    profiles: [qdrant]
+    image: qdrant/qdrant:v1.20.2
+    volumes:
+      - qdrantdata:/qdrant/storage
+    ports:
+      - "127.0.0.1:${QDRANT_HOST_PORT:-6333}:6333"
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://127.0.0.1:6333/healthz"]
       interval: 5s
       timeout: 3s
       retries: 20
@@ -381,6 +402,7 @@ volumes:
   pgdata:
   objects:
   s3data:
+  qdrantdata:
   phoenix:
   ollama:
   alloydata:

@@ -610,6 +610,21 @@ class PostgresKnowledgeRepository:
         by_id = {r["id"]: _chunk(r) for r in rows}
         return [by_id[cid] for cid in chunk_ids if cid in by_id]
 
+    async def published_chunks(
+        self, ctx: TenantContext, kb_id: UUID, chunk_ids: Sequence[UUID]
+    ) -> dict[UUID, Metadata]:
+        if not chunk_ids:
+            return {}
+        async with self.db.tenant(ctx) as conn:
+            rows = await conn.fetch(
+                "SELECT id, metadata FROM chunks WHERE tenant_id = $1 AND knowledge_base_id = $2 "
+                "AND is_published AND id = ANY($3::uuid[])",
+                ctx.tenant_id,
+                kb_id,
+                list(chunk_ids),
+            )
+        return {r["id"]: dict(r["metadata"] or {}) for r in rows}
+
     async def list_chunks(self, ctx: TenantContext, version_id: UUID) -> list[Chunk]:
         async with self.db.tenant(ctx) as conn:
             rows = await conn.fetch(

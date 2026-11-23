@@ -228,6 +228,16 @@ class KnowledgeRepository(Protocol):
         language: str,
     ) -> list[Chunk]: ...
     async def get_chunks(self, ctx: TenantContext, chunk_ids: Sequence[UUID]) -> list[Chunk]: ...
+    async def published_chunks(
+        self, ctx: TenantContext, kb_id: UUID, chunk_ids: Sequence[UUID]
+    ) -> Mapping[UUID, Metadata]:
+        """Metadata of the published chunks of a base, keyed by chunk id.
+
+        Vector stores without a relational join use this to apply publication and metadata
+        filters at query time.
+        """
+        ...
+
     async def list_chunks(self, ctx: TenantContext, version_id: UUID) -> list[Chunk]: ...
 
     # publication and deletion

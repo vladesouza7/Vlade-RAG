@@ -480,6 +480,18 @@ class MemoryKnowledgeRepository:
         chunks = self.store.data(ctx).chunks
         return [chunks[cid] for cid in chunk_ids if cid in chunks]
 
+    async def published_chunks(
+        self, ctx: TenantContext, kb_id: UUID, chunk_ids: Sequence[UUID]
+    ) -> dict[UUID, Metadata]:
+        data = self.store.data(ctx)
+        return {
+            cid: data.chunks[cid].metadata
+            for cid in chunk_ids
+            if cid in data.published
+            and cid in data.chunks
+            and data.chunks[cid].knowledge_base_id == kb_id
+        }
+
     async def list_chunks(self, ctx: TenantContext, version_id: UUID) -> list[Chunk]:
         chunks = self.store.data(ctx).chunks.values()
         return sorted(

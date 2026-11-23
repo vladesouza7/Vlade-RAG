@@ -58,9 +58,10 @@ Extras de `vlade-rag` disponíveis na fase 1:
 | `local-models` | `sentence-transformers` (fase 3). Traz o reranker local. Puxa o PyTorch e, no Linux, bibliotecas NVIDIA CUDA com licença proprietária. Fica fora do extra `server` e da verificação de licenças (ADR-0001, item 4) |
 | `langgraph` | `langgraph` (fase 3, MIT). Motor de consulta opcional (ADR-0023). Fica fora do extra `server` |
 | `eval` | `ragas` (fase 3, Apache-2.0). Métricas de resposta do RF-71 (ADR-0025). Traz pandas, pyarrow e scipy. Fica fora do extra `server` |
+| `qdrant` | `qdrant-client` (fase 5, Apache-2.0). Índice vetorial alternativo (ADR-0004). O pgvector continua como padrão |
 | `server` | `native`, `api`, `cli`, `postgres`, `ollama`, `openai`, `otel`, `cache`, `mcp`, `s3` |
 
-O Gemini usa o endpoint compatível com a API da OpenAI e não precisa de extra. Extras previstos para as fases seguintes: `qdrant` e `all`.
+O Gemini usa o endpoint compatível com a API da OpenAI e não precisa de extra. O extra `all` fica previsto para a fase 5, tarefa 5.6.
 
 Os parsers de texto, Markdown e HTML não precisam de extra. Eles usam só a biblioteca padrão.
 
@@ -655,6 +656,8 @@ Regras:
 2. Com filtros de metadados, o adapter ativa `hnsw.iterative_scan = relaxed_order`. Assim o filtro não reduz o resultado abaixo de `top_k`.
 3. O índice HNSW do pgvector aceita até 2000 dimensões para o tipo `vector`. Um modelo com mais dimensões usa o tipo `halfvec`, que aceita até 4000 dimensões.
 
+O Qdrant implementa o mesmo port `VectorIndex` no extra `qdrant` (ADR-0004). Ele cria uma coleção por tenant e por espaço, com o id do tenant no nome. Os pontos guardam `tenant_id` e `kb_id` no payload. A busca consulta os candidatos no Qdrant e pede ao repositório os chunks publicados, para aplicar os filtros de publicação e de metadados. O backend vem de `VLADE_VECTOR_INDEX__BACKEND`, com `postgres` como padrão. `VLADE_VECTOR_INDEX__QDRANT__URL` aponta para o servidor. O Compose oferece o serviço opcional `qdrant` no perfil com o mesmo nome.
+
 ### 7.4. Row-Level Security
 
 Toda tabela com `tenant_id` usa RLS. O papel da aplicação não é dono das tabelas e não tem `BYPASSRLS`.
@@ -775,6 +778,10 @@ VLADE_SOURCES__ALLOWED_DOMAINS=["docs.exemplo.com"]     # lista vazia recusa sou
 VLADE_SOURCES__MAX_BYTES=52428800                      # limite do download; o menor entre este e max_upload_bytes
 VLADE_SOURCES__TIMEOUT=30.0
 VLADE_CACHE__URL=redis://valkey:6379/0           # Valkey ou Redis. Sem URL, o cache e o limite ficam no processo
+VLADE_VECTOR_INDEX__BACKEND=postgres             # postgres (pgvector, padrão) ou qdrant (ADR-0004)
+VLADE_VECTOR_INDEX__QDRANT__URL=http://localhost:6333
+VLADE_VECTOR_INDEX__QDRANT__API_KEY=***
+VLADE_VECTOR_INDEX__QDRANT__COLLECTION_PREFIX=vlade_
 VLADE_LIMITS__RATE_PER_KEY_PER_MINUTE=600        # 0 desliga o limite
 VLADE_LIMITS__RATE_PER_TENANT_PER_MINUTE=3000    # 0 desliga o limite
 VLADE_PROVIDERS__OLLAMA__BASE_URL=http://ollama:11434

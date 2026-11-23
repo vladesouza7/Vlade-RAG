@@ -111,6 +111,18 @@ O perfil `prod` sobe Alloy, Prometheus, Loki, Tempo e Grafana, além dos exporte
 
 O Grafana fica em `http://127.0.0.1:3000`. A configuração, a retenção e as portas estão em [`deploy/observability/README.md`](deploy/observability/README.md). No perfil `staging`, só o Alloy sobe entre os serviços de observabilidade e envia aos backends externos.
 
+### Índice vetorial alternativo (Qdrant)
+
+O pgvector é o índice padrão. O Qdrant entra como alternativa no extra `qdrant`, sem mudar o padrão (ADR-0004):
+
+```bash
+uv sync --extra qdrant
+docker compose --profile qdrant up -d
+VLADE_VECTOR_INDEX__BACKEND=qdrant vlade-rag api serve
+```
+
+A suíte de contrato cobre os dois índices, e `tests/integration/test_qdrant_equivalence.py` compara o Recall@10 deles no mesmo espaço. O relatório está em `evals/reports/fase5-qdrant/README.md`.
+
 ## Estrutura do repositório
 
 | Pasta | Conteúdo |

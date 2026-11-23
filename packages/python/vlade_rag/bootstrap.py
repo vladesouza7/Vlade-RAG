@@ -322,6 +322,18 @@ async def build_runtime(
         tenants = PostgresTenantDirectory(db, settings.security.api_key_pepper.get_secret_value())
         object_storage = None
 
+    if settings.vector_index.backend == "qdrant":
+        try:
+            from vlade_rag.knowledge.qdrant import QdrantVectorIndex
+        except ImportError as exc:
+            raise InvalidArgument(
+                'The qdrant backend needs the "qdrant" extra: pip install "vlade-rag[qdrant]"'
+            ) from exc
+        qdrant = QdrantVectorIndex.from_settings(settings.vector_index.qdrant, ports["repository"])
+        ports["vector_index"] = qdrant  # pgvector stays the default; Qdrant is opt-in
+        closers.append(qdrant.aclose)
+        checks["vector_index"] = qdrant.ping
+
     storage_backend = settings.object_storage.backend
     if storage_backend == "s3":
         s3 = settings.object_storage.s3

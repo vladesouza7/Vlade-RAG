@@ -27,6 +27,22 @@ def test_invalid_port_is_rejected(monkeypatch: pytest.MonkeyPatch) -> None:
         Settings()
 
 
+def test_vector_index_backend_defaults_to_pgvector(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.delenv("VLADE_VECTOR_INDEX__BACKEND", raising=False)
+    assert Settings().vector_index.backend == "postgres"
+
+
+def test_qdrant_backend_settings(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("VLADE_VECTOR_INDEX__BACKEND", "qdrant")
+    monkeypatch.setenv("VLADE_VECTOR_INDEX__QDRANT__URL", "http://qdrant:6333")
+    monkeypatch.setenv("VLADE_VECTOR_INDEX__QDRANT__API_KEY", "secret")
+    settings = Settings()
+    assert settings.vector_index.backend == "qdrant"
+    assert settings.vector_index.qdrant.url == "http://qdrant:6333"
+    key = settings.vector_index.qdrant.api_key
+    assert key is not None and key.get_secret_value() == "secret"
+
+
 def test_empty_provider_keys_and_defaults(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("VLADE_PROVIDERS__OPENAI__API_KEY", "")
     monkeypatch.setenv("VLADE_PROVIDERS__OPENROUTER__API_KEY", "sk-or")

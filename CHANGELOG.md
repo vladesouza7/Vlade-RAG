@@ -2,8 +2,11 @@
 
 Este arquivo registra as mudanças relevantes de cada versão. O formato segue o [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/). O projeto usa [versionamento semântico](https://semver.org/lang/pt-BR/).
 
-
 ## [Não publicado]
+
+### Adicionado
+
+- Adapter Qdrant de `VectorIndex` (fase 5, tarefa 5.1, ADR-0004) no extra `qdrant`. O pgvector continua como padrão e como referência. O backend vem de `VLADE_VECTOR_INDEX__BACKEND`. A suíte de contrato cobre memória, pgvector e Qdrant, e um teste de integração compara o Recall@10 dos dois índices no mesmo espaço.
 
 ## [0.4.0] - 2026-11-23
 
