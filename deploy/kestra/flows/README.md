@@ -1,10 +1,11 @@
-# Flows Kestra da fase 4
+# Flows Kestra
 
-Os quatro flows executam as tarefas operacionais da tarefa 4.1 (ADR-0011). Eles ficam em `deploy/kestra/flows/` e chamam a API REST do Vlade-RAG com uma chave de serviço do tenant. O único fluxo que não chama a API é `backup`, que usa credenciais de operação diretas.
+Os cinco flows executam as tarefas operacionais das tarefas 4.1 e 5.3 (ADR-0011 e ADR-0029). Eles ficam em `deploy/kestra/flows/` e chamam a API REST do Vlade-RAG com uma chave de serviço do tenant. O único fluxo que não chama a API é `backup`, que usa credenciais de operação diretas.
 
 | Flow | Gatilho | Ação |
 |---|---|---|
 | `ingest_batch` | Manual ou evento de objeto | Envia um lote de documentos com `POST /v1/knowledge-bases/{kb}/documents` |
+| `sync_source` | Agenda diária (desligada por padrão) | Chama `POST /v1/knowledge-bases/{kb}/sources/{source}/sync` |
 | `reindex_knowledge_base` | Manual | Faz a prévia, confirma com `POST /v1/knowledge-bases/{kb}/reindex` e espera o job |
 | `evaluate_nightly` | Agenda diária (desligada por padrão) | Chama `POST /v1/evaluations` e espera o job |
 | `backup` | Agenda diária (desligada por padrão) | Faz `pg_dump` e copia o bucket de objetos |
@@ -32,8 +33,10 @@ O registro de datasets fica no servidor da API, em `VLADE_EVALUATION__DATASETS_P
 [{"filename": "manual.md", "content_text": "# Manual\n\nTexto do manual."}]
 ```
 
-Os gatilhos de `evaluate_nightly` e `backup` vêm com `disabled: true`. O operador liga cada um depois de definir os segredos e as variáveis, e de conferir a janela de execução.
+`sync_source` recebe `source` e `knowledge_base`. Os parâmetros `cursor` e `limit` são opcionais. O conector precisa estar configurado no servidor da API antes de ligar o gatilho.
+
+Os gatilhos de `sync_source`, `evaluate_nightly` e `backup` vêm com `disabled: true`. O operador liga cada um depois de definir os segredos e as variáveis, e de conferir a janela de execução.
 
 ## Verificação
 
-Não há servidor Kestra no perfil `dev`. A suíte `tests/unit/test_kestra_flows.py` confere a estrutura dos quatro arquivos, os gatilhos, os inputs e as chamadas à API. A aceitação de reindexação sob carga roda no teste `tests/integration/test_reindex_load.py`, que faz buscas e reindexação em paralelo.
+Não há servidor Kestra no perfil `dev`. A suíte `tests/unit/test_kestra_flows.py` confere a estrutura dos cinco arquivos, os gatilhos, os inputs e as chamadas à API. A aceitação de reindexação sob carga roda no teste `tests/integration/test_reindex_load.py`, que faz buscas e reindexação em paralelo.

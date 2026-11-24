@@ -1044,12 +1044,12 @@ O grafo LangGraph tem os nós `retrieve`, `rewrite`, `assemble`, `generate`, `va
 
 ### 12.2. Kestra
 
-O Kestra chama a API REST com uma chave de serviço do tenant. Os flows ficam em `deploy/kestra/flows/`. Os flows não acessam o banco diretamente. O `README.md` da pasta lista as variáveis e os segredos. Os gatilhos de `evaluate_nightly` e `backup` começam desligados.
+O Kestra chama a API REST com uma chave de serviço do tenant. Os flows ficam em `deploy/kestra/flows/`. Os flows não acessam o banco diretamente. O `README.md` da pasta lista as variáveis e os segredos. Os gatilhos de `sync_source`, `evaluate_nightly` e `backup` começam desligados. O endpoint `POST /sources/{source}/sync` chama o caso de uso `SyncSource`, que envia os itens do conector para a ingestão sem duplicar documentos.
 
 | Flow | Gatilho | Chamadas |
 |---|---|---|
 | `ingest_batch` | API ou evento no armazenamento S3 | `POST /documents` por arquivo, depois `GET /jobs/{id}` até o fim |
-| `sync_source` | Agenda | `POST /sources/{id}/sync` |
+| `sync_source` | Agenda (desligada por padrão) | `POST /knowledge-bases/{kb}/sources/{source}/sync` |
 | `reindex_knowledge_base` | Manual | `POST /reindex` com `confirm: true`, depois acompanha o job |
 | `evaluate_nightly` | Agenda diária | `POST /evaluations` |
 | `backup` | Agenda diária | `pg_dump` e cópia do bucket. Não chama a API |
@@ -1097,7 +1097,7 @@ Prefixo `/v1`. O cabeçalho `Authorization: Bearer <chave>` autentica. Erros usa
 | `POST` | `/v1/knowledge-bases/{kb}/search` | `Search` |
 | `POST` | `/v1/knowledge-bases/{kb}/query` | `AnswerQuery`. Com `"stream": true`, devolve Server-Sent Events |
 | `POST` | `/v1/knowledge-bases/{kb}/reindex` | `ReindexKnowledgeBase` |
-| `POST` | `/v1/knowledge-bases/{kb}/sources/{id}/sync` | Sincronização (fase 5) |
+| `POST` | `/v1/knowledge-bases/{kb}/sources/{source}/sync` | `SyncSource` |
 | `POST` | `/v1/evaluations` | `RunEvaluation` |
 | `GET` | `/v1/jobs/{id}` | `GetIngestionStatus` |
 | `GET` | `/v1/usage` | `GetUsage` |

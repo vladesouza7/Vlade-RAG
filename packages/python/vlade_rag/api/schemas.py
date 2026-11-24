@@ -171,6 +171,16 @@ class EvaluationOut(_Model):
         )
 
 
+class SyncIn(_Model):
+    cursor: str | None = None
+    limit: int | None = Field(default=None, ge=1, le=1000)
+
+
+class SyncOut(_Model):
+    ingested: int
+    next_cursor: str | None = None
+
+
 class IngestOut(_Model):
     job: JobOut
     document_id: UUID

@@ -232,6 +232,44 @@ def test_evaluations_queue_a_job(api: Api) -> None:
     assert "mrr" in job["result"]["metrics"]
 
 
+def test_sync_source_routes_a_connector_to_ingestion(api: Api) -> None:
+    """Task 5.3: POST /v1/sources/{source}/sync runs a DocumentSource (ADR-0029)."""
+    from collections.abc import AsyncIterator
+
+    from vlade_rag.core.domain import RawDocument, SourceItem, TenantContext
+
+    class OneItemSource:
+        name = "one"
+
+        async def list_items(
+            self, ctx: TenantContext, cursor: str | None
+        ) -> AsyncIterator[SourceItem]:
+            yield SourceItem("one://1", "origem.md", "text/markdown", "ext-1")
+
+        async def fetch(self, ctx: TenantContext, item: SourceItem) -> RawDocument:
+            return RawDocument(
+                filename=item.filename,
+                mime_type="text/markdown",
+                data=b"# Origem\n\nTexto vindo do conector.",
+                source_type="one",
+                source_uri=item.uri,
+            )
+
+    _load(api)
+    api.runtime.deps.document_sources = {"one": OneItemSource()}  # type: ignore[assignment]
+    url = "/v1/knowledge-bases/trocas/sources/one/sync"
+    body = {"limit": 10}
+    assert api.client.post(url, json=body, headers=api.reader).status_code == 403
+    missing = api.client.post(
+        "/v1/knowledge-bases/trocas/sources/nope/sync", json=body, headers=api.admin
+    )
+    assert missing.status_code == 422
+    started = api.client.post(url, json=body, headers=api.admin)
+    assert started.status_code == 200, started.text
+    assert started.json()["ingested"] == 1
+    assert api.drain() == 1
+
+
 def test_tenant_isolation_over_http(api: Api) -> None:
     doc_id = _load(api)
     other = api.other

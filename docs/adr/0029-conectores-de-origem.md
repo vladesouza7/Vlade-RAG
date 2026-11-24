@@ -31,5 +31,6 @@ Uma ingestão repetida não pode criar documentos duplicados. Um conector també
 - O conector de sites depende da lista de domínios da ADR-0028. Sem ela, nenhuma semente é lida.
 - O token do Drive expira. O operador precisa renová-lo no cofre de segredos.
 - O conector SQL não garante que a consulta é segura no banco. Ele valida a forma da instrução. A permissão de leitura no banco é a barreira real.
+- O endpoint `POST /v1/knowledge-bases/{kb}/sources/{source}/sync` expõe a sincronização. O flow `sync_source` chama esse endpoint e começa com o gatilho desligado.
 - A suíte de contrato roda sem rede e sem serviços externos.
 - A limitação L23 da ADR-0028 continua válida para o conector de sites.
