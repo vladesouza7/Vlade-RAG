@@ -786,6 +786,10 @@ VLADE_SOURCES__GOOGLE_DRIVE__FOLDER_ID=root
 VLADE_SOURCES__SQL__URL=postgresql+asyncpg://***        # banco externo de leitura
 VLADE_SOURCES__SQL__QUERY=SELECT id, title FROM documentos
 VLADE_CACHE__URL=redis://valkey:6379/0           # Valkey ou Redis. Sem URL, o cache e o limite ficam no processo
+VLADE_CACHE__SEMANTIC__ENABLED=true              # cache semântico de consultas (ADR-0030)
+VLADE_CACHE__SEMANTIC__THRESHOLD=0.98
+VLADE_CACHE__SEMANTIC__MAX_ENTRIES=128
+VLADE_CACHE__SEMANTIC__TTL_SECONDS=600
 VLADE_VECTOR_INDEX__BACKEND=postgres             # postgres (pgvector, padrão) ou qdrant (ADR-0004)
 VLADE_VECTOR_INDEX__QDRANT__URL=http://localhost:6333
 VLADE_VECTOR_INDEX__QDRANT__API_KEY=***
@@ -1014,6 +1018,8 @@ O prompt `answer_with_citations` tem estas regras:
 O hash da chave `search` cobre o texto, o idioma, os filtros, o `top_k`, o uso do reranker e a configuração de recuperação da base. Uma entrada guarda o `chunk_id`, a pontuação e o nome do retriever de cada resultado. Se um chunk da entrada não existe mais, o `Search` ignora a entrada e busca de novo.
 
 O adapter acrescenta o prefixo `{tenant_id}/` a toda chave. Se o servidor Valkey falha, o `Search` trata a leitura como ausência da entrada, a escrita é descartada e o log recebe um aviso. A requisição continua.
+
+O cache semântico é opcional (ADR-0030). `VLADE_CACHE__SEMANTIC__ENABLED` liga a camada `SemanticCache`, que guarda o vetor da pergunta e os resultados em `semsearch:{kb_id}:{kb_epoch}`. Uma busca densa sem filtros e sem transformação compara o vetor novo com os vetores guardados por cosine. Se a similaridade atingir `VLADE_CACHE__SEMANTIC__THRESHOLD`, o `Search` reusa os resultados sem chamar retrievers, fusão ou reranker. `MAX_ENTRIES` limita o número de perguntas por base, e `TTL_SECONDS` define a validade. O padrão é desligado.
 
 ## 12. Orquestração
 

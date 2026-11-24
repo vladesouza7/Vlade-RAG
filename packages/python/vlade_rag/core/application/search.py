@@ -6,8 +6,9 @@ import asyncio
 import hashlib
 import json
 import time
-from collections.abc import Mapping
+from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
+from typing import Any
 from uuid import UUID
 
 from vlade_rag.core.application import semconv as sc
@@ -196,6 +197,17 @@ class Search:
         cached = await self._cache_get(ctx, cache_key)
         if cached is not None:
             return cached
+        vector: list[float] | None = None
+        if self._semantic_enabled(query, cfg):
+            space = await self.deps.repository.get_embedding_space(
+                ctx, kb.active_embedding_space_id
+            )
+            vector = await DenseRetriever(self.deps)._embed_query(ctx, kb, space.id, query.text)
+            records = await self.deps.semantic_cache.lookup(ctx, kb.id, kb.epoch, vector)
+            if records is not None:
+                hits = await self._rehydrate(ctx, records)
+                if hits is not None:
+                    return hits
         queries = await self._transform(ctx, kb, query)
         # One list per (query, retriever). The original query keeps the plain retriever name, so
         # the weights of the fusion and the tie-break (ARCHITECTURE 11.2) still apply to it. The
@@ -236,6 +248,10 @@ class Search:
             )
         results = fused[:top_k]
         await self._cache_put(ctx, cache_key, results)
+        if vector is not None:
+            await self.deps.semantic_cache.store(
+                ctx, kb.id, kb.epoch, vector, self._records(results)
+            )
         metrics = self.deps.metrics
         for (name, _, _), found in zip(jobs, lists, strict=True):
             # A derived query names its lists "dense#1": keep the low-cardinality retriever name.
@@ -285,6 +301,40 @@ class Search:
         ).hexdigest()
         return f"search:{kb.id}:{kb.epoch}:{digest}"
 
+    def _semantic_enabled(self, query: Query, cfg: Any) -> bool:
+        """Only plain dense searches use the semantic cache. Derived queries and filters do not."""
+        settings = self.deps.semantic_cache.settings
+        return (
+            settings.enabled
+            and self.deps.cache is not None
+            and "dense" in cfg.retrievers
+            and cfg.query_transform == "none"
+            and query.filters is None
+        )
+
+    @staticmethod
+    def _records(results: Sequence[ScoredChunk]) -> list[dict[str, Any]]:
+        return [
+            {"id": str(r.chunk.id), "score": r.score, "retriever": r.retriever} for r in results
+        ]
+
+    async def _rehydrate(
+        self, ctx: TenantContext, entries: Sequence[Mapping[str, Any]]
+    ) -> list[ScoredChunk] | None:
+        try:
+            ids = [UUID(str(e["id"])) for e in entries]
+            chunks = {c.id: c for c in await self.deps.repository.get_chunks(ctx, ids)}
+            if any(i not in chunks for i in ids):
+                return None
+            return [
+                ScoredChunk(
+                    chunks[UUID(str(e["id"]))], float(e["score"]), rank, str(e["retriever"])
+                )
+                for rank, e in enumerate(entries, start=1)
+            ]
+        except (ValueError, KeyError, TypeError):
+            return None
+
     async def _cache_get(self, ctx: TenantContext, key: str) -> list[ScoredChunk] | None:
         if self.deps.cache is None:
             return None
@@ -293,24 +343,16 @@ class Search:
             return None
         try:
             entries = json.loads(raw)
-            ids = [UUID(e["id"]) for e in entries]
-            chunks = {c.id: c for c in await self.deps.repository.get_chunks(ctx, ids)}
-            if any(i not in chunks for i in ids):
-                return None
-            return [
-                ScoredChunk(chunks[UUID(e["id"])], float(e["score"]), rank, str(e["retriever"]))
-                for rank, e in enumerate(entries, start=1)
-            ]
-        except (ValueError, KeyError, TypeError):
+        except (ValueError, TypeError):
             return None
+        return await self._rehydrate(ctx, entries)
 
     async def _cache_put(self, ctx: TenantContext, key: str, results: list[ScoredChunk]) -> None:
         if self.deps.cache is None:
             return
-        entries = [
-            {"id": str(r.chunk.id), "score": r.score, "retriever": r.retriever} for r in results
-        ]
-        await self.deps.cache.set(ctx, key, json.dumps(entries).encode(), SEARCH_CACHE_TTL)
+        await self.deps.cache.set(
+            ctx, key, json.dumps(self._records(results)).encode(), SEARCH_CACHE_TTL
+        )
 
     async def _log(
         self, ctx: TenantContext, kb: KnowledgeBase, text: str, count: int, started: float

@@ -33,6 +33,7 @@ Cada arquivo registra uma decisão. Um ADR aceito não muda. Para mudar uma deci
 | [0027](0027-reindexacao-sem-parada.md) | Reindexação sem parada | Aceito | — |
 | [0028](0028-download-de-uri-de-origem.md) | Download de URI de origem | Aceito | — |
 | [0029](0029-conectores-de-origem.md) | Conectores de origem: sites, Google Drive e bancos SQL | Aceito | — |
+| [0030](0030-cache-semantico.md) | Cache semântico de consultas | Aceito | — |
 
 ## Modelo
 

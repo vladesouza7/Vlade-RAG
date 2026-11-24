@@ -67,6 +67,22 @@ def shape(results: list[ScoredChunk]) -> list[tuple[str, float, int, str]]:
     return [(str(r.chunk.id), r.score, r.rank, r.retriever) for r in results]
 
 
+async def test_similar_query_is_served_from_the_semantic_cache(
+    kb: tuple[World, CountingFusion],
+) -> None:
+    from vlade_rag.core.application import SemanticCache, SemanticCacheSettings
+
+    world, fusion = kb
+    world.deps.semantic_cache = SemanticCache(
+        world.deps.cache, SemanticCacheSettings(enabled=True, threshold=0.5)
+    )
+    first = await search(world, "prazo de entrega")
+    assert first and fusion.calls == 1
+    second = await search(world, "prazo entrega")
+    assert fusion.calls == 1  # a different text, but the same meaning and vector
+    assert shape(second) == shape(first)
+
+
 async def test_repeated_search_is_served_from_the_cache(kb: tuple[World, CountingFusion]) -> None:
     world, fusion = kb
     first = await search(world)

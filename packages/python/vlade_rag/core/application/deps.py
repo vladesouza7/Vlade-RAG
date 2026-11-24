@@ -7,6 +7,7 @@ from contextlib import contextmanager
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any
 
+from vlade_rag.core.application.semantic_cache import SemanticCache, SemanticCacheSettings
 from vlade_rag.core.domain.kb_config import EmbeddingsConfig, GenerationConfig, RerankConfig
 from vlade_rag.core.ports import (
     AttrValue,
@@ -121,6 +122,9 @@ class Dependencies:
     # ``orchestration.engine`` value -> engine. Without "pipeline", the built-in one runs.
     answer_engines: Mapping[str, AnswerEngine] = field(default_factory=dict)
     cache: Cache | None = None
+    semantic_cache: SemanticCache = field(
+        default_factory=lambda: SemanticCache(None, SemanticCacheSettings())
+    )
     rate_limiter: RateLimiter | None = None  # without it no request limit applies
     tenants: TenantDirectory | None = None  # needed for quotas; without it no quota applies
     tracer: Tracer = field(default_factory=NoopTracer)

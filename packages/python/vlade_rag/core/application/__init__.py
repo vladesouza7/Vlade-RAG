@@ -38,6 +38,7 @@ from vlade_rag.core.application.reindex import (
 )
 from vlade_rag.core.application.request_limits import EnforceRequestLimits
 from vlade_rag.core.application.search import Search, SearchResult
+from vlade_rag.core.application.semantic_cache import SemanticCache, SemanticCacheSettings
 from vlade_rag.core.application.sources import SyncResult, SyncSource
 
 __all__ = [
@@ -69,6 +70,8 @@ __all__ = [
     "RunIngestionJob",
     "Search",
     "SearchResult",
+    "SemanticCache",
+    "SemanticCacheSettings",
     "SourcePolicy",
     "SubmitIngestion",
     "SubmitResult",

@@ -32,6 +32,7 @@ cp .env.example .env
 | `VLADE_PROVIDERS__*` | Chaves e URLs dos provedores |
 | `VLADE_SOURCES__ALLOWED_DOMAINS` | Domínios permitidos para `https://` e para o conector de sites (ADR-0028) |
 | `VLADE_SOURCES__WEB__SEEDS`, `VLADE_SOURCES__GOOGLE_DRIVE__ACCESS_TOKEN`, `VLADE_SOURCES__SQL__URL` | Ligam os conectores de origem (ADR-0029) |
+| `VLADE_CACHE__SEMANTIC__*` | Ligam e ajustam o cache semântico de consultas (ADR-0030) |
 
 Gere senhas e pepper com um gerador aleatório. Nunca use os valores do `.env.example` em `prod`. O Compose usa `admin` como senha do Grafana quando `GRAFANA_ADMIN_PASSWORD` está vazia. Troque essa senha antes de subir o perfil `prod`.
 
