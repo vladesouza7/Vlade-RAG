@@ -6,6 +6,7 @@ Este arquivo registra as mudanças relevantes de cada versão. O formato segue o
 
 ### Adicionado
 
+- OIDC/OAuth 2.1 na API e no MCP (fase 5, tarefa 5.5, ADR-0031): `authenticate_bearer` aceita chave de API ou token JWT verificado pelo emissor e JWKS configurados. Os claims viram `TenantContext`, sem mudar os casos de uso. O extra `oidc` traz PyJWT com cryptography.
 - Cache semântico de consultas (fase 5, tarefa 5.4, ADR-0030): camada opt-in sobre o port `Cache`, com chave por base e época, limiar de similaridade por cosine e limite de entradas. Funciona em busca densa sem filtros e sem transformação.
 - Endpoint `POST /v1/knowledge-bases/{kb}/sources/{source}/sync` e flow Kestra `sync_source` (fase 5, tarefa 5.3, ADR-0029). O endpoint chama o caso de uso `SyncSource`. O flow tem gatilho diário desligado e aceita `source`, `knowledge_base`, `cursor` e `limit`.
 - Conectores de origem (fase 5, tarefa 5.2, ADR-0029): `WebSource`, `GoogleDriveSource` e `SqlSource` implementam `DocumentSource`. O caso de uso `SyncSource` lista os itens e envia cada um à ingestão, sem duplicar documentos. O conector de sites reusa a política segura da ADR-0028. O extra `sql` traz SQLAlchemy e aiosqlite.

@@ -127,6 +127,10 @@ A suíte de contrato cobre os dois índices, e `tests/integration/test_qdrant_eq
 
 Os conectores de sites, Google Drive e bancos SQL implementam `DocumentSource` (ADR-0029). Eles ficam desligados por padrão. Configure `VLADE_SOURCES__WEB__SEEDS`, `VLADE_SOURCES__GOOGLE_DRIVE__ACCESS_TOKEN` ou `VLADE_SOURCES__SQL__URL` com `VLADE_SOURCES__SQL__QUERY` para ligar cada um. O caso de uso `SyncSource` envia os itens de um conector para a ingestão, sem duplicar documentos. O conector SQL precisa do extra `sql`.
 
+### OIDC/OAuth 2.1
+
+Chaves de API são a credencial padrão. O serviço também aceita tokens OIDC na API e no MCP quando `VLADE_AUTH__OIDC__ENABLED=true` (ADR-0031). O emissor publica um JWKS, e os claims `tenant` e `roles` definem o tenant e os papéis. O extra `oidc` traz o verificador. O transporte stdio do MCP continua usando `VLADE_API_KEY`.
+
 ## Estrutura do repositório
 
 | Pasta | Conteúdo |

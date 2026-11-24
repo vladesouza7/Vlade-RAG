@@ -60,6 +60,7 @@ Extras de `vlade-rag` disponíveis na fase 1:
 | `eval` | `ragas` (fase 3, Apache-2.0). Métricas de resposta do RF-71 (ADR-0025). Traz pandas, pyarrow e scipy. Fica fora do extra `server` |
 | `qdrant` | `qdrant-client` (fase 5, Apache-2.0). Índice vetorial alternativo (ADR-0004). O pgvector continua como padrão |
 | `sql` | `sqlalchemy[asyncio]` e `aiosqlite` (fase 5, MIT). Conector de banco externo (ADR-0029). Outros drivers ficam a cargo do operador |
+| `oidc` | `pyjwt[crypto]` (fase 5, MIT/Apache-2.0). Verificação de tokens OIDC na API e no MCP (ADR-0031) |
 | `server` | `native`, `api`, `cli`, `postgres`, `ollama`, `openai`, `otel`, `cache`, `mcp`, `s3` |
 
 O Gemini usa o endpoint compatível com a API da OpenAI e não precisa de extra. O extra `all` fica previsto para a fase 5, tarefa 5.6.
@@ -89,6 +90,7 @@ packages/python/vlade_rag/
 ├── evaluation/          # metrics/, ragas/, datasets
 ├── api/                 # FastAPI
 ├── mcp/                 # server/, tools/, resources/, prompts/, auth/, policies/
+├── auth/                # verificador OIDC e autenticação Bearer compartilhada pela API e pelo MCP
 ├── cli/                 # Typer
 ├── observability/       # opentelemetry/ (atributos OpenInference para o Arize Phoenix)
 ├── ops/                 # health, auditoria, manutenção (vlade-rag-ops)
@@ -772,6 +774,13 @@ VLADE_OBJECT_STORAGE__S3__SECRET_ACCESS_KEY=***
 VLADE_OBJECT_STORAGE__S3__PATH_STYLE=true
 VLADE_OBJECT_STORAGE__S3__CREATE_BUCKET=false    # true cria o bucket ao iniciar (serviço local)
 VLADE_SECURITY__API_KEY_PEPPER=***
+VLADE_AUTH__OIDC__ENABLED=true                    # OIDC/OAuth 2.1 na API e no MCP (ADR-0031)
+VLADE_AUTH__OIDC__ISSUER=https://idp.exemplo
+VLADE_AUTH__OIDC__AUDIENCE=vlade-rag
+VLADE_AUTH__OIDC__JWKS_URL=https://idp.exemplo/.well-known/jwks.json
+VLADE_AUTH__OIDC__ALGORITHMS=["RS256"]
+VLADE_AUTH__OIDC__TENANT_CLAIM=tenant
+VLADE_AUTH__OIDC__ROLES_CLAIM=roles
 VLADE_EVALUATION__DATASETS_PATH=evals/datasets               # nomes de datasets para avaliação agendada (ADR-0011)
 VLADE_EVALUATION__DEFAULT_K=10
 VLADE_EVALUATION__MAX_ITEMS=1000
@@ -1090,7 +1099,7 @@ Ingestão durante a reindexação (ADR-0027):
 
 ### 14.1. API REST
 
-Prefixo `/v1`. O cabeçalho `Authorization: Bearer <chave>` autentica. Erros usam `application/problem+json` (RFC 9457). Uma resposta 429 traz o cabeçalho `Retry-After`, em segundos.
+Prefixo `/v1`. O cabeçalho `Authorization: Bearer <credencial>` autentica. A credencial é a chave de API ou um token OIDC verificado (ADR-0031). Erros usam `application/problem+json` (RFC 9457). Uma resposta 401 traz `WWW-Authenticate: Bearer`, e uma resposta 429 traz `Retry-After`, em segundos.
 
 | Método | Caminho | Caso de uso |
 |---|---|---|

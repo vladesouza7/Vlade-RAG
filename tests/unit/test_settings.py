@@ -27,6 +27,24 @@ def test_invalid_port_is_rejected(monkeypatch: pytest.MonkeyPatch) -> None:
         Settings()
 
 
+def test_oidc_is_off_by_default() -> None:
+    oidc = Settings().auth.oidc
+    assert oidc.enabled is False
+    assert oidc.tenant_claim == "tenant"
+    assert oidc.algorithms == ["RS256"]
+
+
+def test_oidc_settings(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("VLADE_AUTH__OIDC__ENABLED", "true")
+    monkeypatch.setenv("VLADE_AUTH__OIDC__ISSUER", "https://idp.example")
+    monkeypatch.setenv("VLADE_AUTH__OIDC__AUDIENCE", "vlade")
+    monkeypatch.setenv("VLADE_AUTH__OIDC__JWKS_URL", "https://idp.example/jwks")
+    oidc = Settings().auth.oidc
+    assert oidc.enabled is True
+    assert oidc.issuer == "https://idp.example"
+    assert oidc.jwks_url == "https://idp.example/jwks"
+
+
 def test_semantic_cache_is_off_by_default() -> None:
     semantic = Settings().cache.semantic
     assert semantic.enabled is False

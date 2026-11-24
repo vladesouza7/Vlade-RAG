@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import secrets
 import sys
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
@@ -50,6 +51,26 @@ async def kb_slugs(client: Client) -> list[str]:
 
 
 # ---------------------------------------------------------------- HTTP
+
+
+async def test_http_accepts_an_oidc_access_token(mcp_world: McpWorld) -> None:
+    """Task 5.5: MCP Streamable HTTP also accepts a verified OIDC token."""
+    from tests.oidc_helpers import AUDIENCE, ISSUER, KID, make_token, signing_keys
+    from vlade_rag.auth import OidcVerifier
+    from vlade_rag.core.config.settings import OidcSettings
+
+    private, public = signing_keys()
+    slug = f"oidc-{secrets.token_hex(4)}"
+    await mcp_world.runtime.tenants.create_tenant(slug, "OIDC")
+    mcp_world.runtime.oidc = OidcVerifier(
+        OidcSettings(enabled=True, issuer=ISSUER, audience=AUDIENCE),
+        mcp_world.runtime.tenants,
+        jwks={KID: public},
+    )
+    token = make_token(private, tenant=slug, roles=("reader",))
+    async with http_app(mcp_world) as app, mcp_client(app, token) as client:
+        tools = await client.list_tools()
+        assert {tool.name for tool in tools.tools} >= {"vlade_list_knowledge_bases"}
 
 
 @pytest.mark.parametrize("key", [None, "", "vrag_nope_nope", "not-an-api-key"])

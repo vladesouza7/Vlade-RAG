@@ -13,6 +13,7 @@ from typing import Any
 from starlette.responses import JSONResponse
 from starlette.types import ASGIApp, Receive, Scope, Send
 
+from vlade_rag.auth import authenticate_bearer
 from vlade_rag.core.domain import TenantContext, Unauthenticated
 from vlade_rag.core.ports import TenantDirectory
 
@@ -41,9 +42,10 @@ def context_of(request: Any) -> TenantContext | None:
 class ApiKeyMiddleware:
     """ASGI middleware: authenticate the key of each HTTP request before the MCP server runs."""
 
-    def __init__(self, app: ASGIApp, tenants: TenantDirectory) -> None:
+    def __init__(self, app: ASGIApp, tenants: TenantDirectory, oidc: Any = None) -> None:
         self.app = app
         self.tenants = tenants
+        self.oidc = oidc
 
     async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
         if scope["type"] != "http":
@@ -53,12 +55,19 @@ class ApiKeyMiddleware:
         ctx: TenantContext | None = None
         if token is not None:
             try:
-                ctx = await self.tenants.authenticate(token, interface="mcp")
+                ctx = await authenticate_bearer(
+                    self.tenants, token, interface="mcp", oidc=self.oidc
+                )
             except Unauthenticated:
                 ctx = None
         if ctx is None:
             response = JSONResponse(
-                {"error": {"code": "unauthenticated", "message": "Send a valid API key."}},
+                {
+                    "error": {
+                        "code": "unauthenticated",
+                        "message": "Send a valid API key or access token.",
+                    }
+                },
                 status_code=401,
                 headers={"WWW-Authenticate": "Bearer"},
             )

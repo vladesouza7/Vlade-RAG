@@ -30,13 +30,14 @@ O servidor lê a chave de API da variável de ambiente `VLADE_API_KEY` na inicia
 
 ### 3.2. Transporte HTTP
 
-1. O cliente envia `Authorization: Bearer <chave>` em cada requisição.
-2. Se a chave não existe ou é inválida, o servidor responde HTTP 401.
-3. A versão 1 usa chaves de API. A fase 5 acrescenta OAuth 2.1 conforme a especificação de autorização do MCP.
+1. O cliente envia `Authorization: Bearer <credencial>` em cada requisição. A credencial é a chave de API ou um token de acesso OIDC.
+2. Se a credencial não existe ou é inválida, o servidor responde HTTP 401 com `WWW-Authenticate: Bearer`.
+3. A versão 1 usa chaves de API. A fase 5 acrescenta OAuth 2.1 (ADR-0031), com verificação do token contra o emissor e o JWKS configurados.
+4. As chaves de API continuam válidas com OIDC ligado. O servidor tenta a chave primeiro e verifica o token quando a credencial tem forma de JWT.
 
 ### 3.3. Tenant
 
-O servidor deriva o tenant e os papéis da chave. Nenhuma ferramenta aceita `tenant_id` como parâmetro. O `slug` identifica a base dentro do tenant da chave.
+O servidor deriva o tenant e os papéis da credencial verificada. Nenhuma ferramenta aceita `tenant_id` como parâmetro. O `slug` identifica a base dentro do tenant da credencial. Os claims `tenant` e `roles` do token são configuráveis.
 
 ## 4. Política de ferramentas
 

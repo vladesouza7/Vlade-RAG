@@ -25,6 +25,7 @@ cp .env.example .env
 | `POSTGRES_PASSWORD` | Senha do dono do PostgreSQL |
 | `VLADE_APP_DB_PASSWORD` | Senha do papel da aplicação |
 | `VLADE_API_KEY_PEPPER` | Segredo usado no hash das chaves de API |
+| `VLADE_AUTH__OIDC__*` | Ligam e ajustam OIDC/OAuth 2.1 na API e no MCP (ADR-0031) |
 | `S3_ACCESS_KEY_ID` e `S3_SECRET_ACCESS_KEY` | Credenciais do RustFS ou do S3 |
 | `VLADE_OTEL__ENABLED` | Liga traces e métricas. Use `true` em `prod` |
 | `VLADE_OTEL__ENDPOINT` | Use `http://alloy:4318` no Compose |
