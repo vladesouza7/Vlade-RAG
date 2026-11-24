@@ -194,10 +194,20 @@ class WorkerSettings(BaseModel):
     lease_seconds: int = Field(default=600, ge=10)
 
 
+class CacheSemanticSettings(BaseModel):
+    """Opt-in semantic cache of query results (ADR-0030)."""
+
+    enabled: bool = False
+    threshold: float = Field(default=0.98, ge=0.5, le=1.0)
+    max_entries: int = Field(default=128, ge=1, le=1000)
+    ttl_seconds: int = Field(default=600, ge=1)
+
+
 class CacheSettings(BaseModel):
     """Valkey or Redis (ADR-0007). Without ``url``, cache and rate limit live in the process."""
 
     url: SecretStr | None = None
+    semantic: CacheSemanticSettings = Field(default_factory=CacheSemanticSettings)
 
     @field_validator("url", mode="before")
     @classmethod

@@ -27,6 +27,22 @@ def test_invalid_port_is_rejected(monkeypatch: pytest.MonkeyPatch) -> None:
         Settings()
 
 
+def test_semantic_cache_is_off_by_default() -> None:
+    semantic = Settings().cache.semantic
+    assert semantic.enabled is False
+    assert semantic.threshold == 0.98
+
+
+def test_semantic_cache_settings(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("VLADE_CACHE__SEMANTIC__ENABLED", "true")
+    monkeypatch.setenv("VLADE_CACHE__SEMANTIC__THRESHOLD", "0.75")
+    monkeypatch.setenv("VLADE_CACHE__SEMANTIC__MAX_ENTRIES", "16")
+    settings = Settings()
+    assert settings.cache.semantic.enabled is True
+    assert settings.cache.semantic.threshold == 0.75
+    assert settings.cache.semantic.max_entries == 16
+
+
 def test_source_connectors_are_off_by_default() -> None:
     sources = Settings().sources
     assert sources.web.seeds == []

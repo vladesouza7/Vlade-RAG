@@ -11,7 +11,13 @@ from collections.abc import Awaitable, Callable
 from dataclasses import dataclass, field
 from typing import Any
 
-from vlade_rag.core.application import Dependencies, Limits, SourcePolicy
+from vlade_rag.core.application import (
+    Dependencies,
+    Limits,
+    SemanticCache,
+    SemanticCacheSettings,
+    SourcePolicy,
+)
 from vlade_rag.core.config import Settings, get_settings
 from vlade_rag.core.domain import InvalidArgument
 from vlade_rag.core.domain.kb_config import EmbeddingsConfig, GenerationConfig, RerankConfig
@@ -455,6 +461,16 @@ async def build_runtime(
         closers.append(sql_source.close)
     deps.document_sources = document_sources
 
+    semantic = settings.cache.semantic
+    deps.semantic_cache = SemanticCache(
+        ports.get("cache"),
+        SemanticCacheSettings(
+            enabled=semantic.enabled,
+            threshold=semantic.threshold,
+            max_entries=semantic.max_entries,
+            ttl_seconds=semantic.ttl_seconds,
+        ),
+    )
     deps.evaluation_runner = EvaluationWorker(deps)
     return Runtime(
         settings=settings,
