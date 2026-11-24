@@ -6,6 +6,7 @@ Este arquivo registra as mudanças relevantes de cada versão. O formato segue o
 
 ### Adicionado
 
+- Endpoint `POST /v1/knowledge-bases/{kb}/sources/{source}/sync` e flow Kestra `sync_source` (fase 5, tarefa 5.3, ADR-0029). O endpoint chama o caso de uso `SyncSource`. O flow tem gatilho diário desligado e aceita `source`, `knowledge_base`, `cursor` e `limit`.
 - Conectores de origem (fase 5, tarefa 5.2, ADR-0029): `WebSource`, `GoogleDriveSource` e `SqlSource` implementam `DocumentSource`. O caso de uso `SyncSource` lista os itens e envia cada um à ingestão, sem duplicar documentos. O conector de sites reusa a política segura da ADR-0028. O extra `sql` traz SQLAlchemy e aiosqlite.
 - Adapter Qdrant de `VectorIndex` (fase 5, tarefa 5.1, ADR-0004) no extra `qdrant`. O pgvector continua como padrão e como referência. O backend vem de `VLADE_VECTOR_INDEX__BACKEND`. A suíte de contrato cobre memória, pgvector e Qdrant, e um teste de integração compara o Recall@10 dos dois índices no mesmo espaço.
 

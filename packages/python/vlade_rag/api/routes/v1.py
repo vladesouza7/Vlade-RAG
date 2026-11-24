@@ -29,6 +29,8 @@ from vlade_rag.api.schemas import (
     SearchHit,
     SearchIn,
     SearchOut,
+    SyncIn,
+    SyncOut,
     TenantUsageOut,
 )
 from vlade_rag.core.application import (
@@ -48,6 +50,7 @@ from vlade_rag.core.application import (
     RunEvaluation,
     Search,
     SubmitIngestion,
+    SyncSource,
 )
 from vlade_rag.core.domain import InvalidArgument, RawDocument, VladeError
 
@@ -171,6 +174,19 @@ async def run_evaluation(body: EvaluationIn, ctx: CtxDep, rt: RuntimeDep) -> Eva
         k=body.k,
     )
     return EvaluationOut.of(result)
+
+
+@router.post("/knowledge-bases/{kb}/sources/{source}/sync", response_model=SyncOut)
+async def sync_source(kb: str, source: str, body: SyncIn, ctx: CtxDep, rt: RuntimeDep) -> SyncOut:
+    """Ingest the items of a configured source connector (ADR-0029)."""
+    result = await SyncSource(rt.deps).execute(
+        ctx,
+        source=source,
+        knowledge_base=kb,
+        cursor=body.cursor,
+        limit=body.limit,
+    )
+    return SyncOut(ingested=result.ingested, next_cursor=result.next_cursor)
 
 
 @router.get("/usage", response_model=TenantUsageOut)

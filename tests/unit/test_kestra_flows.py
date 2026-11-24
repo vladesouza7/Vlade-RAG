@@ -10,7 +10,7 @@ import pytest
 import yaml
 
 FLOWS = Path(__file__).parents[2] / "deploy" / "kestra" / "flows"
-NAMES = ("ingest_batch", "reindex_knowledge_base", "evaluate_nightly", "backup")
+NAMES = ("ingest_batch", "sync_source", "reindex_knowledge_base", "evaluate_nightly", "backup")
 
 
 def flow(name: str) -> dict[str, Any]:
@@ -39,7 +39,9 @@ def test_every_flow_has_a_namespace_and_tasks(name: str) -> None:
             assert task["commands"]
 
 
-@pytest.mark.parametrize("name", ("ingest_batch", "reindex_knowledge_base", "evaluate_nightly"))
+@pytest.mark.parametrize(
+    "name", ("ingest_batch", "sync_source", "reindex_knowledge_base", "evaluate_nightly")
+)
 def test_api_flows_use_the_service_key_and_no_direct_database_access(name: str) -> None:
     text = text_of(flow(name))
     assert "secrets.VLADE_API_KEY" in text
@@ -55,6 +57,19 @@ def test_ingest_batch_takes_documents_as_json() -> None:
     assert "/v1/knowledge-bases/" in text
     assert "multipart/form-data" in text
     assert "filename" in text
+
+
+def test_sync_source_calls_the_connector_endpoint() -> None:
+    data = flow("sync_source")
+    script = data["tasks"][0]["script"]
+    assert "/v1/knowledge-bases/" in script
+    assert "/sources/" in script
+    assert "/sync" in script
+    trigger = data["triggers"][0]
+    assert trigger["disabled"] is True
+    inputs = {item["name"]: item for item in data["inputs"]}
+    assert inputs["source"]["required"] is True
+    assert inputs["knowledge_base"]["required"] is True
 
 
 def test_reindex_previews_and_confirms() -> None:

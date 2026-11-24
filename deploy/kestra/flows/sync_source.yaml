@@ -1,0 +1,73 @@
+id: sync_source
+namespace: vlade
+description: >
+  Agenda de sincronização de um conector de origem. Chama POST /v1/knowledge-bases/{kb}/sources/{source}/sync.
+  O conector precisa estar configurado no servidor da API (ADR-0029).
+
+inputs:
+  - name: source
+    type: STRING
+    required: true
+    description: Nome do conector, entre web, google_drive e sql.
+  - name: knowledge_base
+    type: STRING
+    required: true
+  - name: cursor
+    type: STRING
+    required: false
+    description: Cursor devolvido por uma execução anterior, quando o conector usa paginação.
+  - name: limit
+    type: INT
+    required: false
+    defaults: 200
+
+triggers:
+  - id: nightly
+    type: io.kestra.plugin.core.trigger.Schedule
+    cron: "0 4 * * *"
+    timezone: UTC
+    disabled: true
+
+tasks:
+  - id: sync
+    type: io.kestra.plugin.scripts.python.Script
+    containerImage: python:3.12-slim
+    env:
+      VLADE_API_URL: "{{ vars.vlade_api_url }}"
+      VLADE_API_KEY: "{{ secrets.VLADE_API_KEY }}"
+      SOURCE: "{{ inputs.source }}"
+      KNOWLEDGE_BASE: "{{ inputs.knowledge_base }}"
+      CURSOR: "{{ inputs.cursor }}"
+      LIMIT: "{{ inputs.limit }}"
+    script: |
+      import json
+      import os
+      import urllib.request
+
+      body = {}
+      if os.environ.get("CURSOR"):
+          body["cursor"] = os.environ["CURSOR"]
+      if os.environ.get("LIMIT"):
+          body["limit"] = int(os.environ["LIMIT"])
+
+      endpoint = (
+          os.environ["VLADE_API_URL"].rstrip("/")
+          + "/v1/knowledge-bases/"
+          + os.environ["KNOWLEDGE_BASE"]
+          + "/sources/"
+          + os.environ["SOURCE"]
+          + "/sync"
+      )
+      request = urllib.request.Request(
+          endpoint,
+          data=json.dumps(body).encode("utf-8"),
+          method="POST",
+          headers={
+              "Authorization": "Bearer " + os.environ["VLADE_API_KEY"],
+              "Content-Type": "application/json",
+          },
+      )
+      with urllib.request.urlopen(request, timeout=120) as response:
+          if response.status != 200:
+              raise SystemExit(f"API returned HTTP {response.status}")
+          print(json.loads(response.read()))
