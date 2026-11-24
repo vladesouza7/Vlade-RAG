@@ -41,6 +41,7 @@ postgres = [
     "pgvector>=0.5.1",
 ]
 qdrant = ["qdrant-client>=1.20.0"]  # alternative VectorIndex; pgvector stays the default (ADR-0004)
+sql = ["sqlalchemy[asyncio]>=2.1", "aiosqlite>=0.20"]  # external SQL source connector (ADR-0029)
 docling = ["docling>=2.151.1"]
 otel = [
     "opentelemetry-api>=1.45.2",

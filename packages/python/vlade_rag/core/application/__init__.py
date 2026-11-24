@@ -38,6 +38,7 @@ from vlade_rag.core.application.reindex import (
 )
 from vlade_rag.core.application.request_limits import EnforceRequestLimits
 from vlade_rag.core.application.search import Search, SearchResult
+from vlade_rag.core.application.sources import SyncResult, SyncSource
 
 __all__ = [
     "AnswerDelta",
@@ -71,6 +72,8 @@ __all__ = [
     "SourcePolicy",
     "SubmitIngestion",
     "SubmitResult",
+    "SyncResult",
+    "SyncSource",
     "UsageView",
     "assemble_context",
     "validate_answer",

@@ -14,6 +14,7 @@ from vlade_rag.core.ports import (
     Cache,
     Chunker,
     DocumentParser,
+    DocumentSource,
     EmbeddingProvider,
     EvaluationDatasets,
     EvaluationRunner,
@@ -126,6 +127,8 @@ class Dependencies:
     metrics: Metrics = field(default_factory=NoopMetrics)
     limits: Limits = field(default_factory=Limits)
     sources: SourcePolicy = field(default_factory=SourcePolicy)
+    # Connectors of task 5.2, keyed by name. Empty by default: no source is active.
+    document_sources: Mapping[str, DocumentSource] = field(default_factory=dict)
     # Evaluation needs the registry of datasets and a worker runner. Both are wired in bootstrap.
     evaluation_datasets: EvaluationDatasets | None = None
     evaluation_runner: EvaluationRunner | None = None

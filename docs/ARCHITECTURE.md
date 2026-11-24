@@ -59,6 +59,7 @@ Extras de `vlade-rag` disponíveis na fase 1:
 | `langgraph` | `langgraph` (fase 3, MIT). Motor de consulta opcional (ADR-0023). Fica fora do extra `server` |
 | `eval` | `ragas` (fase 3, Apache-2.0). Métricas de resposta do RF-71 (ADR-0025). Traz pandas, pyarrow e scipy. Fica fora do extra `server` |
 | `qdrant` | `qdrant-client` (fase 5, Apache-2.0). Índice vetorial alternativo (ADR-0004). O pgvector continua como padrão |
+| `sql` | `sqlalchemy[asyncio]` e `aiosqlite` (fase 5, MIT). Conector de banco externo (ADR-0029). Outros drivers ficam a cargo do operador |
 | `server` | `native`, `api`, `cli`, `postgres`, `ollama`, `openai`, `otel`, `cache`, `mcp`, `s3` |
 
 O Gemini usa o endpoint compatível com a API da OpenAI e não precisa de extra. O extra `all` fica previsto para a fase 5, tarefa 5.6.
@@ -777,6 +778,13 @@ VLADE_EVALUATION__MAX_ITEMS=1000
 VLADE_SOURCES__ALLOWED_DOMAINS=["docs.exemplo.com"]     # lista vazia recusa source_uri https:// (ADR-0028)
 VLADE_SOURCES__MAX_BYTES=52428800                      # limite do download; o menor entre este e max_upload_bytes
 VLADE_SOURCES__TIMEOUT=30.0
+VLADE_SOURCES__WEB__SEEDS=["https://docs.exemplo.com"] # conector de sites (ADR-0029)
+VLADE_SOURCES__WEB__MAX_PAGES=50
+VLADE_SOURCES__WEB__MAX_DEPTH=2
+VLADE_SOURCES__GOOGLE_DRIVE__ACCESS_TOKEN=***           # token OAuth de acesso
+VLADE_SOURCES__GOOGLE_DRIVE__FOLDER_ID=root
+VLADE_SOURCES__SQL__URL=postgresql+asyncpg://***        # banco externo de leitura
+VLADE_SOURCES__SQL__QUERY=SELECT id, title FROM documentos
 VLADE_CACHE__URL=redis://valkey:6379/0           # Valkey ou Redis. Sem URL, o cache e o limite ficam no processo
 VLADE_VECTOR_INDEX__BACKEND=postgres             # postgres (pgvector, padrão) ou qdrant (ADR-0004)
 VLADE_VECTOR_INDEX__QDRANT__URL=http://localhost:6333
@@ -914,6 +922,18 @@ O processo `vlade-rag worker` roda o worker. No perfil `dev`, a API pode rodar u
 As etapas `validate`, `store_original` e `dedupe` acontecem no caso de uso `SubmitIngestion`, antes de o job existir. O job registra as etapas de `extract` a `publish`.
 
 Depois de `publish`, uma tarefa de manutenção apaga os chunks e os vetores das versões `superseded`. O período de espera padrão é de 24 horas. O comando `vlade-rag ops cleanup` executa essa tarefa.
+
+### 10.1. Conectores de origem
+
+Três adapters implementam `DocumentSource` (ADR-0029). O `Runtime` guarda os conectores ligados em `deps.document_sources`. Cada conector deve desligar por padrão.
+
+| Nome | Classe | Configuração | O que faz |
+|---|---|---|---|
+| `web` | `WebSource` | `VLADE_SOURCES__WEB__SEEDS`, `VLADE_SOURCES__ALLOWED_DOMAINS` | Percorre páginas HTTPS do mesmo host, até um limite de páginas e de profundidade |
+| `google_drive` | `GoogleDriveSource` | `VLADE_SOURCES__GOOGLE_DRIVE__ACCESS_TOKEN`, `__FOLDER_ID` | Lista arquivos da pasta e baixa cada arquivo pela API Drive v3 |
+| `sql` | `SqlSource` | `VLADE_SOURCES__SQL__URL`, `__QUERY` | Lê as linhas de uma instrução `SELECT` em um banco externo e transforma cada linha em documento JSON |
+
+O caso de uso `SyncSource` lista os itens de um conector e chama `SubmitIngestion` para cada um. Ele conta só os documentos novos. O `external_id` do item evita duplicatas em uma segunda execução. O conector de sites reusa as regras da ADR-0028: domínios permitidos, porta 443, sem redirecionamento, sem endereço privado e limite de tamanho. O conector SQL exige uma única instrução `SELECT`, `WITH` ou `VALUES` e uma conta de banco somente leitura.
 
 ## 11. Pipeline de consulta
 

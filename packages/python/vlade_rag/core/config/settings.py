@@ -61,16 +61,56 @@ class ObjectStorageSettings(BaseModel):
     s3: S3Settings = Field(default_factory=S3Settings)
 
 
+class WebSourceSettings(BaseModel):
+    """Seeds and limits of the website connector (ADR-0029)."""
+
+    seeds: list[str] = Field(default_factory=list)
+    max_pages: int = Field(default=50, ge=1)
+    max_depth: int = Field(default=2, ge=0)
+
+
+class GoogleDriveSourceSettings(BaseModel):
+    """OAuth token and folder of the Drive connector (ADR-0029)."""
+
+    access_token: SecretStr | None = None
+    folder_id: str = "root"
+    page_size: int = Field(default=100, ge=1, le=1000)
+    max_files: int = Field(default=1000, ge=1)
+
+    @field_validator("access_token", mode="before")
+    @classmethod
+    def _empty_is_none(cls, value: object) -> object:
+        return None if value in ("", None) else value
+
+
+class SqlSourceSettings(BaseModel):
+    """Connection and query of the external SQL connector (ADR-0029)."""
+
+    url: SecretStr | None = None
+    query: str | None = None
+    filename_columns: list[str] = Field(default_factory=list)
+    max_rows: int = Field(default=1000, ge=1)
+
+    @field_validator("url", mode="before")
+    @classmethod
+    def _empty_is_none(cls, value: object) -> object:
+        return None if value in ("", None) else value
+
+
 class SourcesSettings(BaseModel):
     """Download of a document from an origin URI (ARCHITECTURE section 15).
 
     ``allowed_domains`` is empty by default, so an ``https://`` URI is refused. Each entry is a
     host name; a subdomain of an entry is also allowed. The download never follows a redirect.
+    The nested settings configure the connectors of task 5.2.
     """
 
     allowed_domains: list[str] = Field(default_factory=list)
     max_bytes: int = Field(default=50 * 1024 * 1024, ge=1)
     timeout: float = Field(default=30.0, gt=0)
+    web: WebSourceSettings = Field(default_factory=WebSourceSettings)
+    google_drive: GoogleDriveSourceSettings = Field(default_factory=GoogleDriveSourceSettings)
+    sql: SqlSourceSettings = Field(default_factory=SqlSourceSettings)
 
 
 class OllamaSettings(BaseModel):
