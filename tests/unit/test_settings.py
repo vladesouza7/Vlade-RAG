@@ -27,6 +27,25 @@ def test_invalid_port_is_rejected(monkeypatch: pytest.MonkeyPatch) -> None:
         Settings()
 
 
+def test_source_connectors_are_off_by_default() -> None:
+    sources = Settings().sources
+    assert sources.web.seeds == []
+    assert sources.google_drive.access_token is None
+    assert sources.sql.url is None
+
+
+def test_source_connector_settings(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("VLADE_SOURCES__WEB__SEEDS", '["https://docs.example.com"]')
+    monkeypatch.setenv("VLADE_SOURCES__GOOGLE_DRIVE__ACCESS_TOKEN", "token")
+    monkeypatch.setenv("VLADE_SOURCES__SQL__URL", "sqlite+aiosqlite:///tmp/source.db")
+    monkeypatch.setenv("VLADE_SOURCES__SQL__QUERY", "SELECT title FROM documents")
+    settings = Settings()
+    assert settings.sources.web.seeds == ["https://docs.example.com"]
+    token = settings.sources.google_drive.access_token
+    assert token is not None and token.get_secret_value() == "token"
+    assert settings.sources.sql.query == "SELECT title FROM documents"
+
+
 def test_vector_index_backend_defaults_to_pgvector(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.delenv("VLADE_VECTOR_INDEX__BACKEND", raising=False)
     assert Settings().vector_index.backend == "postgres"

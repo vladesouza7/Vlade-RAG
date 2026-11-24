@@ -418,6 +418,43 @@ async def build_runtime(
         deps.tracer = tracer  # without it, the use cases record no span
     if metrics is not None:
         deps.metrics = metrics  # without it, the use cases record no metric
+
+    sources_config = settings.sources
+    document_sources: dict[str, Any] = {}
+    if sources_config.web.seeds:
+        from vlade_rag.ingestion.sources.web import WebSource
+
+        document_sources["web"] = WebSource(
+            deps,
+            sources_config.web.seeds,
+            max_pages=sources_config.web.max_pages,
+            max_depth=sources_config.web.max_depth,
+        )
+    if sources_config.google_drive.access_token is not None:
+        from vlade_rag.ingestion.sources.google_drive import GoogleDriveSource
+
+        drive = sources_config.google_drive
+        document_sources["google_drive"] = GoogleDriveSource(
+            drive.access_token,
+            folder_id=drive.folder_id,
+            page_size=drive.page_size,
+            max_files=drive.max_files,
+            timeout=sources_config.timeout,
+        )
+    if sources_config.sql.url is not None and sources_config.sql.query is not None:
+        from vlade_rag.ingestion.sources.sql import SqlSource
+
+        sql = sources_config.sql
+        sql_source = SqlSource(
+            sql.url,
+            sql.query,
+            filename_columns=sql.filename_columns,
+            max_rows=sql.max_rows,
+        )
+        document_sources["sql"] = sql_source
+        closers.append(sql_source.close)
+    deps.document_sources = document_sources
+
     deps.evaluation_runner = EvaluationWorker(deps)
     return Runtime(
         settings=settings,

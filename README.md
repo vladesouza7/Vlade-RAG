@@ -123,6 +123,10 @@ VLADE_VECTOR_INDEX__BACKEND=qdrant vlade-rag api serve
 
 A suíte de contrato cobre os dois índices, e `tests/integration/test_qdrant_equivalence.py` compara o Recall@10 deles no mesmo espaço. O relatório está em `evals/reports/fase5-qdrant/README.md`.
 
+### Conectores de origem
+
+Os conectores de sites, Google Drive e bancos SQL implementam `DocumentSource` (ADR-0029). Eles ficam desligados por padrão. Configure `VLADE_SOURCES__WEB__SEEDS`, `VLADE_SOURCES__GOOGLE_DRIVE__ACCESS_TOKEN` ou `VLADE_SOURCES__SQL__URL` com `VLADE_SOURCES__SQL__QUERY` para ligar cada um. O caso de uso `SyncSource` envia os itens de um conector para a ingestão, sem duplicar documentos. O conector SQL precisa do extra `sql`.
+
 ## Estrutura do repositório
 
 | Pasta | Conteúdo |
