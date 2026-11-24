@@ -1,0 +1,62 @@
+site_name: Vlade-RAG
+site_description: Documentação do framework open source de RAG modular e multi-tenant
+site_url: https://vladesouza7.github.io/Vlade-RAG/
+repo_url: https://github.com/vladesouza7/Vlade-RAG
+repo_name: vladesouza7/Vlade-RAG
+edit_uri: edit/homolog/docs/
+copyright: MIT · Vlade-RAG
+
+docs_dir: docs
+site_dir: site
+use_directory_urls: true
+
+theme:
+  name: material
+  language: pt-BR
+  features:
+    - navigation.instant
+    - navigation.tracking
+    - navigation.top
+    - search.suggest
+    - search.highlight
+    - content.code.copy
+  palette:
+    - scheme: default
+      primary: teal
+      accent: teal
+      toggle:
+        icon: material/weather-night
+        name: Tema escuro
+    - scheme: slate
+      primary: teal
+      accent: teal
+      toggle:
+        icon: material/weather-sunny
+        name: Tema claro
+
+plugins:
+  - search:
+      lang: pt
+
+markdown_extensions:
+  - admonition
+  - toc:
+      permalink: true
+  - tables
+  - fenced_code
+  - pymdownx.highlight:
+      anchor_linenums: true
+  - pymdownx.superfences
+
+validation:
+  links:
+    not_found: ignore
+    anchors: warn
+    absolute_links: ignore
+  nav:
+    not_found: ignore
+
+extra:
+  social:
+    - icon: material/github
+      link: https://github.com/vladesouza7/Vlade-RAG
