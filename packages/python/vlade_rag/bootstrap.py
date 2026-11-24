@@ -222,6 +222,7 @@ class Runtime:
     registry: Registry
     closers: list[Closer] = field(default_factory=list)
     checks: dict[str, Callable[[], Awaitable[Any]]] = field(default_factory=dict)
+    oidc: Any = None  # OidcVerifier when OIDC is enabled
 
     async def aclose(self) -> None:
         while self.closers:
@@ -472,6 +473,11 @@ async def build_runtime(
         ),
     )
     deps.evaluation_runner = EvaluationWorker(deps)
+    oidc = None
+    if settings.auth.oidc.enabled:
+        from vlade_rag.auth import OidcVerifier
+
+        oidc = OidcVerifier(settings.auth.oidc, tenants)
     return Runtime(
         settings=settings,
         deps=deps,
@@ -479,4 +485,5 @@ async def build_runtime(
         registry=registry,
         closers=closers,
         checks=checks,
+        oidc=oidc,
     )

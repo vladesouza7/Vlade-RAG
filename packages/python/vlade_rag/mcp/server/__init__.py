@@ -343,7 +343,7 @@ def create_http_app(runtime: Runtime, *, host: str = "127.0.0.1") -> ASGIApp:
     """The Streamable HTTP app at ``/mcp``. Stateless: each request carries its own key."""
     server = build_server(runtime)
     app = server.streamable_http_app(stateless_http=True, json_response=True, host=host)
-    return ApiKeyMiddleware(app, runtime.tenants)
+    return ApiKeyMiddleware(app, runtime.tenants, runtime.oidc)
 
 
 async def serve_stdio(runtime: Runtime, api_key: str | None) -> int:

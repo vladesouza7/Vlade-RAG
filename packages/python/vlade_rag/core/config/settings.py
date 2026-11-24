@@ -188,6 +188,24 @@ class SecuritySettings(BaseModel):
     api_key_pepper: SecretStr | None = None
 
 
+class OidcSettings(BaseModel):
+    """Optional OIDC/OAuth 2.1 bearer tokens (task 5.5, MCP_SPEC section 3.2)."""
+
+    enabled: bool = False
+    issuer: str = ""
+    audience: str = ""
+    jwks_url: str = ""
+    algorithms: list[str] = Field(default_factory=lambda: ["RS256"])
+    tenant_claim: str = "tenant"
+    roles_claim: str = "roles"
+
+
+class AuthSettings(BaseModel):
+    """Authentication settings. API keys stay the default; OIDC is opt-in."""
+
+    oidc: OidcSettings = Field(default_factory=OidcSettings)
+
+
 class WorkerSettings(BaseModel):
     concurrency: int = Field(default=2, ge=1, le=64)
     poll_interval: float = Field(default=1.0, gt=0)
@@ -290,6 +308,7 @@ class Settings(BaseSettings):
     providers: ProvidersSettings = Field(default_factory=ProvidersSettings)
     cache: CacheSettings = Field(default_factory=CacheSettings)
     security: SecuritySettings = Field(default_factory=SecuritySettings)
+    auth: AuthSettings = Field(default_factory=AuthSettings)
     sources: SourcesSettings = Field(default_factory=SourcesSettings)
     worker: WorkerSettings = Field(default_factory=WorkerSettings)
     limits: LimitsSettings = Field(default_factory=LimitsSettings)

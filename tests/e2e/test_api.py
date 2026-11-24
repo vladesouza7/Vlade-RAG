@@ -270,6 +270,28 @@ def test_sync_source_routes_a_connector_to_ingestion(api: Api) -> None:
     assert api.drain() == 1
 
 
+def test_oidc_bearer_over_http(api: Api) -> None:
+    """Task 5.5 (MCP_SPEC 3.2): an access token authenticates on the REST API."""
+    from tests.oidc_helpers import AUDIENCE, ISSUER, KID, make_token, signing_keys
+    from vlade_rag.auth import OidcVerifier
+    from vlade_rag.core.config.settings import OidcSettings
+
+    private, public = signing_keys()
+    slug = f"oidc-{secrets.token_hex(4)}"
+    api.client.portal.call(  # type: ignore[union-attr]
+        partial(api.runtime.tenants.create_tenant, slug, "OIDC")
+    )
+    api.runtime.oidc = OidcVerifier(
+        OidcSettings(enabled=True, issuer=ISSUER, audience=AUDIENCE),
+        api.runtime.tenants,
+        jwks={KID: public},
+    )
+    token = make_token(private, tenant=slug, roles=("admin",))
+    response = api.client.get("/v1/knowledge-bases", headers={"Authorization": f"Bearer {token}"})
+    assert response.status_code == 200, response.text
+    assert response.json() == []
+
+
 def test_tenant_isolation_over_http(api: Api) -> None:
     doc_id = _load(api)
     other = api.other
