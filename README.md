@@ -153,6 +153,16 @@ Chaves de API são a credencial padrão. O serviço também aceita tokens OIDC n
 | [`docs/ROADMAP.md`](docs/ROADMAP.md) | Fases e situação |
 | [`docs/adr/`](docs/adr/README.md) | Decisões de arquitetura |
 | [`docs/operacao/`](docs/operacao/README.md) | Guias de implantação e operação |
+| [`docs/index.md`](docs/index.md) | Página inicial do site de documentação |
+
+O site usa MkDocs com o tema Material. Para compilar e conferir os links localmente:
+
+```bash
+uv sync --extra docs
+uv run mkdocs build --strict
+```
+
+A CI compila o site no job `Docs site (MkDocs)` e guarda o conteúdo de `site/` como artefato. Para publicar no GitHub Pages, use `uv run mkdocs gh-deploy` com o remote configurado.
 
 ## Contribuir
 
