@@ -295,6 +295,63 @@ class VectorIndex(Protocol):
         ...
 
 
+@dataclass(frozen=True, slots=True)
+class GraphEntity:
+    name: str
+    type: str
+    description: str
+
+
+@dataclass(frozen=True, slots=True)
+class GraphRelation:
+    source: str
+    target: str
+    keywords: str
+    description: str
+    weight: float = 1.0
+
+
+@dataclass(frozen=True, slots=True)
+class GraphSearchResult:
+    """Entities, relations and chunks the graph found. ``chunk_hits`` use Vlade-RAG chunk ids."""
+
+    entities: tuple[GraphEntity, ...] = ()
+    relations: tuple[GraphRelation, ...] = ()
+    chunk_hits: tuple[ChunkHit, ...] = ()
+
+
+@runtime_checkable
+class GraphIndex(Protocol):
+    """Knowledge graph of a base (phase 6, ADR-0032).
+
+    The adapter derives its own partition from ``ctx.tenant_id`` and ``kb.id``. A document has at
+    most one version in the graph: ``index_document`` replaces the earlier versions.
+    """
+
+    name: str
+
+    async def index_document(
+        self,
+        ctx: TenantContext,
+        kb: KnowledgeBase,
+        document_id: UUID,
+        version_id: UUID,
+        chunks: Sequence[Chunk],
+    ) -> int:
+        """Extract entities and relations from the chunks. Returns the number of chunks indexed."""
+        ...
+
+    async def delete_document(
+        self, ctx: TenantContext, kb: KnowledgeBase, document_id: UUID
+    ) -> int:
+        """Remove every version of the document from the graph. Returns the versions removed."""
+        ...
+
+    async def search(
+        self, ctx: TenantContext, kb: KnowledgeBase, text: str, *, mode: str, top_k: int
+    ) -> GraphSearchResult: ...
+
+
 @runtime_checkable
 class LexicalIndex(Protocol):
     name: str  # "tsvector", "pg_search", "trigram"
@@ -637,6 +694,10 @@ __all__ = [
     "EvaluationRunner",
     "Evaluator",
     "FusionStrategy",
+    "GraphEntity",
+    "GraphIndex",
+    "GraphRelation",
+    "GraphSearchResult",
     "IssuedApiKey",
     "JobQueue",
     "KnowledgeRepository",

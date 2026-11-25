@@ -17,15 +17,17 @@ from vlade_rag.core.domain import (
     ChunkHit,
     InvalidArgument,
     KnowledgeBase,
+    MetadataFilter,
     Query,
     QueryLogEntry,
     Role,
     ScoredChunk,
     TenantContext,
+    matches,
     parse_filter,
 )
 from vlade_rag.core.domain.models import JsonValue
-from vlade_rag.core.ports import AttrValue, LexicalIndex
+from vlade_rag.core.ports import AttrValue, GraphIndex, LexicalIndex
 
 EMBEDDING_CACHE_TTL = 7 * 24 * 3600
 SEARCH_CACHE_TTL = 10 * 60
@@ -99,6 +101,52 @@ class LexicalRetriever:
         return await _load(self.deps, ctx, hits, self.name)
 
 
+def require_graph(deps: Dependencies, kb: KnowledgeBase) -> GraphIndex:
+    """The graph index of the base, or ``InvalidArgument`` when the base cannot use it."""
+    if deps.graph_index is None:
+        raise InvalidArgument("The knowledge graph is not configured on this server.")
+    if not kb.config.graph.enabled:
+        raise InvalidArgument(f"The knowledge graph is not enabled for the base '{kb.slug}'.")
+    return deps.graph_index
+
+
+async def published_graph_hits(
+    deps: Dependencies,
+    ctx: TenantContext,
+    kb: KnowledgeBase,
+    hits: Sequence[ChunkHit],
+    filters: MetadataFilter | None,
+) -> list[ChunkHit]:
+    """Keep the graph hits whose chunk is published and matches the metadata filter.
+
+    The graph keeps the chunks of a version until the next graph job replaces it, so a hit can
+    point to an older version.
+    """
+    published = await deps.repository.published_chunks(ctx, kb.id, [h.chunk_id for h in hits])
+    return [h for h in hits if h.chunk_id in published and matches(filters, published[h.chunk_id])]
+
+
+class GraphRetriever:
+    """Chunks reached through the entities and relations of the graph (phase 6, ADR-0032)."""
+
+    name = "graph"
+
+    def __init__(self, deps: Dependencies) -> None:
+        self.deps = deps
+
+    async def retrieve(
+        self, ctx: TenantContext, kb: KnowledgeBase, query: Query, top_k: int
+    ) -> list[ScoredChunk]:
+        graph = require_graph(self.deps, kb)
+        cfg = kb.config.graph
+        with self.deps.tracer.span(
+            "retrieval.graph", {sc.SPAN_KIND: sc.RETRIEVER, "vlade.top_k": top_k}
+        ):
+            result = await graph.search(ctx, kb, query.text, mode=cfg.mode, top_k=cfg.top_k)
+        hits = await published_graph_hits(self.deps, ctx, kb, result.chunk_hits, query.filters)
+        return await _load(self.deps, ctx, hits[:top_k], self.name)
+
+
 @dataclass(frozen=True, slots=True)
 class SearchResult:
     knowledge_base: KnowledgeBase
@@ -110,11 +158,16 @@ class Search:
     def __init__(self, deps: Dependencies) -> None:
         self.deps = deps
 
-    def _retrievers(self, kb: KnowledgeBase) -> list[DenseRetriever | LexicalRetriever]:
-        retrievers: list[DenseRetriever | LexicalRetriever] = []
+    def _retrievers(
+        self, kb: KnowledgeBase
+    ) -> list[DenseRetriever | LexicalRetriever | GraphRetriever]:
+        retrievers: list[DenseRetriever | LexicalRetriever | GraphRetriever] = []
         for name in kb.config.retrieval.retrievers:
             if name == "dense":
                 retrievers.append(DenseRetriever(self.deps))
+            elif name == "graph":
+                require_graph(self.deps, kb)
+                retrievers.append(GraphRetriever(self.deps))
             elif name in self.deps.lexical_indexes:
                 retrievers.append(
                     LexicalRetriever(self.deps, name, self.deps.lexical_indexes[name])

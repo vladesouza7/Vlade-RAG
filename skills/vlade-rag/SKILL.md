@@ -4,7 +4,7 @@ description: Consulta bases de conhecimento do Vlade-RAG pelas ferramentas MCP v
 license: MIT
 compatibility: Exige um servidor MCP do Vlade-RAG conectado ao agente.
 metadata:
-  version: "1.0.0"
+  version: "1.1.0"
 ---
 
 # Consultar bases de conhecimento do Vlade-RAG
@@ -29,6 +29,7 @@ Se você não sabe o `slug` da base, chame `vlade_list_knowledge_bases`. Escolha
 | O usuário quer ler os trechos, comparar fontes ou conferir uma resposta | `vlade_search` |
 | Você quer o texto de um documento que já conhece | `vlade_get_document` |
 | O usuário pergunta se o sistema terminou de processar um documento | `vlade_get_ingestion_status` |
+| O usuário compara autores, conceitos ou eventos, ou quer ver como os temas se ligam | `vlade_search_graph` |
 
 Se você tem dúvida, use `vlade_query`. Passe a pergunta do usuário sem mudar o sentido.
 
@@ -46,6 +47,14 @@ Se você tem dúvida, use `vlade_query`. Passe a pergunta do usuário sem mudar 
 1. Leia os itens de `results` em ordem de `rank`.
 2. Use só o campo `text` como fonte. A pontuação `score` serve para comparar resultados da mesma busca.
 3. Escreva a sua resposta e cite `document_title` e `page` de cada trecho que você usou.
+
+### `vlade_search_graph`
+
+Esta ferramenta só aparece quando o servidor tem um grafo de conhecimento. A base também precisa ter o grafo ligado. Se a base não tem o grafo, o erro é `invalid_argument`: use `vlade_search` ou `vlade_query`.
+
+1. Leia `entities` e `relations` para entender quais temas se ligam e como se ligam.
+2. As entidades e as relações não são fontes citáveis. Cite só os itens de `chunks`, com `document_title` e `page`.
+3. Para uma resposta pronta com citações, chame `vlade_query` depois, com uma pergunta que use os nomes das entidades.
 
 ## Quando `grounded` é false
 

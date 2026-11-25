@@ -29,6 +29,7 @@ READ_TOOLS = [
     "vlade_query",
     "vlade_get_document",
     "vlade_get_ingestion_status",
+    "vlade_search_graph",
 ]
 WRITE_TOOLS = [
     "vlade_ingest_document",
@@ -36,6 +37,13 @@ WRITE_TOOLS = [
     "vlade_reindex_knowledge_base",
     "vlade_evaluate",
 ]
+
+
+def listed_read_tools(world: McpWorld) -> list[str]:
+    """Read tools the server lists: ``vlade_search_graph`` needs a knowledge graph (phase 6)."""
+    if world.runtime.deps.graph_index is not None:
+        return READ_TOOLS
+    return [name for name in READ_TOOLS if name != "vlade_search_graph"]
 
 
 def spec_tools() -> dict[str, dict[str, Any]]:
@@ -76,7 +84,7 @@ def test_tool_definitions_match_the_spec() -> None:
 async def test_tools_list_has_annotations_and_schemas(mcp_world: McpWorld) -> None:
     async with mcp_world.client(mcp_world.reader) as client:
         listed = (await client.list_tools()).tools
-    assert [t.name for t in listed] == READ_TOOLS
+    assert [t.name for t in listed] == listed_read_tools(mcp_world)
     spec = {t.name: t for t in all_tools()}
     for tool in listed:
         assert tool.annotations is not None

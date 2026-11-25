@@ -22,7 +22,7 @@ Interfaces       API REST · Servidor MCP · CLI · Worker
 Orquestração     Pipeline linear (padrão) · LangGraph · Kestra (operação)
 Aplicação        Casos de uso
 Domínio          Entidades e ports
-Adapters         PostgreSQL/pgvector · Qdrant · Ollama · OpenAI · Gemini · OpenRouter · S3 · Valkey
+Adapters         PostgreSQL/pgvector · Qdrant · LightRAG · Ollama · OpenAI · Gemini · OpenRouter · S3 · Valkey
 Motor Rust       Normalização, chunking, tokens, hash, fusão RRF
 ```
 
@@ -130,6 +130,22 @@ Os conectores de sites, Google Drive e bancos SQL implementam `DocumentSource` (
 ### OIDC/OAuth 2.1
 
 Chaves de API são a credencial padrão. O serviço também aceita tokens OIDC na API e no MCP quando `VLADE_AUTH__OIDC__ENABLED=true` (ADR-0031). O emissor publica um JWKS, e os claims `tenant` e `roles` definem o tenant e os papéis. O extra `oidc` traz o verificador. O transporte stdio do MCP continua usando `VLADE_API_KEY`.
+
+### Grafo de conhecimento (LightRAG)
+
+O grafo ajuda em perguntas que comparam autores, conceitos ou eventos espalhados por muitos documentos (ADR-0032). Ele é opcional:
+
+1. No `.env`, defina `VLADE_GRAPH_DB_PASSWORD` antes do primeiro `up`, e `VLADE_GRAPH__DATABASE_URL` com a mesma senha.
+2. Na base, ligue o grafo e escolha o modelo de extração:
+
+   ```json
+   {"graph": {"enabled": true, "provider": "openrouter", "model": "provedor/modelo"},
+    "retrieval": {"retrievers": ["dense", "lexical", "graph"]}}
+   ```
+
+3. Explore o grafo com `POST /v1/knowledge-bases/{kb}/graph/search` ou com a ferramenta MCP `vlade_search_graph`.
+
+A extração chama o LLM em cada trecho, então o custo é alto. O projeto LightRAG recomenda um modelo grande, sem modo "thinking". Para ligar o grafo numa base que já tem documentos, chame `POST /v1/knowledge-bases/{kb}/graph/reindex?confirm=true`.
 
 ## Estrutura do repositório
 

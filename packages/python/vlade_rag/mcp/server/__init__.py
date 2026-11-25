@@ -102,7 +102,11 @@ def build_server(runtime: Runtime, fixed_ctx: TenantContext | None = None) -> Se
     is the context that ``ApiKeyMiddleware`` stored after it checked the key.
     """
     deps = runtime.deps
-    tools: dict[str, ToolSpec] = {spec.name: spec for spec in all_tools()}
+    tools: dict[str, ToolSpec] = {
+        spec.name: spec
+        for spec in all_tools()
+        if not spec.requires_graph or deps.graph_index is not None
+    }
 
     async def write_enabled(ctx: TenantContext) -> bool:
         """The tenant setting of MCP_SPEC section 4: write tools are off by default."""

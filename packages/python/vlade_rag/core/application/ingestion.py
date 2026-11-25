@@ -281,6 +281,8 @@ class RunIngestionJob:
                 result = await self._ingest(ctx, job)
             elif job.kind == JobKind.REINDEX:
                 result = await self._reindex(ctx, job)
+            elif job.kind == JobKind.GRAPH_INDEX:
+                result = await self._graph_index(ctx, job)
             elif job.kind == JobKind.EVALUATION:
                 runner = self.deps.evaluation_runner
                 if runner is None:
@@ -459,13 +461,26 @@ class RunIngestionJob:
                 if not isinstance(exc.cause, EmbeddingSpaceChanged) or attempt == PUBLISH_ATTEMPTS:
                     raise
                 kb = await repo.get_knowledge_base_by_id(ctx, kb.id)
+        from vlade_rag.core.application.graph import enqueue_graph_index
+
+        graph_job = await enqueue_graph_index(deps, ctx, kb, document_id, version.id)
         return {
             "document_id": str(document_id),
             "version_id": str(version.id),
             "version": version.version,
             "chunks": len(chunks),
             "skipped": False,
+            **({"graph_job_id": str(graph_job.id)} if graph_job is not None else {}),
         }
+
+    async def _graph_index(self, ctx: TenantContext, job: IngestionJob) -> Metadata:
+        from vlade_rag.core.application.graph import GraphIndexRunner
+
+        document_id = job.input.get("document_id")
+        async with self._step(
+            ctx, job, "graph_index", UUID(str(document_id)) if document_id else None
+        ):
+            return await GraphIndexRunner(self.deps).run(ctx, job)
 
     async def _reindex(self, ctx: TenantContext, job: IngestionJob) -> Metadata:
         from vlade_rag.core.application.reindex import ReindexRunner

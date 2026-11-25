@@ -1,6 +1,6 @@
 # Vlade-RAG — Especificação do servidor MCP
 
-> Versão do contrato: 1.0.0 — 2026-11-19
+> Versão do contrato: 1.1.0 — 2026-11-25. A versão 1.1.0 acrescenta a ferramenta `vlade_search_graph` (seção 5.11).
 > Fonte: seção 12 do [`VLADE-RAG.md`](../VLADE-RAG.md). Arquitetura: [`ARCHITECTURE.md`](ARCHITECTURE.md). Decisão: [ADR-0013](adr/0013-mcp-qualquer-cliente.md).
 
 ---
@@ -62,12 +62,15 @@ O servidor deriva o tenant e os papéis da credencial verificada. Nenhuma ferram
 | `vlade_query` | Leitura | `reader` | `true` | `false` | `false` |
 | `vlade_get_document` | Leitura | `reader` | `true` | `false` | `true` |
 | `vlade_get_ingestion_status` | Leitura | `reader` | `true` | `false` | `true` |
+| `vlade_search_graph` | Leitura | `reader` | `true` | `false` | `true` |
 | `vlade_ingest_document` | Escrita | `writer` | `false` | `false` | `false` |
 | `vlade_delete_document` | Escrita destrutiva | `admin` | `false` | `true` | `true` |
 | `vlade_reindex_knowledge_base` | Escrita destrutiva | `admin` | `false` | `true` | `false` |
 | `vlade_evaluate` | Operação | `admin` | `false` | `false` | `false` |
 
 Todas as ferramentas têm `openWorldHint: false`.
+
+O servidor lista e aceita `vlade_search_graph` só quando tem um grafo de conhecimento configurado (`VLADE_GRAPH__DATABASE_URL`, ADR-0032).
 
 ### 5.2. `vlade_list_knowledge_bases`
 
@@ -516,6 +519,94 @@ Saída:
 ```
 
 O job grava o relatório no campo `result`. As métricas de resposta com juiz pago (`faithfulness`, `answer_relevancy`, `context_precision` e `context_recall`) continuam só na CLI `vlade-rag eval answers`.
+
+### 5.11. `vlade_search_graph`
+
+Descrição para o modelo:
+
+> Explora o grafo de conhecimento de uma base: entidades, relações entre entidades e os trechos que sustentam essas relações. Use esta ferramenta para perguntas que comparam autores, conceitos ou eventos. A base precisa ter o grafo ligado.
+
+Entrada:
+
+```json
+{
+  "type": "object",
+  "required": ["knowledge_base", "query"],
+  "additionalProperties": false,
+  "properties": {
+    "knowledge_base": { "type": "string", "description": "Slug da base." },
+    "query": { "type": "string", "minLength": 1, "maxLength": 4000 },
+    "mode": {
+      "type": "string",
+      "enum": ["local", "global", "hybrid", "mix", "naive"],
+      "description": "Sem valor: usa a configuração da base."
+    },
+    "top_k": { "type": "integer", "minimum": 1, "maximum": 200 }
+  }
+}
+```
+
+Saída:
+
+```json
+{
+  "type": "object",
+  "required": ["entities", "relations", "chunks", "trace_id"],
+  "properties": {
+    "entities": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["name", "type", "description"],
+        "properties": {
+          "name": { "type": "string" },
+          "type": { "type": "string" },
+          "description": { "type": "string" }
+        }
+      }
+    },
+    "relations": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["source", "target", "keywords", "description", "weight"],
+        "properties": {
+          "source": { "type": "string" },
+          "target": { "type": "string" },
+          "keywords": { "type": "string" },
+          "description": { "type": "string" },
+          "weight": { "type": "number" }
+        }
+      }
+    },
+    "chunks": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["rank", "score", "chunk_id", "document_id", "document_title", "text"],
+        "properties": {
+          "rank": { "type": "integer" },
+          "score": { "type": "number" },
+          "chunk_id": { "type": "string", "format": "uuid" },
+          "document_id": { "type": "string", "format": "uuid" },
+          "document_title": { "type": "string" },
+          "text": { "type": "string" },
+          "page": { "anyOf": [{ "type": "integer" }, { "type": "null" }] },
+          "section": { "anyOf": [{ "type": "string" }, { "type": "null" }] },
+          "resource_uri": { "type": "string", "description": "URI do resource do documento." }
+        }
+      }
+    },
+    "trace_id": { "anyOf": [{ "type": "string" }, { "type": "null" }] }
+  }
+}
+```
+
+Regras:
+
+1. Se a base não tem o grafo ligado (`graph.enabled`), a ferramenta devolve o erro `invalid_argument`.
+2. Os trechos são só de versões publicadas. Um trecho de uma versão antiga não aparece.
+3. As entidades e as relações não têm citação própria. Para citar, use os trechos da lista `chunks`.
 
 ## 6. Resources
 

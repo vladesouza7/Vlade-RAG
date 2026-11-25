@@ -20,6 +20,7 @@ from vlade_rag.core.ports import (
     EvaluationDatasets,
     EvaluationRunner,
     FusionStrategy,
+    GraphIndex,
     JobQueue,
     KnowledgeRepository,
     LexicalIndex,
@@ -137,6 +138,8 @@ class Dependencies:
     evaluation_datasets: EvaluationDatasets | None = None
     evaluation_runner: EvaluationRunner | None = None
     default_kb_config: Mapping[str, Any] = field(default_factory=dict)
+    # Knowledge graph (phase 6). None: no base of this server can enable the graph.
+    graph_index: GraphIndex | None = None
 
     def parser_for(self, mime_type: str) -> DocumentParser | None:
         for parser in self.parsers:

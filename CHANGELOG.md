@@ -6,6 +6,7 @@ Este arquivo registra as mudanças relevantes de cada versão. O formato segue o
 
 ### Adicionado
 
+- Grafo de conhecimento com LightRAG (fase 6, tarefas 6.0 a 6.7, ADR-0032): port `GraphIndex`, adapter `LightRAGGraphIndex` no extra `graph` e adapter em memória para testes. O grafo fica numa base PostgreSQL separada (`vlade_graph`) e fica desligado por padrão em cada base. A ingestão enfileira o job `graph_index` depois da publicação. O retriever `graph` entra na fusão RRF. Novas rotas `POST /v1/knowledge-bases/{kb}/graph/search` e `POST /v1/knowledge-bases/{kb}/graph/reindex`. Nova ferramenta MCP `vlade_search_graph` (contrato MCP 1.1.0). A Agent Skill ensina a ferramenta nova.
 - Site de documentação (fase 5, tarefa 5.7, 2026-11-24): MkDocs com o tema Material, fonte na pasta `docs/` e página inicial em `docs/index.md`. A CI compila com `mkdocs build --strict` e guarda o resultado como artefato. O extra `docs` instala MkDocs Material.
 - OIDC/OAuth 2.1 na API e no MCP (fase 5, tarefa 5.5, ADR-0031): `authenticate_bearer` aceita chave de API ou token JWT verificado pelo emissor e JWKS configurados. Os claims viram `TenantContext`, sem mudar os casos de uso. O extra `oidc` traz PyJWT com cryptography.
 - Cache semântico de consultas (fase 5, tarefa 5.4, ADR-0030): camada opt-in sobre o port `Cache`, com chave por base e época, limiar de similaridade por cosine e limite de entradas. Funciona em busca densa sem filtros e sem transformação.

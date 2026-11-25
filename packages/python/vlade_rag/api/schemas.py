@@ -10,6 +10,7 @@ from pydantic import BaseModel, ConfigDict, Field
 
 from vlade_rag.core.application import (
     EvaluationResult,
+    GraphSearchView,
     KnowledgeBaseSummary,
     ReindexResult,
     UsageView,
@@ -283,6 +284,60 @@ class SearchHit(_Model):
 class SearchOut(_Model):
     results: list[SearchHit]
     trace_id: str | None
+
+
+class GraphSearchIn(_Model):
+    query: str = Field(min_length=1)
+    mode: Literal["local", "global", "hybrid", "mix", "naive"] | None = None
+    top_k: int | None = Field(default=None, ge=1, le=200)
+
+
+class GraphEntityOut(_Model):
+    name: str
+    type: str
+    description: str
+
+
+class GraphRelationOut(_Model):
+    source: str
+    target: str
+    keywords: str
+    description: str
+    weight: float
+
+
+class GraphSearchOut(_Model):
+    entities: list[GraphEntityOut]
+    relations: list[GraphRelationOut]
+    chunks: list[SearchHit]
+    trace_id: str | None
+
+    @classmethod
+    def of(cls, view: GraphSearchView) -> GraphSearchOut:
+        return cls(
+            entities=[
+                GraphEntityOut(name=e.name, type=e.type, description=e.description)
+                for e in view.entities
+            ],
+            relations=[
+                GraphRelationOut(
+                    source=r.source,
+                    target=r.target,
+                    keywords=r.keywords,
+                    description=r.description,
+                    weight=r.weight,
+                )
+                for r in view.relations
+            ],
+            chunks=[SearchHit.of(item, rank) for rank, item in enumerate(view.chunks, start=1)],
+            trace_id=view.trace_id,
+        )
+
+
+class GraphReindexOut(_Model):
+    executed: bool
+    documents: int
+    jobs: int
 
 
 class QueryIn(_Model):

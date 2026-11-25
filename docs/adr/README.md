@@ -35,6 +35,7 @@ Cada arquivo registra uma decisão. Um ADR aceito não muda. Para mudar uma deci
 | [0029](0029-conectores-de-origem.md) | Conectores de origem: sites, Google Drive e bancos SQL | Aceito | — |
 | [0030](0030-cache-semantico.md) | Cache semântico de consultas | Aceito | — |
 | [0031](0031-oidc-oauth21.md) | OIDC e OAuth 2.1 na API e no MCP | Aceito | — |
+| [0032](0032-grafo-de-conhecimento-com-lightrag.md) | Grafo de conhecimento com LightRAG | Aceito | — |
 
 ## Modelo
 

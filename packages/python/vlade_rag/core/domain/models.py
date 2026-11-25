@@ -39,6 +39,7 @@ class JobKind(StrEnum):
     REINDEX = "reindex"
     EVALUATION = "evaluation"
     SYNC = "sync"
+    GRAPH_INDEX = "graph_index"
 
 
 class JobStatus(StrEnum):

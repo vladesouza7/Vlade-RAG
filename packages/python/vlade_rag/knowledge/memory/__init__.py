@@ -60,6 +60,7 @@ from vlade_rag.core.ports import (
     RateDecision,
     SpaceMaintenanceInfo,
 )
+from vlade_rag.knowledge.memory.graph import MemoryGraphIndex
 from vlade_rag.knowledge.object_keys import validate_object_key
 from vlade_rag.native import token_spans
 
@@ -1140,6 +1141,7 @@ class MemoryAdapters:
     job_queue: MemoryJobQueue
     audit_log: MemoryAuditLog
     tenants: MemoryTenantDirectory
+    graph_index: MemoryGraphIndex
 
 
 def memory_adapters(store: MemoryStore | None = None) -> MemoryAdapters:
@@ -1156,6 +1158,7 @@ def memory_adapters(store: MemoryStore | None = None) -> MemoryAdapters:
         job_queue=MemoryJobQueue(store),
         audit_log=MemoryAuditLog(store),
         tenants=MemoryTenantDirectory(store),
+        graph_index=MemoryGraphIndex(),
     )
 
 
@@ -1164,6 +1167,7 @@ __all__ = [
     "MemoryAuditLog",
     "MemoryCache",
     "MemoryFuzzyIndex",
+    "MemoryGraphIndex",
     "MemoryJobQueue",
     "MemoryKnowledgeRepository",
     "MemoryLexicalIndex",

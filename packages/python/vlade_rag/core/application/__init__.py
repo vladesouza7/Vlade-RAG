@@ -18,6 +18,12 @@ from vlade_rag.core.application.deps import (
 )
 from vlade_rag.core.application.documents import DeleteDocument, DocumentView, GetDocument
 from vlade_rag.core.application.evaluation import EvaluationResult, RunEvaluation
+from vlade_rag.core.application.graph import (
+    GraphReindexResult,
+    GraphSearchView,
+    ReindexGraph,
+    SearchGraph,
+)
 from vlade_rag.core.application.ingestion import (
     GetIngestionStatus,
     RunIngestionJob,
@@ -56,12 +62,15 @@ __all__ = [
     "GetIngestionStatus",
     "GetKnowledgeBase",
     "GetUsage",
+    "GraphReindexResult",
+    "GraphSearchView",
     "KnowledgeBaseSummary",
     "Limits",
     "ListAuditEvents",
     "ListKnowledgeBases",
     "NoopMetrics",
     "NoopTracer",
+    "ReindexGraph",
     "ReindexKnowledgeBase",
     "ReindexPreview",
     "ReindexResult",
@@ -69,6 +78,7 @@ __all__ = [
     "RunEvaluation",
     "RunIngestionJob",
     "Search",
+    "SearchGraph",
     "SearchResult",
     "SemanticCache",
     "SemanticCacheSettings",

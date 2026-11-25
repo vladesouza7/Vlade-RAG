@@ -45,6 +45,7 @@ sql = ["sqlalchemy[asyncio]>=2.1", "aiosqlite>=0.20"]  # external SQL source con
 oidc = ["pyjwt[crypto]>=2.15.1"]  # OIDC/OAuth 2.1 bearer tokens (task 5.5)
 docs = ["mkdocs>=1.6.1", "mkdocs-material>=9.8.2"]  # documentation site (task 5.7)
 docling = ["docling>=2.151.1"]
+graph = ["lightrag-hku>=1.5.8"]  # knowledge graph with LightRAG (phase 6, ADR-0032)
 otel = [
     "opentelemetry-api>=1.45.2",
     "opentelemetry-sdk>=1.45.2",

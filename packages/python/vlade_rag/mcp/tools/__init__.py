@@ -25,6 +25,7 @@ from vlade_rag.core.application import (
     ReindexKnowledgeBase,
     RunEvaluation,
     Search,
+    SearchGraph,
     SubmitIngestion,
 )
 from vlade_rag.core.domain import (
@@ -51,6 +52,8 @@ class ToolSpec:
     handler: Handler
     read_only: bool = True
     destructive: bool = False
+    # Listed and callable only when the server has a knowledge graph (phase 6).
+    requires_graph: bool = False
 
     def to_mcp(self) -> Tool:
         return Tool(
@@ -134,6 +137,52 @@ async def _search(
             for r in result.results
         ],
         "trace_id": result.trace_id,
+    }
+
+
+# ---------------------------------------------------------------- vlade_search_graph
+
+
+async def _search_graph(
+    deps: Dependencies, ctx: TenantContext, args: Mapping[str, Any]
+) -> dict[str, Any]:
+    view = await SearchGraph(deps).execute(
+        ctx,
+        knowledge_base=args["knowledge_base"],
+        text=args["query"],
+        mode=args.get("mode"),
+        top_k=args.get("top_k"),
+    )
+    slug = view.knowledge_base.slug
+    return {
+        "entities": [
+            {"name": e.name, "type": e.type, "description": e.description} for e in view.entities
+        ],
+        "relations": [
+            {
+                "source": r.source,
+                "target": r.target,
+                "keywords": r.keywords,
+                "description": r.description,
+                "weight": r.weight,
+            }
+            for r in view.relations
+        ],
+        "chunks": [
+            {
+                "rank": rank,
+                "score": item.score,
+                "chunk_id": str(item.chunk.id),
+                "document_id": str(item.chunk.document_id),
+                "document_title": item.chunk.document_title,
+                "text": item.chunk.text,
+                "page": item.chunk.page,
+                "section": item.chunk.section,
+                "resource_uri": resource_uri(slug, item.chunk.document_id),
+            }
+            for rank, item in enumerate(view.chunks, start=1)
+        ],
+        "trace_id": view.trace_id,
     }
 
 
@@ -453,6 +502,56 @@ _SEARCH_OUT = {
     },
 }
 
+_GRAPH_IN = {
+    "type": "object",
+    "required": ["knowledge_base", "query"],
+    "additionalProperties": False,
+    "properties": {
+        "knowledge_base": {"type": "string", "description": "Slug da base."},
+        "query": {"type": "string", "minLength": 1, "maxLength": 4000},
+        "mode": {
+            "type": "string",
+            "enum": ["local", "global", "hybrid", "mix", "naive"],
+            "description": "Sem valor: usa a configuração da base.",
+        },
+        "top_k": {"type": "integer", "minimum": 1, "maximum": 200},
+    },
+}
+_GRAPH_OUT = {
+    "type": "object",
+    "required": ["entities", "relations", "chunks", "trace_id"],
+    "properties": {
+        "entities": {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "required": ["name", "type", "description"],
+                "properties": {
+                    "name": {"type": "string"},
+                    "type": {"type": "string"},
+                    "description": {"type": "string"},
+                },
+            },
+        },
+        "relations": {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "required": ["source", "target", "keywords", "description", "weight"],
+                "properties": {
+                    "source": {"type": "string"},
+                    "target": {"type": "string"},
+                    "keywords": {"type": "string"},
+                    "description": {"type": "string"},
+                    "weight": {"type": "number"},
+                },
+            },
+        },
+        "chunks": _SEARCH_OUT["properties"]["results"],  # type: ignore[index]
+        "trace_id": _NULLABLE_STRING,
+    },
+}
+
 _QUERY_IN = {
     "type": "object",
     "required": ["knowledge_base", "question"],
@@ -762,6 +861,22 @@ def read_tools() -> list[ToolSpec]:
             group=Group.LIGHT,
             idempotent=True,
             handler=_get_ingestion_status,
+        ),
+        ToolSpec(
+            name="vlade_search_graph",
+            description=(
+                "Explora o grafo de conhecimento de uma base: entidades, relações entre "
+                "entidades e os trechos que sustentam essas relações. Use esta ferramenta para "
+                "perguntas que comparam autores, conceitos ou eventos. A base precisa ter o grafo "
+                "ligado."
+            ),
+            input_schema=_GRAPH_IN,
+            output_schema=_GRAPH_OUT,
+            role=Role.READER,
+            group=Group.SEARCH,
+            idempotent=True,
+            handler=_search_graph,
+            requires_graph=True,
         ),
     ]
 

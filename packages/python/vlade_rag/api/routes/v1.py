@@ -19,6 +19,9 @@ from vlade_rag.api.schemas import (
     DocumentOut,
     EvaluationIn,
     EvaluationOut,
+    GraphReindexOut,
+    GraphSearchIn,
+    GraphSearchOut,
     IngestOut,
     JobOut,
     KnowledgeBaseCreate,
@@ -46,9 +49,11 @@ from vlade_rag.core.application import (
     KnowledgeBaseSummary,
     ListAuditEvents,
     ListKnowledgeBases,
+    ReindexGraph,
     ReindexKnowledgeBase,
     RunEvaluation,
     Search,
+    SearchGraph,
     SubmitIngestion,
     SyncSource,
 )
@@ -227,6 +232,24 @@ async def search(kb: str, body: SearchIn, ctx: CtxDep, rt: RuntimeDep) -> Search
         results=[SearchHit.of(item, rank) for rank, item in enumerate(result.results, start=1)],
         trace_id=result.trace_id,
     )
+
+
+@router.post("/knowledge-bases/{kb}/graph/search", response_model=GraphSearchOut)
+async def graph_search(kb: str, body: GraphSearchIn, ctx: CtxDep, rt: RuntimeDep) -> GraphSearchOut:
+    """Entities, relations and supporting chunks of the knowledge graph (phase 6, ADR-0032)."""
+    view = await SearchGraph(rt.deps).execute(
+        ctx, knowledge_base=kb, text=body.query, mode=body.mode, top_k=body.top_k
+    )
+    return GraphSearchOut.of(view)
+
+
+@router.post("/knowledge-bases/{kb}/graph/reindex", response_model=GraphReindexOut)
+async def graph_reindex(
+    kb: str, ctx: CtxDep, rt: RuntimeDep, confirm: bool = False
+) -> GraphReindexOut:
+    """Without ``confirm``: the number of documents. With it: one graph job per document."""
+    result = await ReindexGraph(rt.deps).execute(ctx, knowledge_base=kb, confirm=confirm)
+    return GraphReindexOut(executed=result.executed, documents=result.documents, jobs=result.jobs)
 
 
 def _sse(event: str, data: Any) -> str:
