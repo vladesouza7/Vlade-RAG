@@ -8,6 +8,7 @@ O projeto não é um chatbot. Ele entrega a base para aplicações com uma base 
 
 | Documento | Conteúdo |
 |---|---|
+| [Guia do iniciante](GUIA-INICIANTE.md) | O que o projeto resolve e um exemplo simples de uso |
 | [Requisitos](PROJECT_SPEC.md) | Casos de uso, requisitos funcionais e não funcionais |
 | [Arquitetura](ARCHITECTURE.md) | Ports, adapters, pipeline, persistência e interfaces |
 | [Contrato do MCP](MCP_SPEC.md) | Ferramentas, papéis, limites e transportes |
