@@ -28,9 +28,7 @@ class MemoryWikiStore:
         pages = self.pages.get(self._key(ctx, knowledge_base), {})
         return pages.get(self._path(path))
 
-    async def put(
-        self, ctx: TenantContext, knowledge_base: str, path: str, content: str
-    ) -> None:
+    async def put(self, ctx: TenantContext, knowledge_base: str, path: str, content: str) -> None:
         key = self._key(ctx, knowledge_base)
         self.pages.setdefault(key, {})[self._path(path)] = content
 

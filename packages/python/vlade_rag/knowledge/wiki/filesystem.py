@@ -35,9 +35,7 @@ class FileSystemWikiStore:
         def _list() -> tuple[str, ...]:
             if not base.exists():
                 return ()
-            return tuple(
-                sorted(file.relative_to(base).as_posix() for file in base.rglob("*.md"))
-            )
+            return tuple(sorted(file.relative_to(base).as_posix() for file in base.rglob("*.md")))
 
         return await asyncio.to_thread(_list)
 
@@ -48,9 +46,7 @@ class FileSystemWikiStore:
         except FileNotFoundError:
             return None
 
-    async def put(
-        self, ctx: TenantContext, knowledge_base: str, path: str, content: str
-    ) -> None:
+    async def put(self, ctx: TenantContext, knowledge_base: str, path: str, content: str) -> None:
         target = self._path(ctx, knowledge_base, path)
 
         def _write() -> None:
