@@ -20,6 +20,7 @@ from vlade_rag.core.ports import (
     EvaluationDatasets,
     EvaluationRunner,
     FusionStrategy,
+    GraphIndex,
     JobQueue,
     KnowledgeRepository,
     LexicalIndex,
@@ -35,6 +36,8 @@ from vlade_rag.core.ports import (
     TextNormalizer,
     Tracer,
     VectorIndex,
+    WikiPageCodec,
+    WikiStore,
 )
 
 if TYPE_CHECKING:
@@ -137,6 +140,11 @@ class Dependencies:
     evaluation_datasets: EvaluationDatasets | None = None
     evaluation_runner: EvaluationRunner | None = None
     default_kb_config: Mapping[str, Any] = field(default_factory=dict)
+    # Knowledge graph (phase 6). None: no base of this server can enable the graph.
+    graph_index: GraphIndex | None = None
+    # LLM-Wiki store (task 6.12). None: no wiki tool is available.
+    wiki_store: WikiStore | None = None
+    wiki_codec: WikiPageCodec | None = None
 
     def parser_for(self, mime_type: str) -> DocumentParser | None:
         for parser in self.parsers:

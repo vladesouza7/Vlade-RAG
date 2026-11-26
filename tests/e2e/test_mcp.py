@@ -29,13 +29,38 @@ READ_TOOLS = [
     "vlade_query",
     "vlade_get_document",
     "vlade_get_ingestion_status",
+    "vlade_search_graph",
+    "vlade_wiki_read",
+    "vlade_wiki_lint",
 ]
 WRITE_TOOLS = [
     "vlade_ingest_document",
     "vlade_delete_document",
     "vlade_reindex_knowledge_base",
     "vlade_evaluate",
+    "vlade_wiki_write",
+    "vlade_wiki_synthesize",
 ]
+
+
+def listed_read_tools(world: McpWorld) -> list[str]:
+    """Read tools the server lists, after the graph and wiki capability checks."""
+    names = list(READ_TOOLS)
+    if world.runtime.deps.graph_index is None:
+        names.remove("vlade_search_graph")
+    if world.runtime.deps.wiki_store is None:
+        names.remove("vlade_wiki_read")
+        names.remove("vlade_wiki_lint")
+    return names
+
+
+def listed_write_tools(world: McpWorld) -> list[str]:
+    """Write tools the server lists, after the wiki capability check."""
+    names = list(WRITE_TOOLS)
+    if world.runtime.deps.wiki_store is None:
+        names.remove("vlade_wiki_write")
+        names.remove("vlade_wiki_synthesize")
+    return names
 
 
 def spec_tools() -> dict[str, dict[str, Any]]:
@@ -76,7 +101,7 @@ def test_tool_definitions_match_the_spec() -> None:
 async def test_tools_list_has_annotations_and_schemas(mcp_world: McpWorld) -> None:
     async with mcp_world.client(mcp_world.reader) as client:
         listed = (await client.list_tools()).tools
-    assert [t.name for t in listed] == READ_TOOLS
+    assert [t.name for t in listed] == listed_read_tools(mcp_world)
     spec = {t.name: t for t in all_tools()}
     for tool in listed:
         assert tool.annotations is not None

@@ -18,6 +18,10 @@ x-app-env: &app-env
   VLADE_PROVIDERS__OPENAI__API_KEY: ${OPENAI_API_KEY:-}
   VLADE_PROVIDERS__OPENROUTER__API_KEY: ${OPENROUTER_API_KEY:-}
   VLADE_PROVIDERS__OPENCODE__API_KEY: ${OPENCODE_API_KEY:-}
+  # Knowledge graph with LightRAG (phase 6, ADR-0032). Empty: no base can enable the graph.
+  # Example: postgresql://vlade_graph:<VLADE_GRAPH_DB_PASSWORD>@postgres:5432/vlade_graph
+  VLADE_GRAPH__DATABASE_URL: ${VLADE_GRAPH__DATABASE_URL:-}
+  VLADE_GRAPH__WORKING_DIR: /data/graph
   VLADE_PROVIDERS__GEMINI__API_KEY: ${GEMINI_API_KEY:-}
   VLADE_PROVIDERS__GEMINI__EMBEDDING_DIMENSIONS: ${GEMINI_EMBEDDING_DIMENSIONS:-false}
   # Vector index: "postgres" (pgvector, the default) or "qdrant" (ADR-0004).
@@ -73,6 +77,7 @@ services:
       VLADE_API__EMBEDDED_WORKER: ${VLADE_EMBEDDED_WORKER:-true}
     volumes:
       - objects:/data/objects
+      - graphdata:/data/graph
     ports:
       - "127.0.0.1:${VLADE_API_HOST_PORT:-8000}:8000"
     extra_hosts:
@@ -98,6 +103,7 @@ services:
       <<: *app-env
     volumes:
       - objects:/data/objects
+      - graphdata:/data/graph
     extra_hosts:
       - "host.docker.internal:host-gateway"
     depends_on:
@@ -141,6 +147,8 @@ services:
       POSTGRES_DB: vlade
       POSTGRES_USER: vlade_owner
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Defina POSTGRES_PASSWORD no arquivo .env}
+      # Creates the knowledge graph database on a new volume (initdb/02-graph.sh).
+      VLADE_GRAPH_DB_PASSWORD: ${VLADE_GRAPH_DB_PASSWORD:-}
     volumes:
       - pgdata:/var/lib/postgresql/data
     ports:
@@ -400,6 +408,7 @@ services:
 
 volumes:
   pgdata:
+  graphdata:
   objects:
   s3data:
   qdrantdata:

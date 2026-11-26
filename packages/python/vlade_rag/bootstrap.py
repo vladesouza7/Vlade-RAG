@@ -285,6 +285,7 @@ async def build_runtime(
             "audit_log": mem.audit_log,
             "cache": mem.cache,
             "rate_limiter": mem.rate_limiter,
+            "graph_index": mem.graph_index,  # deterministic, no LLM: tests and demos
         }
         tenants: TenantDirectory = mem.tenants
         object_storage: Any = mem.object_storage
@@ -473,6 +474,23 @@ async def build_runtime(
         ),
     )
     deps.evaluation_runner = EvaluationWorker(deps)
+    if settings.graph.database_url is not None and settings.storage.backend != "memory":
+        try:
+            from vlade_rag.knowledge.graph.lightrag import LightRAGGraphIndex
+        except ImportError as exc:
+            raise InvalidArgument(
+                'VLADE_GRAPH__DATABASE_URL needs the "graph" extra: pip install "vlade-rag[graph]"'
+            ) from exc
+        graph = LightRAGGraphIndex(settings.graph, deps.llms, deps.embeddings)
+        deps.graph_index = graph
+        closers.append(graph.aclose)
+        checks["graph"] = graph.ping
+    if settings.wiki.enabled:
+        from vlade_rag.knowledge.wiki import FileSystemWikiStore
+        from vlade_rag.okf.codec import OkfWikiCodec
+
+        deps.wiki_store = FileSystemWikiStore(settings.wiki.root)
+        deps.wiki_codec = OkfWikiCodec()
     oidc = None
     if settings.auth.oidc.enabled:
         from vlade_rag.auth import OidcVerifier

@@ -105,3 +105,11 @@ def test_empty_provider_keys_and_defaults(monkeypatch: pytest.MonkeyPatch) -> No
     assert settings.providers.openrouter.base_url == "https://openrouter.ai/api/v1"
     key = settings.providers.openrouter.api_key
     assert key is not None and key.get_secret_value() == "sk-or"
+
+
+def test_empty_graph_url_means_no_graph(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("VLADE_GRAPH__DATABASE_URL", "")
+    assert Settings().graph.database_url is None
+    monkeypatch.setenv("VLADE_GRAPH__DATABASE_URL", "postgresql://g:p@db:5432/vlade_graph")
+    url = Settings().graph.database_url
+    assert url is not None and url.get_secret_value().endswith("/vlade_graph")

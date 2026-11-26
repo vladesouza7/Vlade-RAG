@@ -10,9 +10,11 @@ from pydantic import BaseModel, ConfigDict, Field
 
 from vlade_rag.core.application import (
     EvaluationResult,
+    GraphSearchView,
     KnowledgeBaseSummary,
     ReindexResult,
     UsageView,
+    WikiPageView,
 )
 from vlade_rag.core.domain import (
     Answer,
@@ -283,6 +285,98 @@ class SearchHit(_Model):
 class SearchOut(_Model):
     results: list[SearchHit]
     trace_id: str | None
+
+
+class GraphSearchIn(_Model):
+    query: str = Field(min_length=1)
+    mode: Literal["local", "global", "hybrid", "mix", "naive"] | None = None
+    top_k: int | None = Field(default=None, ge=1, le=200)
+
+
+class GraphEntityOut(_Model):
+    name: str
+    type: str
+    description: str
+
+
+class GraphRelationOut(_Model):
+    source: str
+    target: str
+    keywords: str
+    description: str
+    weight: float
+
+
+class GraphSearchOut(_Model):
+    entities: list[GraphEntityOut]
+    relations: list[GraphRelationOut]
+    chunks: list[SearchHit]
+    trace_id: str | None
+
+    @classmethod
+    def of(cls, view: GraphSearchView) -> GraphSearchOut:
+        return cls(
+            entities=[
+                GraphEntityOut(name=e.name, type=e.type, description=e.description)
+                for e in view.entities
+            ],
+            relations=[
+                GraphRelationOut(
+                    source=r.source,
+                    target=r.target,
+                    keywords=r.keywords,
+                    description=r.description,
+                    weight=r.weight,
+                )
+                for r in view.relations
+            ],
+            chunks=[SearchHit.of(item, rank) for rank, item in enumerate(view.chunks, start=1)],
+            trace_id=view.trace_id,
+        )
+
+
+class GraphReindexOut(_Model):
+    executed: bool
+    documents: int
+    jobs: int
+
+
+class WikiPageIn(_Model):
+    path: str = Field(min_length=1, max_length=256)
+    type: str = Field(min_length=1)
+    title: str | None = None
+    description: str | None = None
+    body: str = ""
+    tags: list[str] = Field(default_factory=list)
+
+
+class WikiPageOut(_Model):
+    path: str
+    type: str
+    title: str | None
+    description: str | None
+    content: str
+
+    @classmethod
+    def of(cls, view: WikiPageView) -> WikiPageOut:
+        return cls(
+            path=view.path,
+            type=view.page.type,
+            title=view.page.title,
+            description=view.page.description,
+            content=view.content,
+        )
+
+
+class WikiLintOut(_Model):
+    pages: int
+    links: int
+    problems: list[str]
+
+
+class WikiSynthesisIn(_Model):
+    subject: str = Field(min_length=1)
+    path: str | None = Field(default=None, max_length=256)
 
 
 class QueryIn(_Model):

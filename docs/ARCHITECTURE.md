@@ -59,6 +59,7 @@ Extras de `vlade-rag` disponíveis na fase 1:
 | `langgraph` | `langgraph` (fase 3, MIT). Motor de consulta opcional (ADR-0023). Fica fora do extra `server` |
 | `eval` | `ragas` (fase 3, Apache-2.0). Métricas de resposta do RF-71 (ADR-0025). Traz pandas, pyarrow e scipy. Fica fora do extra `server` |
 | `qdrant` | `qdrant-client` (fase 5, Apache-2.0). Índice vetorial alternativo (ADR-0004). O pgvector continua como padrão |
+| `graph` | `lightrag-hku` (fase 6, MIT). Grafo de conhecimento com LightRAG (ADR-0032). Fica fora do extra `server` e entra na imagem Docker |
 | `sql` | `sqlalchemy[asyncio]` e `aiosqlite` (fase 5, MIT). Conector de banco externo (ADR-0029). Outros drivers ficam a cargo do operador |
 | `oidc` | `pyjwt[crypto]` (fase 5, MIT/Apache-2.0). Verificação de tokens OIDC na API e no MCP (ADR-0031) |
 | `server` | `native`, `api`, `cli`, `postgres`, `ollama`, `openai`, `otel`, `cache`, `mcp`, `s3` |
@@ -1030,6 +1031,34 @@ O adapter acrescenta o prefixo `{tenant_id}/` a toda chave. Se o servidor Valkey
 
 O cache semântico é opcional (ADR-0030). `VLADE_CACHE__SEMANTIC__ENABLED` liga a camada `SemanticCache`, que guarda o vetor da pergunta e os resultados em `semsearch:{kb_id}:{kb_epoch}`. Uma busca densa sem filtros e sem transformação compara o vetor novo com os vetores guardados por cosine. Se a similaridade atingir `VLADE_CACHE__SEMANTIC__THRESHOLD`, o `Search` reusa os resultados sem chamar retrievers, fusão ou reranker. `MAX_ENTRIES` limita o número de perguntas por base, e `TTL_SECONDS` define a validade. O padrão é desligado.
 
+### 11.7. Grafo de conhecimento (fase 6)
+
+O grafo de conhecimento usa o LightRAG (ADR-0032). Ele é opcional no servidor e em cada base.
+
+| Item | Regra |
+|---|---|
+| Ligar no servidor | `VLADE_GRAPH__DATABASE_URL` aponta para a base `vlade_graph`. Sem a variável, `Dependencies.graph_index` fica vazio |
+| Ligar na base | `graph.enabled = true` e `graph.model` com o modelo de extração. O retriever `graph` exige `graph.enabled` |
+| Partição | Workspace `t<tenant>_k<base>`, calculado a partir do contexto e do id da base |
+| Indexação | Job `graph_index` depois do `publish`. O job usa os trechos já cortados (`ainsert_custom_chunks`) e troca a versão antiga do documento pela nova |
+| Ligação dos trechos | Tabela `vlade_graph_chunks`: SHA-256 do texto do trecho → `chunks.id` |
+| Busca | `aquery_data` no modo `graph.mode` (`local`, `global`, `hybrid`, `mix` ou `naive`). O retriever `graph` devolve só trechos publicados que passam no filtro (`published_chunks`) e entra na fusão RRF |
+| Exclusão | `DeleteDocument` com `confirm` apaga todas as versões do documento no grafo |
+| Falha | Uma falha do job `graph_index` não marca a versão como falha. Um erro de provedor vira `ProviderUnavailable`, e o worker tenta de novo |
+
+Configuração da base, valores padrão:
+
+```yaml
+graph:
+  enabled: false
+  provider: openrouter       # provedor do modelo de extração
+  model: ""                  # obrigatório com enabled = true
+  max_output_tokens: 4096
+  mode: hybrid
+  top_k: 40                  # entidades e relações por consulta
+  max_chunks_per_document: 2000
+```
+
 ## 12. Orquestração
 
 ### 12.1. Pipeline linear e LangGraph
@@ -1110,6 +1139,8 @@ Prefixo `/v1`. O cabeçalho `Authorization: Bearer <credencial>` autentica. A cr
 | `GET` | `/v1/knowledge-bases/{kb}/documents/{id}` | `GetDocument` |
 | `DELETE` | `/v1/knowledge-bases/{kb}/documents/{id}` | `DeleteDocument`. Sem `?confirm=true`, devolve a prévia |
 | `POST` | `/v1/knowledge-bases/{kb}/search` | `Search` |
+| `POST` | `/v1/knowledge-bases/{kb}/graph/search` | `SearchGraph`. Entidades, relações e trechos do grafo (fase 6) |
+| `POST` | `/v1/knowledge-bases/{kb}/graph/reindex` | `ReindexGraph`. Sem `?confirm=true`, devolve a contagem de documentos |
 | `POST` | `/v1/knowledge-bases/{kb}/query` | `AnswerQuery`. Com `"stream": true`, devolve Server-Sent Events |
 | `POST` | `/v1/knowledge-bases/{kb}/reindex` | `ReindexKnowledgeBase` |
 | `POST` | `/v1/knowledge-bases/{kb}/sources/{source}/sync` | `SyncSource` |

@@ -551,6 +551,7 @@ Alertas:
 | Cache | Valkey, protocolo compatível com Redis. Veja a decisão D3 | 2 |
 | Armazenamento de objetos | API S3: RustFS ou compatível. Veja a decisão D2 | 2 |
 | Banco vetorial alternativo | Qdrant | 5 |
+| Grafo de conhecimento (GraphRAG) | LightRAG, base PostgreSQL separada (ADR-0032) | 6 |
 | Containers | Docker e Docker Compose | 0 |
 
 ### 16.1. Política de licenças das dependências
@@ -773,6 +774,14 @@ Os números abaixo são metas iniciais propostas. Confirme ou ajuste os números
 - OIDC/OAuth 2.1.
 - Publicação do pacote no PyPI.
 
+### Fase 6 — Conhecimento estruturado
+
+- Grafo de conhecimento com LightRAG (ADR-0032): port `GraphIndex`, job `graph_index`, retriever `graph`, rota da API e ferramenta MCP `vlade_search_graph`.
+- Persona por base.
+- Metadados OKF v0.2 nos documentos.
+- Parser bíblico e parser EPUB.
+- LLM-Wiki: páginas OKF geradas e mantidas pelo LLM, com ferramentas MCP de leitura e escrita.
+
 ---
 
 ## 21. Decisões
@@ -790,6 +799,7 @@ Todas as decisões abaixo têm o status `Aceito` desde 2026-11-19. O índice com
 | D7 | O Vlade-RAG é open source, com licença MIT. A política de licenças da seção 16.1 vale para todas as dependências | ADR-0001 |
 | D8 | O Vlade-RAG atende qualquer cliente MCP. O Hermes Agent (Nous Research) e o Claude Code são exemplos. O projeto publica uma Agent Skill no padrão aberto (seção 12.1) | ADR-0013 |
 | D9 | O fluxo de consulta da versão 1 não tem human-in-the-loop | ADR-0014 |
+| D10 | O grafo de conhecimento usa o LightRAG numa base PostgreSQL separada, desligado por padrão em cada base | ADR-0032 |
 | D10 | O Arize Phoenix substitui o Langfuse por enquanto, como observabilidade de IA e registro de experimentos. O Langfuse auto-hospedado não cabe no notebook de 8 GB. O Phoenix usa a Elastic License 2.0 e roda como serviço separado (seção 16.1, item 4) | ADR-0026 |
 
 ---

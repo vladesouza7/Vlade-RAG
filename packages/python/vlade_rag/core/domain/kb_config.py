@@ -10,7 +10,8 @@ from typing import Literal
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 ChunkStrategy = Literal["tokens", "recursive", "markdown", "sentence"]
-RetrieverName = Literal["dense", "lexical", "fuzzy", "bm25"]
+RetrieverName = Literal["dense", "lexical", "fuzzy", "bm25", "graph"]
+GraphMode = Literal["local", "global", "hybrid", "mix", "naive"]
 QueryTransform = Literal["none", "rewrite", "multi_query", "hyde"]
 
 
@@ -77,6 +78,28 @@ class GenerationConfig(_Frozen):
     require_citations: bool = True
 
 
+class GraphConfig(_Frozen):
+    """Knowledge graph of the base (phase 6, ADR-0032). Off by default: extraction is costly.
+
+    The graph uses its own LLM for entity and relation extraction. LightRAG recommends a model
+    with at least 32B parameters, 32k context and no "thinking" mode.
+    """
+
+    enabled: bool = False
+    provider: str = "openrouter"  # LLM provider name of the extraction model
+    model: str = ""  # required when enabled
+    max_output_tokens: int = Field(default=4096, ge=256, le=32768)
+    mode: GraphMode = "hybrid"
+    top_k: int = Field(default=40, ge=1, le=200)  # entities and relations per query
+    max_chunks_per_document: int = Field(default=2000, ge=1, le=100_000)
+
+    @model_validator(mode="after")
+    def _model_when_enabled(self) -> GraphConfig:
+        if self.enabled and not self.model.strip():
+            raise ValueError("graph.model is required when graph.enabled is true")
+        return self
+
+
 class OrchestrationConfig(_Frozen):
     """Engine of the query flow (docs/ARCHITECTURE.md section 12.1, ADR-0023).
 
@@ -101,6 +124,13 @@ class KnowledgeBaseConfig(_Frozen):
     retrieval: RetrievalConfig = Field(default_factory=RetrievalConfig)
     generation: GenerationConfig = Field(default_factory=GenerationConfig)
     orchestration: OrchestrationConfig = Field(default_factory=OrchestrationConfig)
+    graph: GraphConfig = Field(default_factory=GraphConfig)
+
+    @model_validator(mode="after")
+    def _graph_retriever_needs_graph(self) -> KnowledgeBaseConfig:
+        if "graph" in self.retrieval.retrievers and not self.graph.enabled:
+            raise ValueError("the 'graph' retriever needs graph.enabled = true")
+        return self
 
     def requires_reindex(self, new: KnowledgeBaseConfig) -> Literal["none", "embeddings", "full"]:
         """Return the reindex mode a change from ``self`` to ``new`` requires (section 9.2)."""

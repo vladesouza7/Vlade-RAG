@@ -16,7 +16,7 @@ pytest.importorskip("mcp")
 import jsonschema
 
 from tests.e2e.conftest import McpWorld, error_of
-from tests.e2e.test_mcp import READ_TOOLS, WRITE_TOOLS, spec_tools
+from tests.e2e.test_mcp import listed_read_tools, listed_write_tools, spec_tools
 from vlade_rag.ingestion.worker import Worker
 from vlade_rag.mcp.tools import write_tools
 
@@ -49,7 +49,7 @@ async def test_write_tools_are_off_by_default(mcp_world: McpWorld) -> None:
         "content_text": "# Novo\n\nTexto novo.",
     }
     async with mcp_world.client(mcp_world.admin) as client:
-        assert [t.name for t in (await client.list_tools()).tools] == READ_TOOLS
+        assert [t.name for t in (await client.list_tools()).tools] == listed_read_tools(mcp_world)
         error = error_of(await client.call_tool("vlade_ingest_document", args))
     assert error["code"] == "write_tools_disabled" and error["retryable"] is False
     events = await _audit(mcp_world, "vlade_ingest_document")
@@ -69,8 +69,8 @@ async def test_enabled_write_tools_are_filtered_by_role(mcp_world: McpWorld) -> 
                 {"knowledge_base": "vendas", "document_id": str(mcp_world.doc_id)},
             )
         )
-    assert admin == READ_TOOLS + WRITE_TOOLS
-    assert reader == READ_TOOLS
+    assert admin == listed_read_tools(mcp_world) + listed_write_tools(mcp_world)
+    assert reader == listed_read_tools(mcp_world)
     assert error["code"] == "forbidden"
 
     spec = {t.name: t for t in write_tools()}

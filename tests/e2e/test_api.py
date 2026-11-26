@@ -418,3 +418,70 @@ def test_daily_request_quota(api: Api) -> None:
     r = api.client.get("/v1/knowledge-bases", headers=api.reader)
     assert r.status_code == 429 and r.json()["code"] == "quota_exceeded"
     assert api.client.get("/v1/knowledge-bases", headers=api.other).status_code == 200
+
+
+# ---------------------------------------------------------------- knowledge graph (phase 6)
+
+GRAPH_KB_CONFIG: dict[str, Any] = {
+    **KB_CONFIG,
+    "graph": {"enabled": True, "provider": "extractive", "model": "extractive"},
+    "retrieval": {"retrievers": ["dense", "lexical", "graph"]},
+}
+DOC_GRAPH = (
+    "# Escatologia\n\nCharles Ryrie defende o Dispensacionalismo e distingue Israel e Igreja.\n"
+)
+
+
+def _needs_graph(has_graph: bool) -> None:
+    if not has_graph:
+        pytest.skip("this runtime has no knowledge graph")
+
+
+def test_graph_search_over_http(api: Api) -> None:
+    _needs_graph(api.runtime.deps.graph_index is not None)
+    r = api.client.post(
+        "/v1/knowledge-bases",
+        json={"slug": "teologia", "name": "Teologia", "config": GRAPH_KB_CONFIG},
+        headers=api.admin,
+    )
+    assert r.status_code == 201, r.text
+    r = api.client.post(
+        "/v1/knowledge-bases/teologia/documents",
+        files={"file": ("ryrie.md", DOC_GRAPH.encode(), "text/markdown")},
+        headers=api.admin,
+    )
+    assert r.status_code == 202, r.text
+    assert api.drain() == 2  # ingest, then graph_index
+    found = api.client.post(
+        "/v1/knowledge-bases/teologia/graph/search",
+        json={"query": "Ryrie e o Dispensacionalismo"},
+        headers=api.reader,
+    )
+    assert found.status_code == 200, found.text
+    body = found.json()
+    assert "Charles Ryrie" in {e["name"] for e in body["entities"]}
+    assert body["chunks"][0]["document_title"] == "ryrie.md"
+    preview = api.client.post("/v1/knowledge-bases/teologia/graph/reindex", headers=api.admin)
+    assert preview.json() == {"executed": False, "documents": 1, "jobs": 0}
+    denied = api.client.post(
+        "/v1/knowledge-bases/teologia/graph/reindex?confirm=true", headers=api.reader
+    )
+    assert denied.status_code == 403
+    hidden = api.client.post(
+        "/v1/knowledge-bases/teologia/graph/search", json={"query": "Ryrie"}, headers=api.other
+    )
+    assert hidden.status_code == 404
+
+
+def test_graph_search_needs_an_enabled_base(api: Api) -> None:
+    r = api.client.post(
+        "/v1/knowledge-bases",
+        json={"slug": "simples", "name": "Simples", "config": KB_CONFIG},
+        headers=api.admin,
+    )
+    assert r.status_code == 201, r.text
+    r = api.client.post(
+        "/v1/knowledge-bases/simples/graph/search", json={"query": "x"}, headers=api.reader
+    )
+    assert r.status_code == 422
+    assert r.headers["content-type"] == "application/problem+json"

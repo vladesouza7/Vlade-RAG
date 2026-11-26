@@ -8,7 +8,7 @@ Rules:
 
 from __future__ import annotations
 
-from collections.abc import AsyncIterator, Mapping, Sequence
+from collections.abc import AsyncIterator, Iterable, Mapping, Sequence
 from contextlib import AbstractContextManager
 from dataclasses import dataclass, field
 from datetime import datetime
@@ -46,6 +46,7 @@ from vlade_rag.core.domain import (
     TenantContext,
     TenantQuotas,
     TenantUsage,
+    WikiPage,
 )
 from vlade_rag.core.domain.kb_config import EmbeddingsConfig
 
@@ -295,6 +296,63 @@ class VectorIndex(Protocol):
         ...
 
 
+@dataclass(frozen=True, slots=True)
+class GraphEntity:
+    name: str
+    type: str
+    description: str
+
+
+@dataclass(frozen=True, slots=True)
+class GraphRelation:
+    source: str
+    target: str
+    keywords: str
+    description: str
+    weight: float = 1.0
+
+
+@dataclass(frozen=True, slots=True)
+class GraphSearchResult:
+    """Entities, relations and chunks the graph found. ``chunk_hits`` use Vlade-RAG chunk ids."""
+
+    entities: tuple[GraphEntity, ...] = ()
+    relations: tuple[GraphRelation, ...] = ()
+    chunk_hits: tuple[ChunkHit, ...] = ()
+
+
+@runtime_checkable
+class GraphIndex(Protocol):
+    """Knowledge graph of a base (phase 6, ADR-0032).
+
+    The adapter derives its own partition from ``ctx.tenant_id`` and ``kb.id``. A document has at
+    most one version in the graph: ``index_document`` replaces the earlier versions.
+    """
+
+    name: str
+
+    async def index_document(
+        self,
+        ctx: TenantContext,
+        kb: KnowledgeBase,
+        document_id: UUID,
+        version_id: UUID,
+        chunks: Sequence[Chunk],
+    ) -> int:
+        """Extract entities and relations from the chunks. Returns the number of chunks indexed."""
+        ...
+
+    async def delete_document(
+        self, ctx: TenantContext, kb: KnowledgeBase, document_id: UUID
+    ) -> int:
+        """Remove every version of the document from the graph. Returns the versions removed."""
+        ...
+
+    async def search(
+        self, ctx: TenantContext, kb: KnowledgeBase, text: str, *, mode: str, top_k: int
+    ) -> GraphSearchResult: ...
+
+
 @runtime_checkable
 class LexicalIndex(Protocol):
     name: str  # "tsvector", "pg_search", "trigram"
@@ -388,6 +446,28 @@ class ObjectStorage(Protocol):
     async def get(self, ctx: TenantContext, key: str) -> bytes: ...
     async def delete(self, ctx: TenantContext, key: str) -> None: ...
     async def delete_prefix(self, ctx: TenantContext, prefix: str) -> int: ...
+
+
+@runtime_checkable
+class WikiStore(Protocol):
+    """Storage of OKF pages of a base. Paths are bundle-relative POSIX paths."""
+
+    async def list(self, ctx: TenantContext, knowledge_base: str) -> tuple[str, ...]: ...
+    async def get(self, ctx: TenantContext, knowledge_base: str, path: str) -> str | None: ...
+    async def put(
+        self, ctx: TenantContext, knowledge_base: str, path: str, content: str
+    ) -> None: ...
+    async def delete(self, ctx: TenantContext, knowledge_base: str, path: str) -> None: ...
+
+
+@runtime_checkable
+class WikiPageCodec(Protocol):
+    """Serialization of OKF pages. The adapter owns PyYAML, the core owns only the model."""
+
+    def parse_page(self, text: str, path: str) -> WikiPage: ...
+    def render_page(self, page: WikiPage) -> str: ...
+    def render_index(self, entries: Iterable[tuple[str, str, str]], title: str) -> str: ...
+    def append_log(self, log: str | None, date: str, item: str, title: str) -> str: ...
 
 
 @runtime_checkable
@@ -637,6 +717,10 @@ __all__ = [
     "EvaluationRunner",
     "Evaluator",
     "FusionStrategy",
+    "GraphEntity",
+    "GraphIndex",
+    "GraphRelation",
+    "GraphSearchResult",
     "IssuedApiKey",
     "JobQueue",
     "KnowledgeRepository",
@@ -657,4 +741,6 @@ __all__ = [
     "TextNormalizer",
     "Tracer",
     "VectorIndex",
+    "WikiPageCodec",
+    "WikiStore",
 ]

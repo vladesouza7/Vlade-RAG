@@ -19,6 +19,9 @@ from vlade_rag.api.schemas import (
     DocumentOut,
     EvaluationIn,
     EvaluationOut,
+    GraphReindexOut,
+    GraphSearchIn,
+    GraphSearchOut,
     IngestOut,
     JobOut,
     KnowledgeBaseCreate,
@@ -32,6 +35,10 @@ from vlade_rag.api.schemas import (
     SyncIn,
     SyncOut,
     TenantUsageOut,
+    WikiLintOut,
+    WikiPageIn,
+    WikiPageOut,
+    WikiSynthesisIn,
 )
 from vlade_rag.core.application import (
     AnswerDelta,
@@ -43,16 +50,23 @@ from vlade_rag.core.application import (
     GetIngestionStatus,
     GetKnowledgeBase,
     GetUsage,
+    GetWikiPage,
     KnowledgeBaseSummary,
+    LintWiki,
     ListAuditEvents,
     ListKnowledgeBases,
+    ListWikiPages,
+    ReindexGraph,
     ReindexKnowledgeBase,
     RunEvaluation,
     Search,
+    SearchGraph,
     SubmitIngestion,
     SyncSource,
+    SynthesizeWikiPage,
+    WriteWikiPage,
 )
-from vlade_rag.core.domain import InvalidArgument, RawDocument, VladeError
+from vlade_rag.core.domain import InvalidArgument, RawDocument, VladeError, WikiActor, WikiPage
 
 router = APIRouter(prefix="/v1")
 
@@ -227,6 +241,75 @@ async def search(kb: str, body: SearchIn, ctx: CtxDep, rt: RuntimeDep) -> Search
         results=[SearchHit.of(item, rank) for rank, item in enumerate(result.results, start=1)],
         trace_id=result.trace_id,
     )
+
+
+@router.post("/knowledge-bases/{kb}/graph/search", response_model=GraphSearchOut)
+async def graph_search(kb: str, body: GraphSearchIn, ctx: CtxDep, rt: RuntimeDep) -> GraphSearchOut:
+    """Entities, relations and supporting chunks of the knowledge graph (phase 6, ADR-0032)."""
+    view = await SearchGraph(rt.deps).execute(
+        ctx, knowledge_base=kb, text=body.query, mode=body.mode, top_k=body.top_k
+    )
+    return GraphSearchOut.of(view)
+
+
+@router.post("/knowledge-bases/{kb}/graph/reindex", response_model=GraphReindexOut)
+async def graph_reindex(
+    kb: str, ctx: CtxDep, rt: RuntimeDep, confirm: bool = False
+) -> GraphReindexOut:
+    """Without ``confirm``: the number of documents. With it: one graph job per document."""
+    result = await ReindexGraph(rt.deps).execute(ctx, knowledge_base=kb, confirm=confirm)
+    return GraphReindexOut(executed=result.executed, documents=result.documents, jobs=result.jobs)
+
+
+@router.get("/knowledge-bases/{kb}/wiki/pages", response_model=list[WikiPageOut])
+async def wiki_list(kb: str, ctx: CtxDep, rt: RuntimeDep) -> list[WikiPageOut]:
+    """List the OKF pages of the wiki of a base."""
+    views = await ListWikiPages(rt.deps).execute(ctx, kb)
+    return [WikiPageOut.of(view) for view in views]
+
+
+@router.get("/knowledge-bases/{kb}/wiki/pages/{path:path}", response_model=WikiPageOut)
+async def wiki_get(kb: str, path: str, ctx: CtxDep, rt: RuntimeDep) -> WikiPageOut:
+    """Read one OKF page. ``path`` is relative to the bundle root."""
+    return WikiPageOut.of(await GetWikiPage(rt.deps).execute(ctx, kb, path))
+
+
+@router.post("/knowledge-bases/{kb}/wiki/pages", response_model=WikiPageOut)
+async def wiki_put(kb: str, body: WikiPageIn, ctx: CtxDep, rt: RuntimeDep) -> WikiPageOut:
+    """Write one OKF page. The server creates generated and updates index.md and log.md."""
+    page = WikiPage(
+        path=body.path,
+        type=body.type,
+        title=body.title,
+        description=body.description,
+        tags=tuple(body.tags),
+        body=body.body,
+        generated=WikiActor(by="human:api-client"),
+    )
+    written = await WriteWikiPage(rt.deps).execute(ctx, kb, page)
+    return WikiPageOut(
+        path=written.path,
+        type=written.type,
+        title=written.title,
+        description=written.description,
+        content=body.body,
+    )
+
+
+@router.post("/knowledge-bases/{kb}/wiki/lint", response_model=WikiLintOut)
+async def wiki_lint(kb: str, ctx: CtxDep, rt: RuntimeDep) -> WikiLintOut:
+    """Check links, orphan pages, stale pages and the reserved files of the wiki."""
+    report = await LintWiki(rt.deps).execute(ctx, kb)
+    return WikiLintOut(pages=report.pages, links=report.links, problems=list(report.problems))
+
+
+@router.post("/knowledge-bases/{kb}/wiki/synthesize", response_model=WikiPageOut)
+async def wiki_synthesize(
+    kb: str, body: WikiSynthesisIn, ctx: CtxDep, rt: RuntimeDep
+) -> WikiPageOut:
+    """Create a wiki page with citations from the source documents of the base."""
+    view = await SynthesizeWikiPage(rt.deps).execute(ctx, kb, body.subject, path=body.path)
+    return WikiPageOut.of(view)
 
 
 def _sse(event: str, data: Any) -> str:

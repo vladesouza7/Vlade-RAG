@@ -279,6 +279,35 @@ class VectorIndexSettings(BaseModel):
     qdrant: QdrantSettings = Field(default_factory=QdrantSettings)
 
 
+class GraphSettings(BaseModel):
+    """Knowledge graph with LightRAG (phase 6, ADR-0032). Needs the ``graph`` extra.
+
+    ``database_url`` points to a database separate from the main one: LightRAG isolates tenants
+    by a ``workspace`` column, without Row-Level Security.
+    """
+
+    database_url: SecretStr | None = None
+    working_dir: str = "./data/graph"  # LightRAG keeps its configuration anchor here: persist it
+    max_instances: int = Field(
+        default=16, ge=1, le=1024
+    )  # cached LightRAG instances (one per base)
+    max_connections: int = Field(default=10, ge=1, le=200)
+    llm_max_async: int = Field(default=4, ge=1, le=64)  # concurrent extraction calls per base
+
+    @field_validator("database_url", mode="before")
+    @classmethod
+    def _empty_is_none(cls, value: object) -> object:
+        return None if value in ("", None) else value
+
+
+class WikiSettings(BaseModel):
+    """LLM-Wiki store (phase 6, task 6.12). Disabled by default."""
+
+    enabled: bool = False
+    root: str = "./data/wiki"
+    max_sources: int = Field(default=8, ge=1, le=50)
+
+
 class OtelSettings(BaseModel):
     enabled: bool = False
     endpoint: str | None = None
@@ -314,6 +343,8 @@ class Settings(BaseSettings):
     limits: LimitsSettings = Field(default_factory=LimitsSettings)
     evaluation: EvaluationSettings = Field(default_factory=EvaluationSettings)
     otel: OtelSettings = Field(default_factory=OtelSettings)
+    graph: GraphSettings = Field(default_factory=GraphSettings)
+    wiki: WikiSettings = Field(default_factory=WikiSettings)
     # Server default for new knowledge bases, as JSON. A config sent on creation is merged
     # over it. Example: {"embeddings": {"provider": "openrouter", ...}, "generation": {...}}
     default_kb_config: dict[str, Any] = Field(default_factory=dict)

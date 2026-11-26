@@ -5,7 +5,31 @@ from __future__ import annotations
 from html.parser import HTMLParser
 
 from vlade_rag.core.application.mime import HTML, MARKDOWN, TEXT
-from vlade_rag.core.domain import ParsedDocument, RawDocument
+from vlade_rag.core.domain import Metadata, ParsedDocument, RawDocument
+from vlade_rag.okf.parser import OkfUnavailable, split_frontmatter
+
+
+def _json_value(value: object) -> object:
+    """Keep metadata JSON-compatible for filters and storage."""
+    if value is None or isinstance(value, (str, int, float, bool)):
+        return value
+    if isinstance(value, (list, tuple)):
+        return [_json_value(item) for item in value]
+    if isinstance(value, dict):
+        return {str(key): _json_value(item) for key, item in value.items()}
+    return str(value)
+
+
+def _okf_metadata(text: str) -> tuple[Metadata, str]:
+    """Split OKF frontmatter from the text. Without the extra, keep the old behavior."""
+    try:
+        frontmatter, body = split_frontmatter(text)
+    except OkfUnavailable:
+        if text.startswith("---\n"):
+            end = text.find("\n---", 4)
+            return {}, text[end + 4 :] if end != -1 else text
+        return {}, text
+    return {f"okf_{key}": _json_value(value) for key, value in frontmatter.items()}, body
 
 
 def _first_heading(text: str) -> str | None:
@@ -28,11 +52,9 @@ class MarkdownParser:
 
     async def parse(self, raw: RawDocument) -> ParsedDocument:
         text = raw.data.decode("utf-8")
-        if text.startswith("---\n"):  # drop YAML front matter
-            end = text.find("\n---", 4)
-            if end != -1:
-                text = text[end + 4 :]
-        return ParsedDocument(text=text, title=_first_heading(text))
+        metadata, body = _okf_metadata(text)
+        title = str(metadata["okf_title"]) if metadata.get("okf_title") else _first_heading(body)
+        return ParsedDocument(text=body, title=title, metadata=metadata)
 
 
 _BLOCK = {"p", "div", "section", "article", "main", "header", "footer", "tr", "table", "pre"}

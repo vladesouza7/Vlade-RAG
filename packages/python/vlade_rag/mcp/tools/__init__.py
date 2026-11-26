@@ -21,17 +21,25 @@ from vlade_rag.core.application import (
     Dependencies,
     GetDocument,
     GetIngestionStatus,
+    GetWikiPage,
+    LintWiki,
     ListKnowledgeBases,
+    ListWikiPages,
     ReindexKnowledgeBase,
     RunEvaluation,
     Search,
+    SearchGraph,
     SubmitIngestion,
+    SynthesizeWikiPage,
+    WriteWikiPage,
 )
 from vlade_rag.core.domain import (
     InvalidArgument,
     RawDocument,
     Role,
     TenantContext,
+    WikiActor,
+    WikiPage,
 )
 from vlade_rag.ingestion.sources.download import read_source
 from vlade_rag.mcp.policies import Group
@@ -51,6 +59,10 @@ class ToolSpec:
     handler: Handler
     read_only: bool = True
     destructive: bool = False
+    # Listed and callable only when the server has a knowledge graph (phase 6).
+    requires_graph: bool = False
+    # Listed and callable only when the server has a wiki store (task 6.12).
+    requires_wiki: bool = False
 
     def to_mcp(self) -> Tool:
         return Tool(
@@ -134,6 +146,52 @@ async def _search(
             for r in result.results
         ],
         "trace_id": result.trace_id,
+    }
+
+
+# ---------------------------------------------------------------- vlade_search_graph
+
+
+async def _search_graph(
+    deps: Dependencies, ctx: TenantContext, args: Mapping[str, Any]
+) -> dict[str, Any]:
+    view = await SearchGraph(deps).execute(
+        ctx,
+        knowledge_base=args["knowledge_base"],
+        text=args["query"],
+        mode=args.get("mode"),
+        top_k=args.get("top_k"),
+    )
+    slug = view.knowledge_base.slug
+    return {
+        "entities": [
+            {"name": e.name, "type": e.type, "description": e.description} for e in view.entities
+        ],
+        "relations": [
+            {
+                "source": r.source,
+                "target": r.target,
+                "keywords": r.keywords,
+                "description": r.description,
+                "weight": r.weight,
+            }
+            for r in view.relations
+        ],
+        "chunks": [
+            {
+                "rank": rank,
+                "score": item.score,
+                "chunk_id": str(item.chunk.id),
+                "document_id": str(item.chunk.document_id),
+                "document_title": item.chunk.document_title,
+                "text": item.chunk.text,
+                "page": item.chunk.page,
+                "section": item.chunk.section,
+                "resource_uri": resource_uri(slug, item.chunk.document_id),
+            }
+            for rank, item in enumerate(view.chunks, start=1)
+        ],
+        "trace_id": view.trace_id,
     }
 
 
@@ -453,6 +511,56 @@ _SEARCH_OUT = {
     },
 }
 
+_GRAPH_IN = {
+    "type": "object",
+    "required": ["knowledge_base", "query"],
+    "additionalProperties": False,
+    "properties": {
+        "knowledge_base": {"type": "string", "description": "Slug da base."},
+        "query": {"type": "string", "minLength": 1, "maxLength": 4000},
+        "mode": {
+            "type": "string",
+            "enum": ["local", "global", "hybrid", "mix", "naive"],
+            "description": "Sem valor: usa a configuração da base.",
+        },
+        "top_k": {"type": "integer", "minimum": 1, "maximum": 200},
+    },
+}
+_GRAPH_OUT = {
+    "type": "object",
+    "required": ["entities", "relations", "chunks", "trace_id"],
+    "properties": {
+        "entities": {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "required": ["name", "type", "description"],
+                "properties": {
+                    "name": {"type": "string"},
+                    "type": {"type": "string"},
+                    "description": {"type": "string"},
+                },
+            },
+        },
+        "relations": {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "required": ["source", "target", "keywords", "description", "weight"],
+                "properties": {
+                    "source": {"type": "string"},
+                    "target": {"type": "string"},
+                    "keywords": {"type": "string"},
+                    "description": {"type": "string"},
+                    "weight": {"type": "number"},
+                },
+            },
+        },
+        "chunks": _SEARCH_OUT["properties"]["results"],  # type: ignore[index]
+        "trace_id": _NULLABLE_STRING,
+    },
+}
+
 _QUERY_IN = {
     "type": "object",
     "required": ["knowledge_base", "question"],
@@ -691,6 +799,158 @@ _EVALUATE_OUT = {
 }
 
 
+# ---------------------------------------------------------------- wiki (task 6.12)
+
+_WIKI_SLUG = {"type": "string", "minLength": 1, "maxLength": 63}
+_WIKI_PATH = {"type": "string", "minLength": 1, "maxLength": 256}
+_WIKI_READ_IN = {
+    "type": "object",
+    "required": ["knowledge_base"],
+    "additionalProperties": False,
+    "properties": {"knowledge_base": _WIKI_SLUG, "path": _WIKI_PATH},
+}
+_WIKI_READ_OUT = {
+    "type": "object",
+    "required": ["pages"],
+    "properties": {
+        "pages": {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "properties": {
+                    "path": {"type": "string"},
+                    "type": {"type": "string"},
+                    "title": {"type": "string"},
+                    "description": {"type": "string"},
+                    "content": {"type": "string"},
+                },
+            },
+        }
+    },
+}
+_WIKI_WRITE_IN = {
+    "type": "object",
+    "required": ["knowledge_base", "path", "type", "body"],
+    "additionalProperties": False,
+    "properties": {
+        "knowledge_base": _WIKI_SLUG,
+        "path": _WIKI_PATH,
+        "type": {"type": "string", "minLength": 1},
+        "title": {"type": "string"},
+        "description": {"type": "string"},
+        "body": {"type": "string"},
+        "tags": {"type": "array", "items": {"type": "string"}},
+        "generated_by": {"type": "string"},
+    },
+}
+_WIKI_WRITE_OUT = {
+    "type": "object",
+    "required": ["path", "type"],
+    "properties": {"path": {"type": "string"}, "type": {"type": "string"}},
+}
+_WIKI_LINT_IN = {
+    "type": "object",
+    "required": ["knowledge_base"],
+    "additionalProperties": False,
+    "properties": {"knowledge_base": _WIKI_SLUG},
+}
+_WIKI_LINT_OUT = {
+    "type": "object",
+    "required": ["pages", "links", "problems"],
+    "properties": {
+        "pages": {"type": "integer"},
+        "links": {"type": "integer"},
+        "problems": {"type": "array", "items": {"type": "string"}},
+    },
+}
+_WIKI_SYNTH_IN = {
+    "type": "object",
+    "required": ["knowledge_base", "subject"],
+    "additionalProperties": False,
+    "properties": {
+        "knowledge_base": _WIKI_SLUG,
+        "subject": {"type": "string", "minLength": 1, "maxLength": 4000},
+        "path": _WIKI_PATH,
+    },
+}
+_WIKI_SYNTH_OUT = {
+    "type": "object",
+    "required": ["path", "content"],
+    "properties": {"path": {"type": "string"}, "content": {"type": "string"}},
+}
+
+
+async def _wiki_read(
+    deps: Dependencies, ctx: TenantContext, args: Mapping[str, Any]
+) -> dict[str, Any]:
+    knowledge_base = args["knowledge_base"]
+    path = args.get("path")
+    if path:
+        view = await GetWikiPage(deps).execute(ctx, knowledge_base, path)
+        return {
+            "pages": [
+                {
+                    "path": view.path,
+                    "type": view.page.type,
+                    "title": view.page.title,
+                    "description": view.page.description,
+                    "content": view.content,
+                }
+            ]
+        }
+    pages = await ListWikiPages(deps).execute(ctx, knowledge_base)
+    return {
+        "pages": [
+            {
+                "path": view.path,
+                "type": view.page.type,
+                "title": view.page.title,
+                "description": view.page.description,
+            }
+            for view in pages
+        ]
+    }
+
+
+async def _wiki_write(
+    deps: Dependencies, ctx: TenantContext, args: Mapping[str, Any]
+) -> dict[str, Any]:
+    page = WikiPage(
+        path=args["path"],
+        type=args["type"],
+        title=args.get("title"),
+        description=args.get("description"),
+        body=args["body"],
+        tags=tuple(args.get("tags") or ()),
+        generated=WikiActor(by=str(args.get("generated_by") or "human:api-client")),
+    )
+    written = await WriteWikiPage(deps).execute(ctx, args["knowledge_base"], page)
+    return {"path": written.path, "type": written.type}
+
+
+async def _wiki_lint(
+    deps: Dependencies, ctx: TenantContext, args: Mapping[str, Any]
+) -> dict[str, Any]:
+    report = await LintWiki(deps).execute(ctx, args["knowledge_base"])
+    return {
+        "pages": report.pages,
+        "links": report.links,
+        "problems": list(report.problems),
+    }
+
+
+async def _wiki_synthesize(
+    deps: Dependencies, ctx: TenantContext, args: Mapping[str, Any]
+) -> dict[str, Any]:
+    view = await SynthesizeWikiPage(deps).execute(
+        ctx,
+        args["knowledge_base"],
+        args["subject"],
+        path=args.get("path"),
+    )
+    return {"path": view.path, "content": view.content}
+
+
 def read_tools() -> list[ToolSpec]:
     """The read tools, in the order of MCP_SPEC section 5.1."""
     return [
@@ -763,6 +1023,50 @@ def read_tools() -> list[ToolSpec]:
             idempotent=True,
             handler=_get_ingestion_status,
         ),
+        ToolSpec(
+            name="vlade_search_graph",
+            description=(
+                "Explora o grafo de conhecimento de uma base: entidades, relações entre "
+                "entidades e os trechos que sustentam essas relações. Use esta ferramenta para "
+                "perguntas que comparam autores, conceitos ou eventos. A base precisa ter o grafo "
+                "ligado."
+            ),
+            input_schema=_GRAPH_IN,
+            output_schema=_GRAPH_OUT,
+            role=Role.READER,
+            group=Group.SEARCH,
+            idempotent=True,
+            handler=_search_graph,
+            requires_graph=True,
+        ),
+        ToolSpec(
+            name="vlade_wiki_read",
+            description=(
+                "Lê a wiki de uma base. Sem 'path', lista as páginas com título e descrição. "
+                "Com 'path', devolve o conteúdo OKF da página."
+            ),
+            input_schema=_WIKI_READ_IN,
+            output_schema=_WIKI_READ_OUT,
+            role=Role.READER,
+            group=Group.LIGHT,
+            idempotent=True,
+            handler=_wiki_read,
+            requires_wiki=True,
+        ),
+        ToolSpec(
+            name="vlade_wiki_lint",
+            description=(
+                "Verifica a wiki de uma base: links quebrados, páginas órfãs, páginas vencidas "
+                "e arquivos index.md e log.md ausentes."
+            ),
+            input_schema=_WIKI_LINT_IN,
+            output_schema=_WIKI_LINT_OUT,
+            role=Role.READER,
+            group=Group.LIGHT,
+            idempotent=True,
+            handler=_wiki_lint,
+            requires_wiki=True,
+        ),
     ]
 
 
@@ -833,6 +1137,36 @@ def write_tools() -> list[ToolSpec]:
             idempotent=False,
             handler=_evaluate,
             read_only=False,
+        ),
+        ToolSpec(
+            name="vlade_wiki_write",
+            description=(
+                "Grava uma página OKF v0.2 na wiki de uma base. Use 'type' curto e descritivo. "
+                "O frontmatter com generated e sources é criado pelo servidor."
+            ),
+            input_schema=_WIKI_WRITE_IN,
+            output_schema=_WIKI_WRITE_OUT,
+            role=Role.WRITER,
+            group=Group.WRITE,
+            idempotent=False,
+            handler=_wiki_write,
+            read_only=False,
+            requires_wiki=True,
+        ),
+        ToolSpec(
+            name="vlade_wiki_synthesize",
+            description=(
+                "Cria uma página de wiki sobre um tema a partir dos trechos recuperados da base. "
+                "A página sai com citações ligadas aos documentos de origem."
+            ),
+            input_schema=_WIKI_SYNTH_IN,
+            output_schema=_WIKI_SYNTH_OUT,
+            role=Role.WRITER,
+            group=Group.GENERATION,
+            idempotent=False,
+            handler=_wiki_synthesize,
+            read_only=False,
+            requires_wiki=True,
         ),
     ]
 

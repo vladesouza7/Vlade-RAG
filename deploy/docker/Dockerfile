@@ -32,7 +32,7 @@ COPY packages/python/pyproject.toml packages/python/pyproject.toml
 COPY packages/rust/vlade_rag_core/pyproject.toml packages/rust/vlade_rag_core/pyproject.toml
 RUN uv export --frozen --no-dev --package vlade-rag \
       --extra api --extra cli --extra postgres --extra ollama --extra openai --extra otel \
-      --extra cache --extra mcp --extra s3 --no-emit-workspace -o /tmp/requirements.txt \
+      --extra cache --extra mcp --extra s3 --extra graph --no-emit-workspace -o /tmp/requirements.txt \
  && uv pip install --system --no-cache -r /tmp/requirements.txt
 
 # Workspace packages.
@@ -43,7 +43,7 @@ RUN uv pip install --system --no-cache --no-deps /wheels/*.whl ./packages/python
  && rm -rf /wheels /root/.cache
 
 RUN useradd --system --uid 10001 --no-create-home vlade \
- && mkdir -p /data/objects && chown -R vlade /data
+ && mkdir -p /data/objects /data/graph && chown -R vlade /data
 USER vlade
 
 ENV VLADE_API__HOST=0.0.0.0 \

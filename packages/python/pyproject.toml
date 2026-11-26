@@ -45,6 +45,8 @@ sql = ["sqlalchemy[asyncio]>=2.1", "aiosqlite>=0.20"]  # external SQL source con
 oidc = ["pyjwt[crypto]>=2.15.1"]  # OIDC/OAuth 2.1 bearer tokens (task 5.5)
 docs = ["mkdocs>=1.6.1", "mkdocs-material>=9.8.2"]  # documentation site (task 5.7)
 docling = ["docling>=2.151.1"]
+graph = ["lightrag-hku>=1.5.8"]  # knowledge graph with LightRAG (phase 6, ADR-0032)
+okf = ["pyyaml>=6.0"]  # OKF v0.2 frontmatter of wiki pages (phase 6, task 6.10; MIT license)
 otel = [
     "opentelemetry-api>=1.45.2",
     "opentelemetry-sdk>=1.45.2",
@@ -63,7 +65,7 @@ eval = ["ragas>=0.4.4"]  # answer metrics with RAGAS (RF-71, ADR-0025); calls an
 # Local reranker (ADR-0008, ADR-0018). Pulls PyTorch and, on Linux, NVIDIA CUDA libraries with a
 # proprietary license, so it stays out of "server" and out of the license check (ADR-0001, item 4).
 local-models = ["sentence-transformers>=3.4.0"]
-server = ["vlade-rag[native,api,cli,postgres,ollama,openai,otel,cache,mcp,s3]"]
+server = ["vlade-rag[native,api,cli,postgres,ollama,openai,otel,cache,mcp,s3,okf]"]
 
 [project.scripts]
 vlade-rag = "vlade_rag.cli:main"

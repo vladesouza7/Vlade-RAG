@@ -18,6 +18,12 @@ from vlade_rag.core.application.deps import (
 )
 from vlade_rag.core.application.documents import DeleteDocument, DocumentView, GetDocument
 from vlade_rag.core.application.evaluation import EvaluationResult, RunEvaluation
+from vlade_rag.core.application.graph import (
+    GraphReindexResult,
+    GraphSearchView,
+    ReindexGraph,
+    SearchGraph,
+)
 from vlade_rag.core.application.ingestion import (
     GetIngestionStatus,
     RunIngestionJob,
@@ -40,6 +46,16 @@ from vlade_rag.core.application.request_limits import EnforceRequestLimits
 from vlade_rag.core.application.search import Search, SearchResult
 from vlade_rag.core.application.semantic_cache import SemanticCache, SemanticCacheSettings
 from vlade_rag.core.application.sources import SyncResult, SyncSource
+from vlade_rag.core.application.wiki import (
+    DeleteWikiPage,
+    GetWikiPage,
+    LintWiki,
+    ListWikiPages,
+    SynthesizeWikiPage,
+    WikiLintReport,
+    WikiPageView,
+    WriteWikiPage,
+)
 
 __all__ = [
     "AnswerDelta",
@@ -48,6 +64,7 @@ __all__ = [
     "AnswerQuery",
     "CreateKnowledgeBase",
     "DeleteDocument",
+    "DeleteWikiPage",
     "Dependencies",
     "DocumentView",
     "EnforceRequestLimits",
@@ -56,12 +73,18 @@ __all__ = [
     "GetIngestionStatus",
     "GetKnowledgeBase",
     "GetUsage",
+    "GetWikiPage",
+    "GraphReindexResult",
+    "GraphSearchView",
     "KnowledgeBaseSummary",
     "Limits",
+    "LintWiki",
     "ListAuditEvents",
     "ListKnowledgeBases",
+    "ListWikiPages",
     "NoopMetrics",
     "NoopTracer",
+    "ReindexGraph",
     "ReindexKnowledgeBase",
     "ReindexPreview",
     "ReindexResult",
@@ -69,6 +92,7 @@ __all__ = [
     "RunEvaluation",
     "RunIngestionJob",
     "Search",
+    "SearchGraph",
     "SearchResult",
     "SemanticCache",
     "SemanticCacheSettings",
@@ -77,7 +101,11 @@ __all__ = [
     "SubmitResult",
     "SyncResult",
     "SyncSource",
+    "SynthesizeWikiPage",
     "UsageView",
+    "WikiLintReport",
+    "WikiPageView",
+    "WriteWikiPage",
     "assemble_context",
     "validate_answer",
 ]

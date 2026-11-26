@@ -74,6 +74,9 @@ class DeleteDocument:
         report, _keys = await repo.delete_document(ctx, document_id, dry_run=not confirm)
         if confirm:
             await self.deps.object_storage.delete_prefix(ctx, document_prefix(kb.id, document_id))
+            if self.deps.graph_index is not None:
+                # The graph may hold the document even if the base turned the graph off later.
+                await self.deps.graph_index.delete_document(ctx, kb, document_id)
         event_id = await self.deps.audit_log.record(
             ctx,
             AuditEvent(

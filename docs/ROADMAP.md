@@ -22,6 +22,7 @@
 | 3 | Qualidade | `0.3.0` | Em andamento. Tarefas 3.2, 3.3 e 3.6 implementadas em 2026-11-20. A linha de base da fase 1 está em `evals/reports/` (Recall@10 de 1,00 e MRR de 0,786). A tarefa 3.1 está implementada: o reranker por API está medido, e o adapter local está pronto sem medida do modelo real. Com o reranker, o Recall@1 sobe de 0,70 para 0,95 e a pergunta 20 passa para a posição 1. Fuzzy, reescrita, multi-query e HyDE não melhoram o resultado com o reranker ligado no `legal-ptbr`. O `legal-ptbr-v2` (150 documentos, 109 perguntas) tira o reranker do teto: com `mongodb/rerank-2.5`, o MRR é 0,959. No v2, o fuzzy e o HyDE melhoram a busca sem reranker e não mudam nada com ele (L12). A tarefa 3.10 está parcial: nenhuma meta de latência de busca foi cumprida nesta máquina (ADR-0020, proposto). A tarefa 3.4 está concluída em 2026-11-21: com 102 mil chunks, o retriever `bm25` leva 60 ms de p95, e o `tsvector` leva 6,813 s. A tarefa 3.5 está concluída em 2026-11-21: o motor LangGraph dá a mesma resposta do pipeline linear com as arestas desligadas. A tarefa 3.9 está concluída em 2026-11-21: a CI roda o gate de qualidade. As tarefas 3.7 (RAGAS) e 3.8 (Arize Phoenix no lugar do Langfuse) estão concluídas em 2026-11-21. O critério de aceite está cumprido com o `legal-ptbr` e o `legal-ptbr-v2`. No `legal-ptbr-v2`, o Recall@10 sobe de 0,979 para 1,000 e a faithfulness de 0,904 para 0,934. Falta a parte restante da tarefa 3.10 |
 | 4 | Operação | `0.4.0` | Concluída em 2026-11-23. Tarefas 4.1 a 4.7 integradas em `homolog`. A reindexação com carga passou sem falha de consulta e sem mistura de espaços. Os cinco dashboards mostraram dados reais e os oito alertas dispararam em testes provocados na CI. A versão `0.4.0` está no CHANGELOG e a tag `v0.4.0` marca o release |
 | 5 | Extensões | `1.0.0` | Em andamento. O projeto concluiu as tarefas 5.1 a 5.5 em 2026-11-23 e a 5.7 em 2026-11-24. O adapter Qdrant fica no extra `qdrant`, com o pgvector como padrão e referência. Os conectores de sites, Google Drive e bancos SQL implementam `DocumentSource`. O endpoint e o flow `sync_source` ligam os conectores à ingestão. O cache semântico fica opt-in sobre o cache existente. OIDC/OAuth 2.1 fica opt-in na API e no MCP, sem mudar os casos de uso. O site de documentação usa MkDocs e publica os documentos da pasta `docs`. A tarefa 5.6 está suspensa por decisão do mantenedor |
+| 6 | Conhecimento estruturado | `1.1.0` | Em andamento. A prova técnica do LightRAG (6.0) passou em 2026-11-25 nos seis itens (ADR-0032). As tarefas 6.1 a 6.7 estão implementadas: port `GraphIndex`, adapter LightRAG no extra `graph`, job `graph_index`, retriever `graph`, rota da API, ferramenta MCP `vlade_search_graph` e base `vlade_graph` no Compose. As tarefas 6.10 e 6.12 estão implementadas em 2026-11-25 (ADR-0033): OKF v0.2 e LLM-Wiki, com módulo de parser, port `WikiStore`, casos de uso, rotas e ferramentas MCP. Faltam a avaliação com um provedor remoto (6.8), a persona por base (6.9) e o parser bíblico e EPUB (6.11) |
 
 ## 3. Dependências entre fases
 
@@ -32,6 +33,7 @@ F0 Fundação
            ├─► F3 Qualidade
            │    └─► F4 Operação
            │         └─► F5 Extensões
+           │              └─► F6 Conhecimento estruturado (grafo, OKF, LLM-Wiki)
            └─► (MCP de escrita depende de F2 auth e entra em F4)
 ```
 
@@ -228,6 +230,34 @@ F0 Fundação
 - `pip install "vlade-rag[all]"` funciona nas plataformas de RNF-09.
 
 **Resultado parcial (2026-11-23):** o primeiro critério está cumprido. `tests/integration/test_qdrant_equivalence.py` ingestou dez documentos, copiou os vetores do pgvector para o Qdrant e rodou a mesma avaliação nos dois índices. Os dois deram Recall@10 de 1,000, sem diferença. O segundo critério depende da tarefa 5.6.
+
+### Fase 6 — Conhecimento estruturado
+
+Objetivo: perguntas que comparam autores, conceitos ou eventos espalhados por muitos documentos. A fase acrescenta um grafo de conhecimento (GraphRAG com LightRAG), metadados OKF, uma persona por base, um parser bíblico e uma LLM-Wiki.
+
+| # | Tarefa | Referência |
+|---|---|---|
+| 6.0 | Prova técnica do LightRAG no PostgreSQL do projeto, sem modelo local | ADR-0032 · Concluída em 2026-11-25: `scripts/spikes/lightrag_spike.py` passou nos seis itens. Armazenamento em base separada, ligação dos trechos por SHA-256, isolamento por workspace, exclusão, `aquery_data` e nenhuma instalação durante a execução |
+| 6.1 | ADR do grafo e licenças das dependências | ADR-0032 · Concluída em 2026-11-25: as 58 dependências do extra `graph` têm licença permitida (ADR-0001) |
+| 6.2 | Port `GraphIndex` e `GraphConfig` na base | ARCHITECTURE §11.7 · Concluída em 2026-11-25: grafo desligado por padrão, modelo de extração separado, retriever `graph` validado |
+| 6.3 | Adapter `LightRAGGraphIndex` | ADR-0032 · Concluída em 2026-11-25: uma instância por base, cache LRU, LLM e embeddings dos provedores do runtime. `tests/integration/test_lightrag_graph.py` roda contra PostgreSQL com LLM falso |
+| 6.4 | Adapter em memória e testes do port | Concluída em 2026-11-25: `MemoryGraphIndex`, sem LLM. `tests/integration/test_graph.py` roda os casos de uso com memória e com PostgreSQL |
+| 6.5 | Job `graph_index`, troca de versão e exclusão | ARCHITECTURE §11.7 · Concluída em 2026-11-25: o job roda depois do `publish`, troca a versão antiga e não marca a versão como falha quando o grafo falha |
+| 6.6 | Retriever `graph`, rota da API e ferramenta MCP `vlade_search_graph` | MCP_SPEC §5.11 · Concluída em 2026-11-25: o retriever entra na fusão RRF. A ferramenta aparece só em servidor com grafo. A Agent Skill ensina a ferramenta |
+| 6.7 | Base `vlade_graph`, papel e variáveis no Compose | ARCHITECTURE §17 · Concluída em 2026-11-25: `deploy/postgres/initdb/02-graph.sh` cria o papel e a base num volume novo. O Compose monta um volume para o diretório de trabalho do LightRAG |
+| 6.8 | Avaliação com e sem o retriever `graph` | `evals/` · Pendente. Precisa de um provedor remoto (OpenRouter ou OpenCode) com chave do mantenedor |
+| 6.9 | Persona por base (`generation.instructions`) | Pendente |
+| 6.10 | Front matter OKF v0.2 como metadados do documento | ADR-0033 · Concluída em 2026-11-25: módulo `vlade_rag.okf` no extra `okf`, com parser, escritor e verificação de conformidade. O parser de Markdown guarda os campos OKF nos metadados do documento com o prefixo `okf_` |
+| 6.11 | Parser bíblico (livro, capítulo, versículo) e parser EPUB | Pendente |
+| 6.12 | LLM-Wiki: páginas OKF geradas por base, `index.md`, `log.md`, `lint` e ferramentas MCP de leitura e escrita | ADR-0033 · Concluída em 2026-11-25: port `WikiStore`, adapters de arquivos e memória, casos de uso de leitura, escrita, exclusão, geração e lint, rotas na API e quatro ferramentas MCP. Só aparece quando o servidor configura `VLADE_WIKI__ENABLED=true` |
+
+**Critérios de aceite:**
+
+- O teste de isolamento do grafo passa pela API, pelo MCP e direto no adapter.
+- Num dataset de perguntas comparativas, o retriever `graph` melhora o Recall@10 ou a faithfulness em relação à busca híbrida sem grafo.
+- Um documento apagado some do grafo e da busca.
+
+**Resultado parcial (2026-11-25):** as tarefas 6.10 e 6.12 entregaram o bundle OKF v0.2 e a wiki persistente. Os testes de unidade cobrem parser, escritor, metadados de Markdown, isolamento por tenant, lint e atualização de `index.md` e `log.md`. A wiki usa o modelo de geração da base e grava citações ligadas aos chunks de origem. Faltam a medição com provedor remoto e a decisão sobre revisão humana antes da publicação.
 
 ## 5. Riscos
 
