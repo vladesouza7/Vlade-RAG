@@ -1,6 +1,6 @@
 # Vlade-RAG — Especificação do servidor MCP
 
-> Versão do contrato: 1.1.0 — 2026-11-25. A versão 1.1.0 acrescenta a ferramenta `vlade_search_graph` (seção 5.11).
+> Versão do contrato: 1.2.0 — 2026-11-25. A versão 1.1.0 acrescentou `vlade_search_graph`. A versão 1.2.0 acrescenta as ferramentas de wiki (seções 5.12 a 5.15).
 > Fonte: seção 12 do [`VLADE-RAG.md`](../VLADE-RAG.md). Arquitetura: [`ARCHITECTURE.md`](ARCHITECTURE.md). Decisão: [ADR-0013](adr/0013-mcp-qualquer-cliente.md).
 
 ---
@@ -63,14 +63,18 @@ O servidor deriva o tenant e os papéis da credencial verificada. Nenhuma ferram
 | `vlade_get_document` | Leitura | `reader` | `true` | `false` | `true` |
 | `vlade_get_ingestion_status` | Leitura | `reader` | `true` | `false` | `true` |
 | `vlade_search_graph` | Leitura | `reader` | `true` | `false` | `true` |
+| `vlade_wiki_read` | Leitura | `reader` | `true` | `false` | `true` |
+| `vlade_wiki_lint` | Leitura | `reader` | `true` | `false` | `true` |
 | `vlade_ingest_document` | Escrita | `writer` | `false` | `false` | `false` |
 | `vlade_delete_document` | Escrita destrutiva | `admin` | `false` | `true` | `true` |
 | `vlade_reindex_knowledge_base` | Escrita destrutiva | `admin` | `false` | `true` | `false` |
 | `vlade_evaluate` | Operação | `admin` | `false` | `false` | `false` |
+| `vlade_wiki_write` | Escrita | `writer` | `false` | `false` | `false` |
+| `vlade_wiki_synthesize` | Escrita | `writer` | `false` | `false` | `false` |
 
 Todas as ferramentas têm `openWorldHint: false`.
 
-O servidor lista e aceita `vlade_search_graph` só quando tem um grafo de conhecimento configurado (`VLADE_GRAPH__DATABASE_URL`, ADR-0032).
+O servidor lista e aceita `vlade_search_graph` só quando tem um grafo de conhecimento configurado (`VLADE_GRAPH__DATABASE_URL`, ADR-0032). O servidor lista e aceita as quatro ferramentas de wiki só quando tem um `WikiStore` (`VLADE_WIKI__ENABLED=true`, ADR-0033).
 
 ### 5.2. `vlade_list_knowledge_bases`
 
@@ -607,6 +611,156 @@ Regras:
 1. Se a base não tem o grafo ligado (`graph.enabled`), a ferramenta devolve o erro `invalid_argument`.
 2. Os trechos são só de versões publicadas. Um trecho de uma versão antiga não aparece.
 3. As entidades e as relações não têm citação própria. Para citar, use os trechos da lista `chunks`.
+
+### 5.12. `vlade_wiki_read`
+
+> Lê a wiki de uma base. Sem 'path', lista as páginas com título e descrição. Com 'path', devolve o conteúdo OKF da página.
+
+Entrada:
+
+```json
+{
+  "type": "object",
+  "required": ["knowledge_base"],
+  "additionalProperties": false,
+  "properties": {
+    "knowledge_base": {"type": "string", "minLength": 1, "maxLength": 63},
+    "path": {"type": "string", "minLength": 1, "maxLength": 256}
+  }
+}
+```
+
+Saída:
+
+```json
+{
+  "type": "object",
+  "required": ["pages"],
+  "properties": {
+    "pages": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "path": {"type": "string"},
+          "type": {"type": "string"},
+          "title": {"type": "string"},
+          "description": {"type": "string"},
+          "content": {"type": "string"}
+        }
+      }
+    }
+  }
+}
+```
+
+Regras: o campo `path` é relativo à raiz do bundle. A ferramenta devolve `[]` quando a wiki não tem páginas.
+
+### 5.13. `vlade_wiki_lint`
+
+> Verifica a wiki de uma base: links quebrados, páginas órfãs, páginas vencidas e arquivos index.md e log.md ausentes.
+
+Entrada:
+
+```json
+{
+  "type": "object",
+  "required": ["knowledge_base"],
+  "additionalProperties": false,
+  "properties": {
+    "knowledge_base": {"type": "string", "minLength": 1, "maxLength": 63}
+  }
+}
+```
+
+Saída:
+
+```json
+{
+  "type": "object",
+  "required": ["pages", "links", "problems"],
+  "properties": {
+    "pages": {"type": "integer"},
+    "links": {"type": "integer"},
+    "problems": {"type": "array", "items": {"type": "string"}}
+  }
+}
+```
+
+Regras: o lint não chama LLM. Ele lê o campo `stale_after` e os links Markdown do corpo das páginas.
+
+### 5.14. `vlade_wiki_write`
+
+> Grava uma página OKF v0.2 na wiki de uma base. Use 'type' curto e descritivo. O frontmatter com generated e sources é criado pelo servidor.
+
+Entrada:
+
+```json
+{
+  "type": "object",
+  "required": ["knowledge_base", "path", "type", "body"],
+  "additionalProperties": false,
+  "properties": {
+    "knowledge_base": {"type": "string", "minLength": 1, "maxLength": 63},
+    "path": {"type": "string", "minLength": 1, "maxLength": 256},
+    "type": {"type": "string", "minLength": 1},
+    "title": {"type": "string"},
+    "description": {"type": "string"},
+    "body": {"type": "string"},
+    "tags": {"type": "array", "items": {"type": "string"}},
+    "generated_by": {"type": "string"}
+  }
+}
+```
+
+Saída:
+
+```json
+{
+  "type": "object",
+  "required": ["path", "type"],
+  "properties": {
+    "path": {"type": "string"},
+    "type": {"type": "string"}
+  }
+}
+```
+
+Regras: `index.md` e `log.md` são nomes reservados. O servidor atualiza os dois arquivos depois de gravar a página.
+
+### 5.15. `vlade_wiki_synthesize`
+
+> Cria uma página de wiki sobre um tema a partir dos trechos recuperados da base. A página sai com citações ligadas aos documentos de origem.
+
+Entrada:
+
+```json
+{
+  "type": "object",
+  "required": ["knowledge_base", "subject"],
+  "additionalProperties": false,
+  "properties": {
+    "knowledge_base": {"type": "string", "minLength": 1, "maxLength": 63},
+    "subject": {"type": "string", "minLength": 1, "maxLength": 4000},
+    "path": {"type": "string", "minLength": 1, "maxLength": 256}
+  }
+}
+```
+
+Saída:
+
+```json
+{
+  "type": "object",
+  "required": ["path", "content"],
+  "properties": {
+    "path": {"type": "string"},
+    "content": {"type": "string"}
+  }
+}
+```
+
+Regras: a ferramenta usa o modelo de geração da base. Sem trechos recuperados, devolve `invalid_argument`. As citações apontam para `vlade://kb/{slug}/documents/{id}#chunk/{id}`.
 
 ## 6. Resources
 

@@ -8,7 +8,7 @@ Rules:
 
 from __future__ import annotations
 
-from collections.abc import AsyncIterator, Mapping, Sequence
+from collections.abc import AsyncIterator, Iterable, Mapping, Sequence
 from contextlib import AbstractContextManager
 from dataclasses import dataclass, field
 from datetime import datetime
@@ -46,6 +46,7 @@ from vlade_rag.core.domain import (
     TenantContext,
     TenantQuotas,
     TenantUsage,
+    WikiPage,
 )
 from vlade_rag.core.domain.kb_config import EmbeddingsConfig
 
@@ -448,6 +449,30 @@ class ObjectStorage(Protocol):
 
 
 @runtime_checkable
+class WikiStore(Protocol):
+    """Storage of OKF pages of a base. Paths are bundle-relative POSIX paths."""
+
+    async def list(self, ctx: TenantContext, knowledge_base: str) -> tuple[str, ...]: ...
+    async def get(self, ctx: TenantContext, knowledge_base: str, path: str) -> str | None: ...
+    async def put(
+        self, ctx: TenantContext, knowledge_base: str, path: str, content: str
+    ) -> None: ...
+    async def delete(self, ctx: TenantContext, knowledge_base: str, path: str) -> None: ...
+
+
+@runtime_checkable
+class WikiPageCodec(Protocol):
+    """Serialization of OKF pages. The adapter owns PyYAML, the core owns only the model."""
+
+    def parse_page(self, text: str, path: str) -> WikiPage: ...
+    def render_page(self, page: WikiPage) -> str: ...
+    def render_index(
+        self, entries: Iterable[tuple[str, str, str]], title: str
+    ) -> str: ...
+    def append_log(self, log: str | None, date: str, item: str, title: str) -> str: ...
+
+
+@runtime_checkable
 class Cache(Protocol):
     async def get(self, ctx: TenantContext, key: str) -> bytes | None: ...
     async def set(self, ctx: TenantContext, key: str, value: bytes, ttl_seconds: int) -> None: ...
@@ -718,4 +743,6 @@ __all__ = [
     "TextNormalizer",
     "Tracer",
     "VectorIndex",
+    "WikiPageCodec",
+    "WikiStore",
 ]

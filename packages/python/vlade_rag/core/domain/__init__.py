@@ -61,6 +61,7 @@ from vlade_rag.core.domain.query import (
 )
 from vlade_rag.core.domain.quotas import TenantQuotas, TenantUsage
 from vlade_rag.core.domain.tenancy import Role, TenantContext
+from vlade_rag.core.domain.wiki import WikiActor, WikiPage, WikiSource, WikiStatus
 
 __all__ = [
     "Answer",
@@ -115,6 +116,10 @@ __all__ = [
     "VersionChanged",
     "VersionStatus",
     "VladeError",
+    "WikiActor",
+    "WikiPage",
+    "WikiSource",
+    "WikiStatus",
     "WriteToolsDisabled",
     "matches",
     "parse_filter",

@@ -46,6 +46,16 @@ from vlade_rag.core.application.request_limits import EnforceRequestLimits
 from vlade_rag.core.application.search import Search, SearchResult
 from vlade_rag.core.application.semantic_cache import SemanticCache, SemanticCacheSettings
 from vlade_rag.core.application.sources import SyncResult, SyncSource
+from vlade_rag.core.application.wiki import (
+    DeleteWikiPage,
+    GetWikiPage,
+    LintWiki,
+    ListWikiPages,
+    SynthesizeWikiPage,
+    WikiLintReport,
+    WikiPageView,
+    WriteWikiPage,
+)
 
 __all__ = [
     "AnswerDelta",
@@ -54,6 +64,7 @@ __all__ = [
     "AnswerQuery",
     "CreateKnowledgeBase",
     "DeleteDocument",
+    "DeleteWikiPage",
     "Dependencies",
     "DocumentView",
     "EnforceRequestLimits",
@@ -62,12 +73,15 @@ __all__ = [
     "GetIngestionStatus",
     "GetKnowledgeBase",
     "GetUsage",
+    "GetWikiPage",
     "GraphReindexResult",
     "GraphSearchView",
     "KnowledgeBaseSummary",
     "Limits",
+    "LintWiki",
     "ListAuditEvents",
     "ListKnowledgeBases",
+    "ListWikiPages",
     "NoopMetrics",
     "NoopTracer",
     "ReindexGraph",
@@ -87,7 +101,11 @@ __all__ = [
     "SubmitResult",
     "SyncResult",
     "SyncSource",
+    "SynthesizeWikiPage",
     "UsageView",
+    "WikiLintReport",
+    "WikiPageView",
+    "WriteWikiPage",
     "assemble_context",
     "validate_answer",
 ]

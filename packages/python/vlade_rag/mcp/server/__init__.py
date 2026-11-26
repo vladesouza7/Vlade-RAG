@@ -105,7 +105,8 @@ def build_server(runtime: Runtime, fixed_ctx: TenantContext | None = None) -> Se
     tools: dict[str, ToolSpec] = {
         spec.name: spec
         for spec in all_tools()
-        if not spec.requires_graph or deps.graph_index is not None
+        if (not spec.requires_graph or deps.graph_index is not None)
+        and (not spec.requires_wiki or deps.wiki_store is not None)
     }
 
     async def write_enabled(ctx: TenantContext) -> bool:

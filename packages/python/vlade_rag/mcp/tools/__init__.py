@@ -21,18 +21,25 @@ from vlade_rag.core.application import (
     Dependencies,
     GetDocument,
     GetIngestionStatus,
+    GetWikiPage,
+    LintWiki,
     ListKnowledgeBases,
+    ListWikiPages,
     ReindexKnowledgeBase,
     RunEvaluation,
     Search,
     SearchGraph,
     SubmitIngestion,
+    SynthesizeWikiPage,
+    WriteWikiPage,
 )
 from vlade_rag.core.domain import (
     InvalidArgument,
     RawDocument,
     Role,
     TenantContext,
+    WikiActor,
+    WikiPage,
 )
 from vlade_rag.ingestion.sources.download import read_source
 from vlade_rag.mcp.policies import Group
@@ -54,6 +61,8 @@ class ToolSpec:
     destructive: bool = False
     # Listed and callable only when the server has a knowledge graph (phase 6).
     requires_graph: bool = False
+    # Listed and callable only when the server has a wiki store (task 6.12).
+    requires_wiki: bool = False
 
     def to_mcp(self) -> Tool:
         return Tool(
@@ -790,6 +799,158 @@ _EVALUATE_OUT = {
 }
 
 
+# ---------------------------------------------------------------- wiki (task 6.12)
+
+_WIKI_SLUG = {"type": "string", "minLength": 1, "maxLength": 63}
+_WIKI_PATH = {"type": "string", "minLength": 1, "maxLength": 256}
+_WIKI_READ_IN = {
+    "type": "object",
+    "required": ["knowledge_base"],
+    "additionalProperties": False,
+    "properties": {"knowledge_base": _WIKI_SLUG, "path": _WIKI_PATH},
+}
+_WIKI_READ_OUT = {
+    "type": "object",
+    "required": ["pages"],
+    "properties": {
+        "pages": {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "properties": {
+                    "path": {"type": "string"},
+                    "type": {"type": "string"},
+                    "title": {"type": "string"},
+                    "description": {"type": "string"},
+                    "content": {"type": "string"},
+                },
+            },
+        }
+    },
+}
+_WIKI_WRITE_IN = {
+    "type": "object",
+    "required": ["knowledge_base", "path", "type", "body"],
+    "additionalProperties": False,
+    "properties": {
+        "knowledge_base": _WIKI_SLUG,
+        "path": _WIKI_PATH,
+        "type": {"type": "string", "minLength": 1},
+        "title": {"type": "string"},
+        "description": {"type": "string"},
+        "body": {"type": "string"},
+        "tags": {"type": "array", "items": {"type": "string"}},
+        "generated_by": {"type": "string"},
+    },
+}
+_WIKI_WRITE_OUT = {
+    "type": "object",
+    "required": ["path", "type"],
+    "properties": {"path": {"type": "string"}, "type": {"type": "string"}},
+}
+_WIKI_LINT_IN = {
+    "type": "object",
+    "required": ["knowledge_base"],
+    "additionalProperties": False,
+    "properties": {"knowledge_base": _WIKI_SLUG},
+}
+_WIKI_LINT_OUT = {
+    "type": "object",
+    "required": ["pages", "links", "problems"],
+    "properties": {
+        "pages": {"type": "integer"},
+        "links": {"type": "integer"},
+        "problems": {"type": "array", "items": {"type": "string"}},
+    },
+}
+_WIKI_SYNTH_IN = {
+    "type": "object",
+    "required": ["knowledge_base", "subject"],
+    "additionalProperties": False,
+    "properties": {
+        "knowledge_base": _WIKI_SLUG,
+        "subject": {"type": "string", "minLength": 1, "maxLength": 4000},
+        "path": _WIKI_PATH,
+    },
+}
+_WIKI_SYNTH_OUT = {
+    "type": "object",
+    "required": ["path", "content"],
+    "properties": {"path": {"type": "string"}, "content": {"type": "string"}},
+}
+
+
+async def _wiki_read(
+    deps: Dependencies, ctx: TenantContext, args: Mapping[str, Any]
+) -> dict[str, Any]:
+    knowledge_base = args["knowledge_base"]
+    path = args.get("path")
+    if path:
+        view = await GetWikiPage(deps).execute(ctx, knowledge_base, path)
+        return {
+            "pages": [
+                {
+                    "path": view.path,
+                    "type": view.page.type,
+                    "title": view.page.title,
+                    "description": view.page.description,
+                    "content": view.content,
+                }
+            ]
+        }
+    pages = await ListWikiPages(deps).execute(ctx, knowledge_base)
+    return {
+        "pages": [
+            {
+                "path": view.path,
+                "type": view.page.type,
+                "title": view.page.title,
+                "description": view.page.description,
+            }
+            for view in pages
+        ]
+    }
+
+
+async def _wiki_write(
+    deps: Dependencies, ctx: TenantContext, args: Mapping[str, Any]
+) -> dict[str, Any]:
+    page = WikiPage(
+        path=args["path"],
+        type=args["type"],
+        title=args.get("title"),
+        description=args.get("description"),
+        body=args["body"],
+        tags=tuple(args.get("tags") or ()),
+        generated=WikiActor(by=str(args.get("generated_by") or "human:api-client")),
+    )
+    written = await WriteWikiPage(deps).execute(ctx, args["knowledge_base"], page)
+    return {"path": written.path, "type": written.type}
+
+
+async def _wiki_lint(
+    deps: Dependencies, ctx: TenantContext, args: Mapping[str, Any]
+) -> dict[str, Any]:
+    report = await LintWiki(deps).execute(ctx, args["knowledge_base"])
+    return {
+        "pages": report.pages,
+        "links": report.links,
+        "problems": list(report.problems),
+    }
+
+
+async def _wiki_synthesize(
+    deps: Dependencies, ctx: TenantContext, args: Mapping[str, Any]
+) -> dict[str, Any]:
+    view = await SynthesizeWikiPage(deps).execute(
+        ctx,
+        args["knowledge_base"],
+        args["subject"],
+        path=args.get("path"),
+    )
+    return {"path": view.path, "content": view.content}
+
+
 def read_tools() -> list[ToolSpec]:
     """The read tools, in the order of MCP_SPEC section 5.1."""
     return [
@@ -878,6 +1039,34 @@ def read_tools() -> list[ToolSpec]:
             handler=_search_graph,
             requires_graph=True,
         ),
+        ToolSpec(
+            name="vlade_wiki_read",
+            description=(
+                "Lê a wiki de uma base. Sem 'path', lista as páginas com título e descrição. "
+                "Com 'path', devolve o conteúdo OKF da página."
+            ),
+            input_schema=_WIKI_READ_IN,
+            output_schema=_WIKI_READ_OUT,
+            role=Role.READER,
+            group=Group.LIGHT,
+            idempotent=True,
+            handler=_wiki_read,
+            requires_wiki=True,
+        ),
+        ToolSpec(
+            name="vlade_wiki_lint",
+            description=(
+                "Verifica a wiki de uma base: links quebrados, páginas órfãs, páginas vencidas "
+                "e arquivos index.md e log.md ausentes."
+            ),
+            input_schema=_WIKI_LINT_IN,
+            output_schema=_WIKI_LINT_OUT,
+            role=Role.READER,
+            group=Group.LIGHT,
+            idempotent=True,
+            handler=_wiki_lint,
+            requires_wiki=True,
+        ),
     ]
 
 
@@ -948,6 +1137,36 @@ def write_tools() -> list[ToolSpec]:
             idempotent=False,
             handler=_evaluate,
             read_only=False,
+        ),
+        ToolSpec(
+            name="vlade_wiki_write",
+            description=(
+                "Grava uma página OKF v0.2 na wiki de uma base. Use 'type' curto e descritivo. "
+                "O frontmatter com generated e sources é criado pelo servidor."
+            ),
+            input_schema=_WIKI_WRITE_IN,
+            output_schema=_WIKI_WRITE_OUT,
+            role=Role.WRITER,
+            group=Group.WRITE,
+            idempotent=False,
+            handler=_wiki_write,
+            read_only=False,
+            requires_wiki=True,
+        ),
+        ToolSpec(
+            name="vlade_wiki_synthesize",
+            description=(
+                "Cria uma página de wiki sobre um tema a partir dos trechos recuperados da base. "
+                "A página sai com citações ligadas aos documentos de origem."
+            ),
+            input_schema=_WIKI_SYNTH_IN,
+            output_schema=_WIKI_SYNTH_OUT,
+            role=Role.WRITER,
+            group=Group.GENERATION,
+            idempotent=False,
+            handler=_wiki_synthesize,
+            read_only=False,
+            requires_wiki=True,
         ),
     ]
 

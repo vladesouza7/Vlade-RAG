@@ -485,6 +485,12 @@ async def build_runtime(
         deps.graph_index = graph
         closers.append(graph.aclose)
         checks["graph"] = graph.ping
+    if settings.wiki.enabled:
+        from vlade_rag.knowledge.wiki import FileSystemWikiStore
+        from vlade_rag.okf.codec import OkfWikiCodec
+
+        deps.wiki_store = FileSystemWikiStore(settings.wiki.root)
+        deps.wiki_codec = OkfWikiCodec()
     oidc = None
     if settings.auth.oidc.enabled:
         from vlade_rag.auth import OidcVerifier

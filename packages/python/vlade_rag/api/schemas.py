@@ -14,6 +14,7 @@ from vlade_rag.core.application import (
     KnowledgeBaseSummary,
     ReindexResult,
     UsageView,
+    WikiPageView,
 )
 from vlade_rag.core.domain import (
     Answer,
@@ -338,6 +339,44 @@ class GraphReindexOut(_Model):
     executed: bool
     documents: int
     jobs: int
+
+
+class WikiPageIn(_Model):
+    path: str = Field(min_length=1, max_length=256)
+    type: str = Field(min_length=1)
+    title: str | None = None
+    description: str | None = None
+    body: str = ""
+    tags: list[str] = Field(default_factory=list)
+
+
+class WikiPageOut(_Model):
+    path: str
+    type: str
+    title: str | None
+    description: str | None
+    content: str
+
+    @classmethod
+    def of(cls, view: WikiPageView) -> WikiPageOut:
+        return cls(
+            path=view.path,
+            type=view.page.type,
+            title=view.page.title,
+            description=view.page.description,
+            content=view.content,
+        )
+
+
+class WikiLintOut(_Model):
+    pages: int
+    links: int
+    problems: list[str]
+
+
+class WikiSynthesisIn(_Model):
+    subject: str = Field(min_length=1)
+    path: str | None = Field(default=None, max_length=256)
 
 
 class QueryIn(_Model):

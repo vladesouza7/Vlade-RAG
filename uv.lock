@@ -5864,6 +5864,9 @@ native = [
 oidc = [
     { name = "pyjwt", extra = ["crypto"] },
 ]
+okf = [
+    { name = "pyyaml" },
+]
 ollama = [
     { name = "httpx2" },
 ]
@@ -5897,6 +5900,7 @@ server = [
     { name = "opentelemetry-sdk" },
     { name = "pgvector" },
     { name = "python-multipart" },
+    { name = "pyyaml" },
     { name = "redis" },
     { name = "typer" },
     { name = "uvicorn" },
@@ -5930,6 +5934,7 @@ requires-dist = [
     { name = "pydantic-settings", specifier = ">=2.16.3" },
     { name = "pyjwt", extras = ["crypto"], marker = "extra == 'oidc'", specifier = ">=2.15.1" },
     { name = "python-multipart", marker = "extra == 'api'", specifier = ">=0.0.34" },
+    { name = "pyyaml", marker = "extra == 'okf'", specifier = ">=6.0" },
     { name = "qdrant-client", marker = "extra == 'qdrant'", specifier = ">=1.20.0" },
     { name = "ragas", marker = "extra == 'eval'", specifier = ">=0.4.4" },
     { name = "redis", marker = "extra == 'cache'", specifier = ">=8.1.0" },
@@ -5937,10 +5942,10 @@ requires-dist = [
     { name = "sqlalchemy", extras = ["asyncio"], marker = "extra == 'sql'", specifier = ">=2.1" },
     { name = "typer", marker = "extra == 'cli'", specifier = ">=0.19.0" },
     { name = "uvicorn", marker = "extra == 'api'", specifier = ">=0.54.0" },
-    { name = "vlade-rag", extras = ["native", "api", "cli", "postgres", "ollama", "openai", "otel", "cache", "mcp", "s3"], marker = "extra == 'server'" },
+    { name = "vlade-rag", extras = ["native", "api", "cli", "postgres", "ollama", "openai", "otel", "cache", "mcp", "s3", "okf"], marker = "extra == 'server'" },
     { name = "vlade-rag-core", marker = "extra == 'native'", editable = "packages/rust/vlade_rag_core" },
 ]
-provides-extras = ["native", "api", "cli", "postgres", "qdrant", "sql", "oidc", "docs", "docling", "graph", "otel", "ollama", "openai", "cache", "mcp", "s3", "langgraph", "eval", "local-models", "server"]
+provides-extras = ["native", "api", "cli", "postgres", "qdrant", "sql", "oidc", "docs", "docling", "graph", "okf", "otel", "ollama", "openai", "cache", "mcp", "s3", "langgraph", "eval", "local-models", "server"]
 
 [[package]]
 name = "vlade-rag-core"

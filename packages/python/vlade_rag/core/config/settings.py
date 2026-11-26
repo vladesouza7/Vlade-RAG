@@ -300,6 +300,14 @@ class GraphSettings(BaseModel):
         return None if value in ("", None) else value
 
 
+class WikiSettings(BaseModel):
+    """LLM-Wiki store (phase 6, task 6.12). Disabled by default."""
+
+    enabled: bool = False
+    root: str = "./data/wiki"
+    max_sources: int = Field(default=8, ge=1, le=50)
+
+
 class OtelSettings(BaseModel):
     enabled: bool = False
     endpoint: str | None = None
@@ -336,6 +344,7 @@ class Settings(BaseSettings):
     evaluation: EvaluationSettings = Field(default_factory=EvaluationSettings)
     otel: OtelSettings = Field(default_factory=OtelSettings)
     graph: GraphSettings = Field(default_factory=GraphSettings)
+    wiki: WikiSettings = Field(default_factory=WikiSettings)
     # Server default for new knowledge bases, as JSON. A config sent on creation is merged
     # over it. Example: {"embeddings": {"provider": "openrouter", ...}, "generation": {...}}
     default_kb_config: dict[str, Any] = Field(default_factory=dict)

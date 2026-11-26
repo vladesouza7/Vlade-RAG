@@ -147,6 +147,20 @@ O grafo ajuda em perguntas que comparam autores, conceitos ou eventos espalhados
 
 A extração chama o LLM em cada trecho, então o custo é alto. O projeto LightRAG recomenda um modelo grande, sem modo "thinking". Para ligar o grafo numa base que já tem documentos, chame `POST /v1/knowledge-bases/{kb}/graph/reindex?confirm=true`.
 
+### Wiki com OKF v0.2
+
+A wiki guarda o trabalho de síntese em páginas Markdown. Cada nova fonte pode atualizar as páginas existentes, as referências cruzadas e o registro de contradições (ADR-0033). O formato é o OKF v0.2: `type`, `sources`, `generated`, `verified`, `status` e `stale_after` no frontmatter, com `index.md` e `log.md` reservados.
+
+A wiki é opcional. Para usar:
+
+1. Instale o extra `okf`, que traz o PyYAML para ler o frontmatter.
+2. Defina `VLADE_WIKI__ENABLED=true` e, se quiser, `VLADE_WIKI__ROOT`. As páginas ficam em `<root>/<tenant>/<base>`.
+3. Leia e grave páginas com `GET` e `POST /v1/knowledge-bases/{kb}/wiki/pages`. A ferramenta MCP `vlade_wiki_read` faz a mesma leitura.
+4. Crie uma página a partir dos documentos da base com `POST /v1/knowledge-bases/{kb}/wiki/synthesize` ou com a ferramenta MCP `vlade_wiki_synthesize`. A página sai com citações ligadas aos chunks de origem.
+5. Use `POST /v1/knowledge-bases/{kb}/wiki/lint` para achar links quebrados, páginas órfãs e páginas vencidas.
+
+O analisador de Markdown guarda o frontmatter OKF nos metadados do documento. O campo `verified` do OKF permite registrar revisão humana, mas o servidor não exige essa revisão antes de publicar.
+
 ## Estrutura do repositório
 
 | Pasta | Conteúdo |

@@ -16,7 +16,7 @@ pytest.importorskip("mcp")
 import jsonschema
 
 from tests.e2e.conftest import McpWorld, error_of
-from tests.e2e.test_mcp import WRITE_TOOLS, listed_read_tools, spec_tools
+from tests.e2e.test_mcp import listed_read_tools, listed_write_tools, spec_tools
 from vlade_rag.ingestion.worker import Worker
 from vlade_rag.mcp.tools import write_tools
 
@@ -69,7 +69,7 @@ async def test_enabled_write_tools_are_filtered_by_role(mcp_world: McpWorld) -> 
                 {"knowledge_base": "vendas", "document_id": str(mcp_world.doc_id)},
             )
         )
-    assert admin == listed_read_tools(mcp_world) + WRITE_TOOLS
+    assert admin == listed_read_tools(mcp_world) + listed_write_tools(mcp_world)
     assert reader == listed_read_tools(mcp_world)
     assert error["code"] == "forbidden"
 
